@@ -1,13 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Step1 from "@/components/register/step1";
 import Step2 from "@/components/register/step2";
+import { registerUser } from "@/lib/api/auth";
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   const [step1Data, setStep1Data] = useState({
     email: "",
@@ -66,10 +70,30 @@ export default function RegisterPage() {
   const handleStep2Submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => {
+    setError(null);
+    
+    try {
+      const response = await registerUser({
+        email: step1Data.email,
+        password: step1Data.password,
+        role: "SOLVER",
+        firstName: step2Data.firstName,
+        lastName: step2Data.lastName,
+        institution: step2Data.university,
+        degreeProgram: step2Data.course,
+      });
+
+      localStorage.setItem("token", response.token);
+      localStorage.setItem("userId", response.userId);
+      localStorage.setItem("userEmail", response.email);
+      localStorage.setItem("userRole", response.role);
+
+      router.push("/dashboard");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Registration failed. Please try again.");
+    } finally {
       setIsLoading(false);
-      console.log("Registration complete:", { ...step1Data, ...step2Data });
-    }, 1000);
+    }
   };
 
   return (
@@ -106,6 +130,12 @@ export default function RegisterPage() {
         </div>
 
         <div className="bg-card rounded-2xl shadow-xl border border-border p-8">
+          {error && (
+            <div className="mb-6 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+              {error}
+            </div>
+          )}
+          
           {currentStep === 1 ? (
             <Step1
               data={step1Data}
