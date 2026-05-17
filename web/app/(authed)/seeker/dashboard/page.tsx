@@ -1,33 +1,9 @@
 "use client";
 
-import { useAuth } from "@/context/auth-context";
-
 export default function SeekerDashboardPage() {
-  const { user, logout } = useAuth();
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-background to-indigo-50 p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8 mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Seeker Dashboard
-              </h1>
-              <p className="text-gray-600">
-                Welcome back, <span className="font-medium text-indigo-600">{user?.email}</span>
-              </p>
-            </div>
-            <button
-              onClick={logout}
-              className="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-
         {/* Dashboard Content */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">

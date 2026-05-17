@@ -1,31 +1,17 @@
 "use client";
 
-import { useAuth } from "@/context/auth-context";
-
 export default function SolverDashboardPage() {
-  const { user, logout } = useAuth();
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#B7E5BA]/20 via-background to-[#5CA87C]/10 p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8 mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Solver Dashboard
-              </h1>
-              <p className="text-gray-600">
-                Welcome back, <span className="font-medium text-[#288760]">{user?.email}</span>
-              </p>
-            </div>
-            <button
-              onClick={logout}
-              className="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium"
-            >
-              Logout
-            </button>
-          </div>
+        {/* Hero Section */}
+        <div className="mb-12 text-center">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-4">
+            Bridging the Gap Between Industry Problems and Academic Solutions.
+          </h1>
+          <p className="text-lg md:text-xl text-gray-700 max-w-4xl mx-auto">
+            Empowering student solvers to tackle real-world cross-industry challenges while building a verifiable portfolio.
+          </p>
         </div>
 
         {/* Dashboard Content */}
