@@ -6,6 +6,7 @@ import Link from "next/link";
 import Step1 from "@/components/register/step1";
 import Step2 from "@/components/register/step2";
 import { registerUser } from "@/lib/api/auth";
+import { setAuthCookies, setAuthStorage, getDashboardPath } from "@/lib/auth-utils";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -83,12 +84,12 @@ export default function RegisterPage() {
         degreeProgram: step2Data.course,
       });
 
-      localStorage.setItem("token", response.token);
-      localStorage.setItem("userId", response.userId);
-      localStorage.setItem("userEmail", response.email);
-      localStorage.setItem("userRole", response.role);
+      // Store auth data
+      setAuthStorage(response);
+      setAuthCookies(response.token, response.role);
 
-      router.push("/dashboard");
+      // Redirect to role-specific dashboard
+      router.push(getDashboardPath(response.role));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed. Please try again.");
     } finally {
