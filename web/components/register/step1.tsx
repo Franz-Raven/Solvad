@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { useMemo } from "react";
 
 interface Step1Props {
   data: {
@@ -11,9 +12,51 @@ interface Step1Props {
   isLoading: boolean;
 }
 
+interface PasswordRequirement {
+  label: string;
+  test: (password: string) => boolean;
+}
+
+const passwordRequirements: PasswordRequirement[] = [
+  {
+    label: "At least 8 characters",
+    test: (password) => password.length >= 8,
+  },
+  {
+    label: "Contains uppercase and lowercase letters",
+    test: (password) => /[a-z]/.test(password) && /[A-Z]/.test(password),
+  },
+  {
+    label: "Includes a special character (!@#$%^&*)",
+    test: (password) => /[!@#$%^&*(),.?":{}|<>]/.test(password),
+  },
+];
+
 export default function Step1({ data, onChange, onSubmit, isLoading }: Step1Props) {
+  const passwordValidation = useMemo(() => {
+    return passwordRequirements.map((req) => ({
+      label: req.label,
+      met: req.test(data.password),
+    }));
+  }, [data.password]);
+
+  const isPasswordValid = passwordValidation.every((req) => req.met);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!isPasswordValid) {
+      return;
+    }
+    
+    if (data.password !== data.confirmPassword) {
+      return;
+    }
+    
+    onSubmit(e);
+  };
   return (
-    <form onSubmit={onSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-5">
       <div className="space-y-2">
         <label
           htmlFor="email"
@@ -48,12 +91,64 @@ export default function Step1({ data, onChange, onSubmit, isLoading }: Step1Prop
           onChange={onChange}
           className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all"
           placeholder="••••••••"
-          minLength={8}
           required
         />
-        <p className="text-xs text-muted-foreground">
-          Must be at least 8 characters
-        </p>
+        
+        {data.password && (
+          <div className="mt-3 space-y-2 p-3 rounded-lg bg-muted/50 border border-border animate-in fade-in slide-in-from-top-2 duration-300">
+            <p className="text-xs font-medium text-muted-foreground mb-2">
+              Password Requirements:
+            </p>
+            {passwordValidation.map((req, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <div
+                  className={`w-4 h-4 rounded-full flex items-center justify-center transition-all duration-200 ${
+                    req.met
+                      ? "bg-green-500/20 border border-green-500 scale-100"
+                      : "bg-red-500/20 border border-red-500 scale-100"
+                  }`}
+                >
+                  {req.met ? (
+                    <svg
+                      className="w-2.5 h-2.5 text-green-600 animate-in zoom-in duration-150"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={3}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  ) : (
+                    <svg
+                      className="w-2.5 h-2.5 text-red-600 animate-in zoom-in duration-150"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={3}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  )}
+                </div>
+                <span
+                  className={`text-xs transition-all duration-200 ${
+                    req.met ? "text-green-600 font-medium" : "text-red-600"
+                  }`}
+                >
+                  {req.label}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -73,13 +168,31 @@ export default function Step1({ data, onChange, onSubmit, isLoading }: Step1Prop
           placeholder="••••••••"
           required
         />
+        {data.confirmPassword && data.password !== data.confirmPassword && (
+          <p className="text-xs text-red-600 flex items-center gap-1">
+            <svg
+              className="w-3 h-3"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+            Passwords do not match
+          </p>
+        )}
       </div>
 
       <Button
         type="submit"
         variant="secondary"
         size="lg"
-        disabled={isLoading}
+        disabled={isLoading || !isPasswordValid || data.password !== data.confirmPassword}
         className="w-full font-semibold shadow-lg shadow-secondary/20 hover:shadow-xl hover:shadow-secondary/30 transition-all"
       >
         {isLoading ? (
