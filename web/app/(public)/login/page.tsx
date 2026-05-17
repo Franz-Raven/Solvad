@@ -1,18 +1,37 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { loginUser } from "@/lib/api/auth";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => setIsLoading(false), 1000);
+    setError(null);
+
+    try {
+      const response = await loginUser({ email, password });
+      
+      localStorage.setItem("token", response.token);
+      localStorage.setItem("userId", response.userId);
+      localStorage.setItem("userEmail", response.email);
+      localStorage.setItem("userRole", response.role);
+
+      router.push("/dashboard");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Login failed. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -44,6 +63,12 @@ export default function LoginPage() {
 
         <div className="bg-card rounded-2xl shadow-xl border border-border p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
+            {error && (
+              <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                {error}
+              </div>
+            )}
+            
             <div className="space-y-2">
               <label
                 htmlFor="email"
