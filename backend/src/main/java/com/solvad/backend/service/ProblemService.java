@@ -1,10 +1,7 @@
 package com.solvad.backend.service;
 
 import com.solvad.backend.dto.*;
-import com.solvad.backend.entity.Problem;
-import com.solvad.backend.entity.ProblemStatus;
-import com.solvad.backend.entity.ProblemSubtask;
-import com.solvad.backend.entity.SeekerProfile;
+import com.solvad.backend.entity.*;
 import com.solvad.backend.repository.ProblemRepository;
 import com.solvad.backend.repository.ProblemSubtaskRepository;
 import com.solvad.backend.repository.SeekerProfileRepository;
@@ -30,6 +27,9 @@ public class ProblemService {
 
     @Autowired
     private GeminiService geminiService;
+
+    @Autowired
+    private ActivityLedgerService activityLedgerService;
 
     public GenerateScopeResponse generateScope(GenerateScopeRequest request) {
         // Call Gemini AI to generate subtasks
@@ -75,6 +75,10 @@ public class ProblemService {
         
         List<ProblemSubtask> savedSubtasks = subtaskRepository.saveAll(subtasks);
 
+        activityLedgerService.log(seekerUserId, savedProblem.getId(),
+                ActivityActionType.PROBLEM_CREATED,
+                "Problem \"" + savedProblem.getTitle() + "\" was created");
+
         // Map to response DTO
         return mapToResponse(savedProblem, savedSubtasks, seeker);
     }
@@ -108,6 +112,8 @@ public class ProblemService {
         Problem problem = problemRepository.findById(problemId)
             .orElseThrow(() -> new RuntimeException("Problem not found"));
 
+        String oldStatus = problem.getStatus().name();
+
         // Verify ownership
         SeekerProfile seeker = seekerProfileRepository.findByUserId(seekerUserId)
             .orElseThrow(() -> new RuntimeException("Seeker profile not found"));
@@ -120,6 +126,10 @@ public class ProblemService {
         try {
             problem.setStatus(ProblemStatus.valueOf(newStatus));
             problemRepository.save(problem);
+            activityLedgerService.log(seekerUserId, problemId,
+                    ActivityActionType.STATUS_CHANGE,
+                    "Status updated",
+                    oldStatus + " → " + newStatus);
         } catch (IllegalArgumentException e) {
             throw new RuntimeException("Invalid status: " + newStatus);
         }

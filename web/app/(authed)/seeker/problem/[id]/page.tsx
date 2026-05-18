@@ -6,6 +6,12 @@ import Link from "next/link";
 import { getProblemById, updateProblemStatus, deleteProblem } from "@/lib/api/problem";
 import type { ProblemResponse } from "@/types/problem";
 
+// New imports for Module 3 (Activity Ledger)
+import { getActivityFeed } from "@/lib/api/activity";
+import type { ActivityLedgerResponse } from "@/types/activity";
+import ActivityFeed from "@/components/activity-feed";
+import DocumentUpload from "@/components/document-upload";
+
 type TabType = "problem" | "insights" | "solvers" | "history" | "settings";
 
 const STATUS_COLORS = {
@@ -201,7 +207,7 @@ export default function ProblemDetailPage() {
         {activeTab === "problem" && <ProblemTab problem={problem} />}
         {activeTab === "insights" && <PlaceholderTab title="AI Insights & Similarity" />}
         {activeTab === "solvers" && <PlaceholderTab title="Assigned Solvers" />}
-        {activeTab === "history" && <PlaceholderTab title="Audit Timeline" />}
+        {activeTab === "history" && <HistoryTab problemId={problemId} />}
         {activeTab === "settings" && (
           <SettingsTab problem={problem} onDelete={handleDeleteProblem} />
         )}
@@ -447,6 +453,54 @@ function SettingsTab({
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Tab 4: History/Audit Timeline Tab
+function HistoryTab({ problemId }: { problemId: string }) {
+  const [activities, setActivities] = useState<ActivityLedgerResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchFeed = async () => {
+    try {
+      setLoading(true);
+      const data = await getActivityFeed(problemId);
+      setActivities(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load activity feed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchFeed();
+  }, [problemId]);
+
+  return (
+    <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-bold text-gray-900">Audit Timeline</h2>
+        <button onClick={fetchFeed} className="text-sm text-secondary hover:text-accent font-medium">
+          Refresh Feed
+        </button>
+      </div>
+
+      <DocumentUpload problemId={problemId} onUploadSuccess={fetchFeed} />
+
+      <div className="mt-8">
+        {loading ? (
+          <div className="flex justify-center p-8">
+            <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        ) : error ? (
+          <p className="text-red-500 text-sm">{error}</p>
+        ) : (
+          <ActivityFeed activities={activities} />
+        )}
       </div>
     </div>
   );

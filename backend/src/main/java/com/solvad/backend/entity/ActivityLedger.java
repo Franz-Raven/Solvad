@@ -33,6 +33,11 @@ public class ActivityLedger {
     @Column(nullable = false, updatable = false)
     private LocalDateTime timestamp;
 
+    @Column(columnDefinition = "TEXT")
+    private String metadata;   // e.g. "OPEN → IN_PROGRESS" or "report_final.pdf"
+
+
+
     public ActivityLedger() {
     }
 
@@ -90,4 +95,14 @@ public class ActivityLedger {
     public void setTimestamp(LocalDateTime timestamp) {
         this.timestamp = timestamp;
     }
+
+    public String getMetadata() {
+        return metadata;
+    }
+
+    public void setMetadata(String metadata) {
+        this.metadata = metadata;
+    }
+
+
 }
