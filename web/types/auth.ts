@@ -17,14 +17,24 @@ export interface User {
   degreeProgram?: string;
 }
 
-export interface RegisterPayload {
+// Common registration fields
+export interface BaseRegisterPayload {
   email: string;
   password: string;
-  role: UserRole;
+}
+
+// Solver-specific registration
+export interface SolverRegisterPayload extends BaseRegisterPayload {
   firstName: string;
   lastName: string;
   institution: string;
   degreeProgram: string;
+}
+
+// Seeker-specific registration
+export interface SeekerRegisterPayload extends BaseRegisterPayload {
+  organizationName: string;
+  contactPerson: string;
 }
 
 export interface LoginPayload {

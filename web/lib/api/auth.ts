@@ -1,8 +1,21 @@
 import { apiRequest } from "@/lib/api";
-import { AuthResponse, RegisterPayload, LoginPayload } from "@/types/auth";
+import { 
+  AuthResponse, 
+  SolverRegisterPayload, 
+  SeekerRegisterPayload, 
+  LoginPayload 
+} from "@/types/auth";
 
-export async function registerUser(data: RegisterPayload) {
-  const result = await apiRequest<AuthResponse>("/auth/register", {
+export async function registerSolver(data: SolverRegisterPayload) {
+  const result = await apiRequest<AuthResponse>("/auth/register/solver", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return result;
+}
+
+export async function registerSeeker(data: SeekerRegisterPayload) {
+  const result = await apiRequest<AuthResponse>("/auth/register/seeker", {
     method: "POST",
     body: JSON.stringify(data),
   });

@@ -72,19 +72,53 @@ context/
 
 ## Theme & Design System
 
-### Role-Based Color Schemes
-**SOLVER (Students):**
-- Primary: `#5CA87C` (jade green)
-- Dark: `#288760`
-- Background gradients: `from-[#B7E5BA]/20 via-background to-[#5CA87C]/10`
+### Unified Green Color Scheme
+**CRITICAL:** All user roles (SOLVER, SEEKER, ADMIN) use the same green branding consistently. **ALWAYS use CSS variables from globals.css instead of hardcoded hex values.**
 
-**SEEKER (Industry):**
-- Primary: `blue-600`, `indigo-600`
-- Background gradients: `from-blue-50 via-background to-indigo-50`
+**CSS Variables (from globals.css):**
+```css
+--accent: oklch(0.63 0.09 162)           /* Light green */
+--secondary: oklch(0.50 0.10 162)        /* Medium green */
+--primary-foreground: oklch(0.30 0.08 162)  /* Dark green */
+```
 
-**ADMIN:**
-- Primary: `purple-600`, `pink-600`
-- Background gradients: `from-purple-50 via-background to-pink-50`
+**Usage in Tailwind:**
+- `bg-accent`, `text-accent`, `border-accent` - Light green (#5CA87C equivalent)
+- `bg-secondary`, `text-secondary` - Medium green
+- `bg-primary-foreground`, `text-primary-foreground` - Dark green (#288760 equivalent)
+- `border-input` instead of `border-gray-300`
+- `bg-background` instead of `bg-white` for semantic consistency
+
+**Common Patterns:**
+```tsx
+// Gradients
+className="bg-gradient-to-br from-accent to-primary-foreground"
+className="bg-gradient-to-br from-accent to-secondary"
+
+// Backgrounds with opacity
+className="bg-gradient-to-br from-accent/20 via-background to-accent/10"
+
+// Buttons
+className="bg-accent hover:bg-secondary text-white"
+className="bg-secondary hover:bg-primary-foreground text-white"
+
+// Focus states
+className="focus:ring-2 focus:ring-accent focus:border-transparent"
+
+// Hover states  
+className="hover:bg-accent/20"
+className="hover:text-primary-foreground"
+```
+
+**DO NOT:**
+- ❌ Hardcode hex values like `#5CA87C`, `#288760`, `#1A5140`
+- ❌ Use absolute colors like `bg-green-600`, `text-blue-500`
+- ❌ Mix hardcoded values with CSS variables
+
+**DO:**
+- ✅ Use semantic CSS variable classes: `bg-accent`, `text-secondary`, `border-primary-foreground`
+- ✅ Utilize opacity modifiers: `bg-accent/20`, `text-secondary/80`
+- ✅ Reference globals.css for all color decisions
 
 ### Typography
 - Font: Poppins (weights: 300, 400, 500, 600, 700)
@@ -163,17 +197,24 @@ Create separate files for different API domains:
 ```typescript
 // lib/api/auth.ts
 import { apiRequest } from "../api";
-import type { LoginPayload, RegisterPayload, AuthResponse } from "@/types/auth";
+import type { LoginPayload, SolverRegisterPayload, SeekerRegisterPayload, AuthResponse } from "@/types/auth";
 
-export async function login(payload: LoginPayload): Promise<AuthResponse> {
+export async function loginUser(payload: LoginPayload): Promise<AuthResponse> {
   return apiRequest<AuthResponse>("/auth/login", {
     method: "POST",
     body: JSON.stringify(payload),
   });
 }
 
-export async function register(payload: RegisterPayload): Promise<AuthResponse> {
-  return apiRequest<AuthResponse>("/auth/register", {
+export async function registerSolver(payload: SolverRegisterPayload): Promise<AuthResponse> {
+  return apiRequest<AuthResponse>("/auth/register/solver", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function registerSeeker(payload: SeekerRegisterPayload): Promise<AuthResponse> {
+  return apiRequest<AuthResponse>("/auth/register/seeker", {
     method: "POST",
     body: JSON.stringify(payload),
   });
@@ -182,18 +223,29 @@ export async function register(payload: RegisterPayload): Promise<AuthResponse> 
 
 ### Using API Functions in Components
 ```typescript
-import { login } from "@/lib/api/auth";
+import { loginUser, registerSolver } from "@/lib/api/auth";
 import { setAuthStorage, setAuthCookies, getDashboardPath } from "@/lib/auth-utils";
 
 const handleLogin = async (data: LoginPayload) => {
   try {
-    const response = await login(data);
+    const response = await loginUser(data);
     setAuthStorage(response);
     setAuthCookies(response.token, response.role);
     router.push(getDashboardPath(response.role));
   } catch (error) {
     console.error("Login failed:", error);
     // Handle error (show toast, etc.)
+  }
+};
+
+const handleSolverRegistration = async (data: SolverRegisterPayload) => {
+  try {
+    const response = await registerSolver(data);
+    setAuthStorage(response);
+    setAuthCookies(response.token, response.role);
+    router.push(getDashboardPath(response.role));
+  } catch (error) {
+    console.error("Registration failed:", error);
   }
 };
 ```
@@ -208,12 +260,47 @@ All interfaces and types in dedicated files:
 export type UserRole = "SOLVER" | "SEEKER" | "ADMIN";
 
 export interface User {
-  id: number;
+  id: string;
   email: string;
   firstName: string;
   lastName: string;
   role: UserRole;
   institution?: string;
+  degreeProgram?: string;
+}
+
+// Common fields for all registrations
+export interface BaseRegisterPayload {
+  email: string;
+  password: string;
+}
+
+// Solver-specific registration (students)
+export interface SolverRegisterPayload extends BaseRegisterPayload {
+  firstName: string;
+  lastName: string;
+  institution: string;
+  degreeProgram: string;
+}
+
+// Seeker-specific registration (industry partners)
+export interface SeekerRegisterPayload extends BaseRegisterPayload {
+  organizationName: string;
+  contactPerson: string;
+}
+
+export interface LoginPayload {
+  email: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  userId: string;
+  email: string;
+  role: UserRole;
+}
+```
   degreeProgram?: string;
 }
 
@@ -339,6 +426,23 @@ const handleSubmit = async (e: React.FormEvent) => {
 - Display errors: Toast notifications or inline error messages
 
 ## Common Patterns
+
+### Role-Specific Pages and Features
+
+**Admin Features:**
+- **Add Industry Page** (`/admin/add-industry`):
+  - Creates SEEKER user accounts and SeekerProfile
+  - Form fields: email, password, organizationName, contactPerson
+  - No multi-step form (unlike public registration)
+  - Uses CSS variables for theming (bg-accent, focus:ring-accent)
+  - Accessible via "Add Industry" tab in admin navigation
+
+**Form Patterns:**
+- Solver registration: 2-step form (credentials → profile details)
+- Admin add-industry: Single-step form (all fields on one page)
+- All forms use controlled components with `useState`
+- Password confirmation validation on client-side
+- Server-side validation on backend
 
 ### Redirects After Login
 ```typescript

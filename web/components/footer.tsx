@@ -8,7 +8,7 @@ export default function Footer() {
           {/* Logo & Brand */}
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-[#5CA87C] to-[#288760] rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 bg-gradient-to-br from-accent to-primary-foreground rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-xl">S</span>
               </div>
               <span className="text-2xl font-bold text-gray-900">Solvad</span>
@@ -23,19 +23,19 @@ export default function Footer() {
             <h3 className="font-semibold text-gray-900 mb-2">Quick Links</h3>
             <Link
               href="/about"
-              className="text-gray-600 hover:text-[#288760] transition-colors text-sm"
+              className="text-gray-600 hover:text-primary-foreground transition-colors text-sm"
             >
               About
             </Link>
             <Link
               href="/contact"
-              className="text-gray-600 hover:text-[#288760] transition-colors text-sm"
+              className="text-gray-600 hover:text-primary-foreground transition-colors text-sm"
             >
               Contact Us
             </Link>
             <Link
               href="/privacy"
-              className="text-gray-600 hover:text-[#288760] transition-colors text-sm"
+              className="text-gray-600 hover:text-primary-foreground transition-colors text-sm"
             >
               Privacy Policy
             </Link>
@@ -46,13 +46,13 @@ export default function Footer() {
             <h3 className="font-semibold text-gray-900 mb-2">Get Started</h3>
             <Link
               href="/register"
-              className="text-gray-600 hover:text-[#288760] transition-colors text-sm"
+              className="text-gray-600 hover:text-primary-foreground transition-colors text-sm"
             >
               Sign Up as Solver
             </Link>
             <Link
               href="/submit-problem"
-              className="text-gray-600 hover:text-[#288760] transition-colors text-sm"
+              className="text-gray-600 hover:text-primary-foreground transition-colors text-sm"
             >
               Submit a Problem
             </Link>

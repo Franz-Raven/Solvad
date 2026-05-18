@@ -2,11 +2,13 @@ package com.solvad.backend.controller;
 
 import com.solvad.backend.dto.AuthResponse;
 import com.solvad.backend.dto.LoginRequest;
-import com.solvad.backend.dto.RegisterRequest;
+import com.solvad.backend.dto.SeekerRegisterRequest;
+import com.solvad.backend.dto.SolverRegisterRequest;
 import com.solvad.backend.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,10 +19,21 @@ public class AuthController {
     @Autowired
     private AuthService authService;
 
-    @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
+    @PostMapping("/register/solver")
+    public ResponseEntity<?> registerSolver(@Valid @RequestBody SolverRegisterRequest request) {
         try {
-            AuthResponse response = authService.register(request);
+            AuthResponse response = authService.registerSolver(request);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/register/seeker")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> registerSeeker(@Valid @RequestBody SeekerRegisterRequest request) {
+        try {
+            AuthResponse response = authService.registerSeeker(request);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());

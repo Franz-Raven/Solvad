@@ -139,27 +139,45 @@ public class AuthController {
     @Autowired
     private AuthService authService;
     
-    @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest request) {
+    @PostMapping("/register/solver")
+    public ResponseEntity<?> registerSolver(@Valid @RequestBody SolverRegisterRequest request) {
         try {
-            AuthResponse response = authService.register(request);
+            AuthResponse response = authService.registerSolver(request);
             return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+    
+    @PostMapping("/register/seeker")
+    public ResponseEntity<?> registerSeeker(@Valid @RequestBody SeekerRegisterRequest request) {
+        try {
+            AuthResponse response = authService.registerSeeker(request);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
     
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
         try {
             AuthResponse response = authService.login(request);
             return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 }
 ```
+
+**Key Patterns:**
+- **Split Registration Endpoints:** Separate endpoints for SOLVER and SEEKER registration
+  - `/api/auth/register/solver` - Creates User + SolverProfile
+  - `/api/auth/register/seeker` - Creates User + SeekerProfile
+- **Type-Safe DTOs:** `SolverRegisterRequest` and `SeekerRegisterRequest` enforce required fields
+- **Validation:** `@Valid` annotation triggers Jakarta validation
+- **Error Handling:** Try-catch blocks return appropriate HTTP status codes
 
 ### Response Format
 **Success:**
@@ -190,8 +208,11 @@ public class AuthController {
 ## Naming Conventions
 
 ### Java Classes
-- **Entities:** `PascalCase` (e.g., `User`, `SolverProfile`, `Problem`)
-- **DTOs:** `PascalCase` + suffix (e.g., `LoginRequest`, `AuthResponse`)
+- **Entities:** `PascalCase` (e.g., `User`, `SolverProfile`, `SeekerProfile`, `Problem`)
+- **DTOs:** `PascalCase` + suffix (e.g., `SolverRegisterRequest`, `SeekerRegisterRequest`, `LoginRequest`, `AuthResponse`)
+  - **Registration DTOs are role-specific:** Each user role has its own request DTO with required fields
+  - `SolverRegisterRequest` - firstName, lastName, institution, degreeProgram
+  - `SeekerRegisterRequest` - organizationName, contactPerson
 - **Services:** `PascalCase` + `Service` (e.g., `AuthService`, `UserService`)
 - **Repositories:** `PascalCase` + `Repository` (e.g., `UserRepository`)
 - **Controllers:** `PascalCase` + `Controller` (e.g., `AuthController`)
