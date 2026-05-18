@@ -76,4 +76,48 @@ public class ProblemController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    @PatchMapping("/{problemId}/status")
+    @PreAuthorize("hasRole('SEEKER')")
+    public ResponseEntity<?> updateProblemStatus(@RequestHeader("Authorization") String authHeader,
+                                                 @PathVariable UUID problemId,
+                                                 @RequestBody UpdateStatusRequest request) {
+        try {
+            String token = authHeader.substring(7);
+            UUID seekerUserId = jwtService.extractUserId(token);
+            
+            ProblemResponse response = problemService.updateProblemStatus(seekerUserId, problemId, request.getStatus());
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/{problemId}")
+    @PreAuthorize("hasRole('SEEKER')")
+    public ResponseEntity<?> deleteProblem(@RequestHeader("Authorization") String authHeader,
+                                          @PathVariable UUID problemId) {
+        try {
+            String token = authHeader.substring(7);
+            UUID seekerUserId = jwtService.extractUserId(token);
+            
+            problemService.deleteProblem(seekerUserId, problemId);
+            return ResponseEntity.ok().body("Problem deleted successfully");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // Simple DTO for status update
+    public static class UpdateStatusRequest {
+        private String status;
+
+        public String getStatus() {
+            return status;
+        }
+
+        public void setStatus(String status) {
+            this.status = status;
+        }
+    }
 }

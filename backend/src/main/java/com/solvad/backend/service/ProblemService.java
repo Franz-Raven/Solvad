@@ -2,6 +2,7 @@ package com.solvad.backend.service;
 
 import com.solvad.backend.dto.*;
 import com.solvad.backend.entity.Problem;
+import com.solvad.backend.entity.ProblemStatus;
 import com.solvad.backend.entity.ProblemSubtask;
 import com.solvad.backend.entity.SeekerProfile;
 import com.solvad.backend.repository.ProblemRepository;
@@ -99,6 +100,55 @@ public class ProblemService {
         List<ProblemSubtask> subtasks = subtaskRepository.findByProblem(problem);
         
         return mapToResponse(problem, subtasks, problem.getSeeker());
+    }
+
+    @Transactional
+    public ProblemResponse updateProblemStatus(UUID seekerUserId, UUID problemId, String newStatus) {
+        // Find the problem
+        Problem problem = problemRepository.findById(problemId)
+            .orElseThrow(() -> new RuntimeException("Problem not found"));
+
+        // Verify ownership
+        SeekerProfile seeker = seekerProfileRepository.findByUserId(seekerUserId)
+            .orElseThrow(() -> new RuntimeException("Seeker profile not found"));
+        
+        if (!problem.getSeeker().getId().equals(seeker.getId())) {
+            throw new RuntimeException("You do not have permission to update this problem");
+        }
+
+        // Update status
+        try {
+            problem.setStatus(ProblemStatus.valueOf(newStatus));
+            problemRepository.save(problem);
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Invalid status: " + newStatus);
+        }
+
+        // Return updated problem
+        List<ProblemSubtask> subtasks = subtaskRepository.findByProblem(problem);
+        return mapToResponse(problem, subtasks, seeker);
+    }
+
+    @Transactional
+    public void deleteProblem(UUID seekerUserId, UUID problemId) {
+        // Find the problem
+        Problem problem = problemRepository.findById(problemId)
+            .orElseThrow(() -> new RuntimeException("Problem not found"));
+
+        // Verify ownership
+        SeekerProfile seeker = seekerProfileRepository.findByUserId(seekerUserId)
+            .orElseThrow(() -> new RuntimeException("Seeker profile not found"));
+        
+        if (!problem.getSeeker().getId().equals(seeker.getId())) {
+            throw new RuntimeException("You do not have permission to delete this problem");
+        }
+
+        // Delete subtasks first (cascade should handle this, but being explicit)
+        List<ProblemSubtask> subtasks = subtaskRepository.findByProblem(problem);
+        subtaskRepository.deleteAll(subtasks);
+
+        // Delete the problem
+        problemRepository.delete(problem);
     }
 
     private ProblemResponse mapToResponse(Problem problem, List<ProblemSubtask> subtasks, SeekerProfile seeker) {

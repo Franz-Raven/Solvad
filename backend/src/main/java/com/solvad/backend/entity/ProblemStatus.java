@@ -4,5 +4,6 @@ public enum ProblemStatus {
     OPEN,
     CLAIMED,
     IN_PROGRESS,
-    SOLVED
+    SOLVED,
+    CLOSED
 }
