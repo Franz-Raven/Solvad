@@ -37,3 +37,19 @@ export async function getProblemById(
     method: "GET",
   });
 }
+
+export async function updateProblemStatus(
+  problemId: string,
+  status: string
+): Promise<ProblemResponse> {
+  return apiRequest<ProblemResponse>(`/problems/${problemId}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+}
+
+export async function deleteProblem(problemId: string): Promise<void> {
+  return apiRequest<void>(`/problems/${problemId}`, {
+    method: "DELETE",
+  });
+}
