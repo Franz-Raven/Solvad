@@ -186,4 +186,53 @@ public class ProblemService {
             subtaskResponses
         );
     }
+
+    @Transactional
+    public Problem claimProblem(UUID problemId, UUID solverUserId) {
+        Problem problem = problemRepository.findById(problemId)
+                .orElseThrow(() -> new RuntimeException("Problem not found: " + problemId));
+
+        // FIXED: Compare against the enum, not a string
+        if (problem.getStatus() != ProblemStatus.OPEN) {
+            throw new RuntimeException("Only OPEN problems can be claimed.");
+        }
+
+        // FIXED: Pass the enum, not a string
+        problem.setStatus(ProblemStatus.CLAIMED);
+
+        // TODO for future: if Problem entity has a solver_id foreign key, set it here.
+        // problem.setAssignedSolverId(solverUserId);
+
+        Problem savedProblem = problemRepository.save(problem);
+
+        // Write the immutable log entry for Module 3
+        activityLedgerService.log(
+                solverUserId,
+                problemId,
+                ActivityActionType.CLAIMED,
+                "Problem claimed by solver"
+        );
+
+        return savedProblem;
+    }
+
+    /**
+     * Fetches all problems matching a specific status (used for Solver matchmaking).
+     */
+    @Transactional(readOnly = true)
+    public List<ProblemResponse> getProblemsByStatus(String statusStr) {
+        try {
+            ProblemStatus status = ProblemStatus.valueOf(statusStr.toUpperCase());
+            List<Problem> problems = problemRepository.findByStatus(status);
+
+            return problems.stream()
+                    .map(problem -> {
+                        List<ProblemSubtask> subtasks = subtaskRepository.findByProblem(problem);
+                        return mapToResponse(problem, subtasks, problem.getSeeker());
+                    })
+                    .collect(Collectors.toList());
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Invalid status: " + statusStr);
+        }
+    }
 }

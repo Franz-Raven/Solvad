@@ -120,4 +120,38 @@ public class ProblemController {
             this.status = status;
         }
     }
+
+    @PostMapping("/{id}/claim")
+    @PreAuthorize("hasRole('SOLVER')")
+    public ResponseEntity<?> claimProblem(
+            @PathVariable UUID id,
+            @RequestHeader("Authorization") String authHeader) {
+        try {
+            String token = authHeader.substring(7);
+            UUID solverUserId = jwtService.extractUserId(token);
+
+            problemService.claimProblem(id, solverUserId);
+            return ResponseEntity.ok().body("{\"message\": \"Problem claimed successfully\"}");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @GetMapping
+    @PreAuthorize("hasAnyRole('SEEKER', 'SOLVER', 'ADMIN')")
+    public ResponseEntity<?> getProblems(@RequestParam(required = false) String status) {
+        try {
+            if (status != null && !status.isEmpty()) {
+                List<ProblemResponse> problems = problemService.getProblemsByStatus(status);
+                return ResponseEntity.ok(problems);
+            }
+            // If no status is provided, return an empty list or implement getAll()
+            return ResponseEntity.ok(List.of());
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 }
+
+
+
