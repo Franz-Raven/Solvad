@@ -1,12 +1,12 @@
 package com.solvad.backend.dto;
 
-import com.solvad.backend.entity.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-public class RegisterRequest {
+public class SolverRegisterRequest {
+    
     @NotBlank(message = "Email is required")
     @Email(message = "Email must be valid")
     private String email;
@@ -19,19 +19,24 @@ public class RegisterRequest {
     )
     private String password;
     
-    private Role role;
+    @NotBlank(message = "First name is required")
     private String firstName;
+    
+    @NotBlank(message = "Last name is required")
     private String lastName;
+    
+    @NotBlank(message = "Institution is required")
     private String institution;
+    
+    @NotBlank(message = "Degree program is required")
     private String degreeProgram;
 
-    public RegisterRequest() {
+    public SolverRegisterRequest() {
     }
 
-    public RegisterRequest(String email, String password, Role role, String firstName, String lastName, String institution, String degreeProgram) {
+    public SolverRegisterRequest(String email, String password, String firstName, String lastName, String institution, String degreeProgram) {
         this.email = email;
         this.password = password;
-        this.role = role;
         this.firstName = firstName;
         this.lastName = lastName;
         this.institution = institution;
@@ -52,14 +57,6 @@ public class RegisterRequest {
 
     public void setPassword(String password) {
         this.password = password;
-    }
-
-    public Role getRole() {
-        return role;
-    }
-
-    public void setRole(Role role) {
-        this.role = role;
     }
 
     public String getFirstName() {

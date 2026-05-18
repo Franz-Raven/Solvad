@@ -10,7 +10,7 @@ export default function Navigation() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-[#5CA87C] to-[#288760] rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-br from-accent to-primary-foreground rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-xl">S</span>
             </div>
             <span className="text-2xl font-bold text-gray-900">Solvad</span>

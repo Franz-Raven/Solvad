@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Step1 from "@/components/register/step1";
 import Step2 from "@/components/register/step2";
-import { registerUser } from "@/lib/api/auth";
+import { registerSolver } from "@/lib/api/auth";
 import { setAuthCookies, setAuthStorage, getDashboardPath } from "@/lib/auth-utils";
 
 export default function RegisterPage() {
@@ -74,10 +74,9 @@ export default function RegisterPage() {
     setError(null);
     
     try {
-      const response = await registerUser({
+      const response = await registerSolver({
         email: step1Data.email,
         password: step1Data.password,
-        role: "SOLVER",
         firstName: step2Data.firstName,
         lastName: step2Data.lastName,
         institution: step2Data.university,

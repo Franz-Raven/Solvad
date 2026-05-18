@@ -2,10 +2,13 @@ package com.solvad.backend.service;
 
 import com.solvad.backend.dto.AuthResponse;
 import com.solvad.backend.dto.LoginRequest;
-import com.solvad.backend.dto.RegisterRequest;
+import com.solvad.backend.dto.SeekerRegisterRequest;
+import com.solvad.backend.dto.SolverRegisterRequest;
 import com.solvad.backend.entity.Role;
+import com.solvad.backend.entity.SeekerProfile;
 import com.solvad.backend.entity.SolverProfile;
 import com.solvad.backend.entity.User;
+import com.solvad.backend.repository.SeekerProfileRepository;
 import com.solvad.backend.repository.SolverProfileRepository;
 import com.solvad.backend.repository.UserRepository;
 import com.solvad.backend.security.JwtService;
@@ -24,13 +27,16 @@ public class AuthService {
     private SolverProfileRepository solverProfileRepository;
 
     @Autowired
+    private SeekerProfileRepository seekerProfileRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Autowired
     private JwtService jwtService;
 
     @Transactional
-    public AuthResponse register(RegisterRequest request) {
+    public AuthResponse registerSolver(SolverRegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email already exists");
         }
@@ -38,19 +44,41 @@ public class AuthService {
         User user = new User();
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRole(request.getRole() != null ? request.getRole() : Role.SOLVER);
+        user.setRole(Role.SOLVER);
 
         user = userRepository.save(user);
 
-        if (user.getRole() == Role.SOLVER) {
-            SolverProfile profile = new SolverProfile();
-            profile.setUser(user);
-            profile.setFirstName(request.getFirstName());
-            profile.setLastName(request.getLastName());
-            profile.setInstitution(request.getInstitution());
-            profile.setDegreeProgram(request.getDegreeProgram());
-            solverProfileRepository.save(profile);
+        SolverProfile profile = new SolverProfile();
+        profile.setUser(user);
+        profile.setFirstName(request.getFirstName());
+        profile.setLastName(request.getLastName());
+        profile.setInstitution(request.getInstitution());
+        profile.setDegreeProgram(request.getDegreeProgram());
+        solverProfileRepository.save(profile);
+
+        String token = jwtService.generateToken(user.getId(), user.getEmail(), user.getRole().name());
+
+        return new AuthResponse(token, user.getId(), user.getEmail(), user.getRole());
+    }
+
+    @Transactional
+    public AuthResponse registerSeeker(SeekerRegisterRequest request) {
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new RuntimeException("Email already exists");
         }
+
+        User user = new User();
+        user.setEmail(request.getEmail());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setRole(Role.SEEKER);
+
+        user = userRepository.save(user);
+
+        SeekerProfile profile = new SeekerProfile();
+        profile.setUser(user);
+        profile.setOrganizationName(request.getOrganizationName());
+        profile.setContactPerson(request.getContactPerson());
+        seekerProfileRepository.save(profile);
 
         String token = jwtService.generateToken(user.getId(), user.getEmail(), user.getRole().name());
 

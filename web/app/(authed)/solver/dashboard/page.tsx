@@ -2,7 +2,7 @@
 
 export default function SolverDashboardPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#B7E5BA]/20 via-background to-[#5CA87C]/10 p-8">
+    <div className="min-h-screen bg-gradient-to-br from-accent/20 via-background to-accent/10 p-8">
       <div className="max-w-7xl mx-auto">
         {/* Hero Section */}
         <div className="mb-12 text-center">
@@ -20,7 +20,7 @@ export default function SolverDashboardPage() {
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
               Available Problems
             </h3>
-            <p className="text-3xl font-bold text-[#5CA87C]">12</p>
+            <p className="text-3xl font-bold text-accent">12</p>
             <p className="text-sm text-gray-600 mt-2">New challenges matched to your profile</p>
           </div>
 
@@ -28,7 +28,7 @@ export default function SolverDashboardPage() {
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
               Active Projects
             </h3>
-            <p className="text-3xl font-bold text-[#288760]">3</p>
+            <p className="text-3xl font-bold text-secondary">3</p>
             <p className="text-sm text-gray-600 mt-2">Currently working on</p>
           </div>
 
@@ -36,7 +36,7 @@ export default function SolverDashboardPage() {
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
               Completed
             </h3>
-            <p className="text-3xl font-bold text-[#1A5140]">7</p>
+            <p className="text-3xl font-bold text-primary-foreground">7</p>
             <p className="text-sm text-gray-600 mt-2">Successfully solved</p>
           </div>
         </div>
@@ -50,9 +50,9 @@ export default function SolverDashboardPage() {
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg hover:bg-[#B7E5BA]/20 transition-colors border border-gray-200"
+                className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg hover:bg-accent/20 transition-colors border border-gray-200"
               >
-                <div className="w-12 h-12 bg-gradient-to-br from-[#5CA87C] to-[#288760] rounded-lg flex items-center justify-center text-white font-bold">
+                <div className="w-12 h-12 bg-gradient-to-br from-accent to-secondary rounded-lg flex items-center justify-center text-white font-bold">
                   {i}
                 </div>
                 <div className="flex-1">
@@ -63,7 +63,7 @@ export default function SolverDashboardPage() {
                     Company Name • Posted 2 days ago • IT/Software Development
                   </p>
                 </div>
-                <button className="px-4 py-2 bg-[#5CA87C] hover:bg-[#288760] text-white text-sm font-medium rounded-lg transition-colors">
+                <button className="px-4 py-2 bg-accent hover:bg-secondary text-white text-sm font-medium rounded-lg transition-colors">
                   View Details
                 </button>
               </div>

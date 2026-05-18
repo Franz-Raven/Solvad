@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import { getDashboardPath } from "@/lib/auth-utils";
 
 export default function AuthedNavigation() {
   const { user, logout } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   const handleLogout = async () => {
     await logout();
@@ -17,13 +18,16 @@ export default function AuthedNavigation() {
   // Get the home path based on user role
   const homePath = user?.role ? getDashboardPath(user.role) : "/";
 
+  // Check if current path matches
+  const isActive = (path: string) => pathname === path;
+
   return (
     <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-b border-gray-200">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href={homePath} className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-[#5CA87C] to-[#288760] rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-br from-accent to-primary-foreground rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-xl">S</span>
             </div>
             <span className="text-2xl font-bold text-gray-900">Solvad</span>
@@ -33,10 +37,24 @@ export default function AuthedNavigation() {
           <nav className="flex items-center gap-8">
             <Link
               href={homePath}
-              className="text-gray-900 font-medium hover:text-[#288760] transition-colors border-b-2 border-[#5CA87C] pb-1"
+              className={`text-gray-900 font-medium hover:text-primary-foreground transition-colors ${
+                isActive(homePath) ? "border-b-2 border-accent pb-1" : ""
+              }`}
             >
               Home
             </Link>
+            
+            {/* Admin-specific tabs */}
+            {user?.role === "ADMIN" && (
+              <Link
+                href="/admin/add-industry"
+                className={`text-gray-900 font-medium hover:text-primary-foreground transition-colors ${
+                  isActive("/admin/add-industry") ? "border-b-2 border-accent pb-1" : ""
+                }`}
+              >
+                Add Industry
+              </Link>
+            )}
           </nav>
 
           {/* Right Side - User Info & Logout */}
