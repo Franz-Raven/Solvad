@@ -2,28 +2,34 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { getRecommendedProblems, claimProblem } from "@/lib/api/solver";
+import { getRecommendedProblems, getActiveProblems, claimProblem } from "@/lib/api/solver";
 import type { ProblemResponse } from "@/types/problem";
 
 export default function SolverDashboardPage() {
-  const [problems, setProblems] = useState<ProblemResponse[]>([]);
+  const [availableProblems, setAvailableProblems] = useState<ProblemResponse[]>([]);
+  const [activeProblems, setActiveProblems] = useState<ProblemResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [claimingId, setClaimingId] = useState<string | null>(null);
 
-  const fetchProblems = async () => {
+  const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const data = await getRecommendedProblems();
-      setProblems(data);
+      // Fetch both feeds in parallel
+      const [recommended, active] = await Promise.all([
+        getRecommendedProblems(),
+        getActiveProblems()
+      ]);
+      setAvailableProblems(recommended);
+      setActiveProblems(active);
     } catch (error) {
-      console.error("Failed to fetch matched problems:", error);
+      console.error("Failed to fetch dashboard data:", error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchProblems();
+    fetchDashboardData();
   }, []);
 
   const handleClaim = async (problemId: string) => {
@@ -31,9 +37,12 @@ export default function SolverDashboardPage() {
       setClaimingId(problemId);
       await claimProblem(problemId);
       
-      // Optimistic UI Update: Instantly remove the claimed problem from the local state
-      // This guarantees a sub-3-second refresh time without waiting for another network request
-      setProblems((prev) => prev.filter((p) => p.id !== problemId));
+      // Optimistic UI: Find the problem, move it from Available to Active
+      const claimedProblem = availableProblems.find(p => p.id === problemId);
+      if (claimedProblem) {
+        setAvailableProblems(prev => prev.filter(p => p.id !== problemId));
+        setActiveProblems(prev => [{ ...claimedProblem, status: "CLAIMED" }, ...prev]);
+      }
       
       alert("Problem successfully claimed! It is now in your active projects.");
     } catch (error) {
@@ -56,33 +65,55 @@ export default function SolverDashboardPage() {
           </p>
         </div>
 
-        {/* Dashboard Content */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {/* Dashboard Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Available Problems</h3>
-            <p className="text-3xl font-bold text-accent">{problems.length}</p>
-            <p className="text-sm text-gray-600 mt-2">New challenges matched to your profile</p>
+            <p className="text-3xl font-bold text-accent">{availableProblems.length}</p>
           </div>
           <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Active Projects</h3>
-            <p className="text-3xl font-bold text-secondary">0</p>
-            <p className="text-sm text-gray-600 mt-2">Currently working on</p>
+            <p className="text-3xl font-bold text-secondary">{activeProblems.length}</p>
           </div>
           <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Completed</h3>
             <p className="text-3xl font-bold text-primary-foreground">0</p>
-            <p className="text-sm text-gray-600 mt-2">Successfully solved</p>
           </div>
         </div>
 
-        {/* Matched Problems Feed */}
+        {/* ACTIVE PROJECTS FEED */}
+        {activeProblems.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-xl border border-secondary/20 p-8 mb-12 border-t-4 border-t-secondary">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Your Active Projects</h2>
+            <div className="space-y-4">
+              {activeProblems.map((problem) => (
+                <div key={problem.id} className="flex flex-col md:flex-row items-start md:items-center gap-4 p-5 bg-secondary/5 rounded-lg border border-secondary/20">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-1">
+                      <h4 className="font-semibold text-gray-900 text-lg">{problem.title}</h4>
+                      <span className="px-2.5 py-0.5 bg-purple-100 text-purple-800 text-xs font-medium rounded-full">
+                        {problem.status}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-2 line-clamp-1">{problem.primaryStatement}</p>
+                  </div>
+                  <Link
+                    href={`/solver/problem/${problem.id}`}
+                    className="px-6 py-2 bg-secondary hover:bg-secondary/90 text-white text-sm font-bold rounded-lg transition-colors whitespace-nowrap"
+                  >
+                    Open Workspace
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* MATCHED PROBLEMS FEED */}
         <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-gray-900">Matched Problems</h2>
-            <button 
-              onClick={fetchProblems}
-              className="text-sm text-secondary hover:text-accent font-medium"
-            >
+            <button onClick={fetchDashboardData} className="text-sm text-accent hover:text-secondary font-medium">
               Refresh Algorithm
             </button>
           </div>
@@ -92,34 +123,14 @@ export default function SolverDashboardPage() {
               <div className="flex justify-center p-8">
                 <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
               </div>
-            ) : problems.length === 0 ? (
+            ) : availableProblems.length === 0 ? (
               <p className="text-center text-gray-500 py-8">No open problems matched your profile at this time.</p>
             ) : (
-              problems.map((problem) => (
-                <div
-                  key={problem.id}
-                  className="flex flex-col md:flex-row items-start md:items-center gap-4 p-5 bg-gray-50 rounded-lg hover:bg-accent/5 transition-colors border border-gray-200"
-                >
+              availableProblems.map((problem) => (
+                <div key={problem.id} className="flex flex-col md:flex-row items-start md:items-center gap-4 p-5 bg-gray-50 rounded-lg border border-gray-200">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-1">
-                      <h4 className="font-semibold text-gray-900 text-lg">
-                        {problem.title}
-                      </h4>
-                      <span className="px-2.5 py-0.5 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
-                        {problem.status}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-                      {problem.primaryStatement}
-                    </p>
-                    <div className="flex gap-2">
-                      <span className="text-xs font-medium text-secondary bg-secondary/10 px-2 py-1 rounded">
-                        {problem.requiredCourse}
-                      </span>
-                      <span className="text-xs text-gray-500 py-1">
-                        {problem.subtasks.length} Sub-tasks
-                      </span>
-                    </div>
+                    <h4 className="font-semibold text-gray-900 text-lg mb-1">{problem.title}</h4>
+                    <p className="text-sm text-gray-600 mb-2 line-clamp-2">{problem.primaryStatement}</p>
                   </div>
                   <div className="flex items-center gap-3 w-full md:w-auto mt-4 md:mt-0">
                     <Link
@@ -141,6 +152,7 @@ export default function SolverDashboardPage() {
             )}
           </div>
         </div>
+
       </div>
     </div>
   );

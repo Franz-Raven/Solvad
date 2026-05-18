@@ -14,4 +14,5 @@ public interface ProblemRepository extends JpaRepository<Problem, UUID> {
     List<Problem> findBySeeker(SeekerProfile seeker);
     List<Problem> findBySeekerId(UUID seekerId);
     List<Problem> findByStatus(ProblemStatus status);
+    List<Problem> findByAssignedSolverIdAndStatusIn(UUID solverId, List<ProblemStatus> statuses);
 }

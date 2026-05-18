@@ -9,8 +9,8 @@ import type { ProblemResponse } from "@/types/problem";
 // New imports for Module 3 (Activity Ledger)
 import { getActivityFeed } from "@/lib/api/activity";
 import type { ActivityLedgerResponse } from "@/types/activity";
-import ActivityFeed from "@/components/activity-feed";
-import DocumentUpload from "@/components/document-upload";
+import ActivityFeed from "@/components/ledger/activity-feed";
+import DocumentUpload from "@/components/ledger/document-upload";
 
 type TabType = "problem" | "insights" | "solvers" | "history" | "settings";
 

@@ -202,6 +202,9 @@ public class ProblemService {
 
         // TODO for future: if Problem entity has a solver_id foreign key, set it here.
         // problem.setAssignedSolverId(solverUserId);
+        problem.setStatus(ProblemStatus.CLAIMED);
+        problem.setAssignedSolverId(solverUserId);
+
 
         Problem savedProblem = problemRepository.save(problem);
 
@@ -216,9 +219,40 @@ public class ProblemService {
         return savedProblem;
     }
 
-    /**
-     * Fetches all problems matching a specific status (used for Solver matchmaking).
-     */
+    @Transactional
+    public Problem submitSolution(UUID problemId, UUID solverUserId, SubmitSolutionRequest request) {
+        Problem problem = problemRepository.findById(problemId)
+                .orElseThrow(() -> new RuntimeException("Problem not found: " + problemId));
+
+        // Ensure the problem is in a state where it can be solved
+        if (problem.getStatus() != ProblemStatus.CLAIMED && problem.getStatus() != ProblemStatus.IN_PROGRESS) {
+            throw new RuntimeException("Only CLAIMED or IN_PROGRESS problems can be submitted for solving.");
+        }
+
+        // Update the problem status to SOLVED
+        problem.setStatus(ProblemStatus.SOLVED);
+        Problem savedProblem = problemRepository.save(problem);
+
+        // Optional: In a full production app, you might save the actual solution text to a Solution entity here.
+
+        // Write the immutable log entry
+        // We use the metadata column to store a snippet of the solution or the file link
+        String metadataContext = request.getFileUrl() != null && !request.getFileUrl().isEmpty()
+                ? "Includes attached document."
+                : "Text submission only.";
+
+        activityLedgerService.log(
+                solverUserId,
+                problemId,
+                ActivityActionType.SOLUTION_SUBMITTED,
+                "Solution submitted for review",
+                metadataContext
+        );
+
+        return savedProblem;
+    }
+
+
     @Transactional(readOnly = true)
     public List<ProblemResponse> getProblemsByStatus(String statusStr) {
         try {
@@ -234,5 +268,18 @@ public class ProblemService {
         } catch (IllegalArgumentException e) {
             throw new RuntimeException("Invalid status: " + statusStr);
         }
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProblemResponse> getSolverActiveProblems(UUID solverUserId) {
+        List<ProblemStatus> activeStatuses = List.of(ProblemStatus.CLAIMED, ProblemStatus.IN_PROGRESS);
+        List<Problem> problems = problemRepository.findByAssignedSolverIdAndStatusIn(solverUserId, activeStatuses);
+
+        return problems.stream()
+                .map(problem -> {
+                    List<ProblemSubtask> subtasks = subtaskRepository.findByProblem(problem);
+                    return mapToResponse(problem, subtasks, problem.getSeeker());
+                })
+                .collect(Collectors.toList());
     }
 }

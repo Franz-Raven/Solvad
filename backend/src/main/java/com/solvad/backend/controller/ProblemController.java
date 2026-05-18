@@ -1,9 +1,6 @@
 package com.solvad.backend.controller;
 
-import com.solvad.backend.dto.GenerateScopeRequest;
-import com.solvad.backend.dto.GenerateScopeResponse;
-import com.solvad.backend.dto.ProblemRequest;
-import com.solvad.backend.dto.ProblemResponse;
+import com.solvad.backend.dto.*;
 import com.solvad.backend.security.JwtService;
 import com.solvad.backend.service.ProblemService;
 import jakarta.validation.Valid;
@@ -151,6 +148,38 @@ public class ProblemController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    @PostMapping("/{id}/solutions")
+    @PreAuthorize("hasRole('SOLVER')")
+    public ResponseEntity<?> submitSolution(
+            @PathVariable UUID id,
+            @RequestHeader("Authorization") String authHeader,
+            @Valid @RequestBody SubmitSolutionRequest request) {
+        try {
+            String token = authHeader.substring(7);
+            UUID solverUserId = jwtService.extractUserId(token);
+
+            problemService.submitSolution(id, solverUserId, request);
+
+            return ResponseEntity.ok().body("{\"message\": \"Solution submitted successfully\"}");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/solver/active")
+    @PreAuthorize("hasRole('SOLVER')")
+    public ResponseEntity<?> getSolverActiveProblems(@RequestHeader("Authorization") String authHeader) {
+        try {
+            String token = authHeader.substring(7);
+            UUID solverUserId = jwtService.extractUserId(token);
+            List<ProblemResponse> problems = problemService.getSolverActiveProblems(solverUserId);
+            return ResponseEntity.ok(problems);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
 }
 
 

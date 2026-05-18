@@ -137,4 +137,10 @@ public class Problem {
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
+
+    @Column(name = "assigned_solver_id")
+    private UUID assignedSolverId;
+
+    public UUID getAssignedSolverId() { return assignedSolverId; }
+    public void setAssignedSolverId(UUID assignedSolverId) { this.assignedSolverId = assignedSolverId; }
 }
