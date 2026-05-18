@@ -16,6 +16,9 @@ public class ProblemSubtask {
     @JoinColumn(name = "problem_id", nullable = false)
     private Problem problem;
 
+    @Column(nullable = false)
+    private String title;
+
     @Column(columnDefinition = "TEXT", nullable = false)
     private String description;
 
@@ -25,8 +28,9 @@ public class ProblemSubtask {
     public ProblemSubtask() {
     }
 
-    public ProblemSubtask(Problem problem, String description, String departmentFocus) {
+    public ProblemSubtask(Problem problem, String title, String description, String departmentFocus) {
         this.problem = problem;
+        this.title = title;
         this.description = description;
         this.departmentFocus = departmentFocus;
     }
@@ -61,5 +65,13 @@ public class ProblemSubtask {
 
     public void setDepartmentFocus(String departmentFocus) {
         this.departmentFocus = departmentFocus;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
     }
 }

@@ -1,0 +1,137 @@
+package com.solvad.backend.dto;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+
+public class ProblemResponse {
+    private UUID id;
+    private String title;
+    private String backgroundContext;
+    private String primaryStatement;
+    private String objectives;
+    private String constraints;
+    private String requiredCourse;
+    private String status;
+    private UUID seekerId;
+    private String seekerOrganization;
+    private LocalDateTime createdAt;
+    private List<SubtaskResponse> subtasks;
+
+    public ProblemResponse() {
+    }
+
+    public ProblemResponse(UUID id, String title, String backgroundContext, String primaryStatement,
+                          String objectives, String constraints, String requiredCourse, String status,
+                          UUID seekerId, String seekerOrganization, LocalDateTime createdAt,
+                          List<SubtaskResponse> subtasks) {
+        this.id = id;
+        this.title = title;
+        this.backgroundContext = backgroundContext;
+        this.primaryStatement = primaryStatement;
+        this.objectives = objectives;
+        this.constraints = constraints;
+        this.requiredCourse = requiredCourse;
+        this.status = status;
+        this.seekerId = seekerId;
+        this.seekerOrganization = seekerOrganization;
+        this.createdAt = createdAt;
+        this.subtasks = subtasks;
+    }
+
+    public UUID getId() {
+        return id;
+    }
+
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getBackgroundContext() {
+        return backgroundContext;
+    }
+
+    public void setBackgroundContext(String backgroundContext) {
+        this.backgroundContext = backgroundContext;
+    }
+
+    public String getPrimaryStatement() {
+        return primaryStatement;
+    }
+
+    public void setPrimaryStatement(String primaryStatement) {
+        this.primaryStatement = primaryStatement;
+    }
+
+    public String getObjectives() {
+        return objectives;
+    }
+
+    public void setObjectives(String objectives) {
+        this.objectives = objectives;
+    }
+
+    public String getConstraints() {
+        return constraints;
+    }
+
+    public void setConstraints(String constraints) {
+        this.constraints = constraints;
+    }
+
+    public String getRequiredCourse() {
+        return requiredCourse;
+    }
+
+    public void setRequiredCourse(String requiredCourse) {
+        this.requiredCourse = requiredCourse;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public UUID getSeekerId() {
+        return seekerId;
+    }
+
+    public void setSeekerId(UUID seekerId) {
+        this.seekerId = seekerId;
+    }
+
+    public String getSeekerOrganization() {
+        return seekerOrganization;
+    }
+
+    public void setSeekerOrganization(String seekerOrganization) {
+        this.seekerOrganization = seekerOrganization;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public List<SubtaskResponse> getSubtasks() {
+        return subtasks;
+    }
+
+    public void setSubtasks(List<SubtaskResponse> subtasks) {
+        this.subtasks = subtasks;
+    }
+}
