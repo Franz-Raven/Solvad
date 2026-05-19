@@ -7,7 +7,7 @@ import AuthedNavigation from "@/components/authed-navigation";
 export default function AuthedLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col isolate">
         <AuthedNavigation />
         <main className="flex-1">
           {children}
