@@ -21,7 +21,7 @@ export interface SolutionAttemptResponse {
   solverLastName: string;
   solverInstitution: string;
   solverDegreeProgram: string;
-  status: "ACTIVE" | "ABANDONED" | "COMPLETED";
+  status: "ACTIVE" | "ABANDONED" | "COMPLETED" | "TERMINATED";
   submissions: SubtaskSubmissionResponse[];
   claimedAt: string;
   updatedAt: string;
