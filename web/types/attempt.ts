@@ -25,5 +25,7 @@ export interface SolutionAttemptResponse {
   claimedAt: string;
   updatedAt: string;
   completedAt: string | null;
+  parentAttemptId?: string;    // <-- Add this
+  parentSolverName?: string;   // <-- Add this
 }
 

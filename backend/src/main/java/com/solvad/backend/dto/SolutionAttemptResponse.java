@@ -33,7 +33,8 @@ public class SolutionAttemptResponse {
                                    String solverInstitution, String solverDegreeProgram,
                                    String status, List<SubtaskSubmissionResponse> submissions,
                                    LocalDateTime claimedAt, LocalDateTime updatedAt,
-                                   LocalDateTime completedAt) {
+                                   LocalDateTime completedAt,
+                                   UUID parentAttemptId, String parentSolverName) {
         this.id = id;
         this.problemId = problemId;
         this.problemTitle = problemTitle;
@@ -47,6 +48,8 @@ public class SolutionAttemptResponse {
         this.claimedAt = claimedAt;
         this.updatedAt = updatedAt;
         this.completedAt = completedAt;
+        this.parentAttemptId = parentAttemptId;
+        this.parentSolverName = parentSolverName;
     }
 
     public UUID getId() { return id; }
@@ -87,4 +90,20 @@ public class SolutionAttemptResponse {
 
     public LocalDateTime getCompletedAt() { return completedAt; }
     public void setCompletedAt(LocalDateTime completedAt) { this.completedAt = completedAt; }
+    // Add these right before the final closing brace } of the class
+
+    public UUID getParentAttemptId() {
+        return parentAttemptId;
+    }
+    public void setParentAttemptId(UUID parentAttemptId) {
+        this.parentAttemptId = parentAttemptId;
+    }
+
+    public String getParentSolverName() {
+        return parentSolverName;
+    }
+    public void setParentSolverName(String parentSolverName) {
+        this.parentSolverName = parentSolverName;
+    }
+
 }

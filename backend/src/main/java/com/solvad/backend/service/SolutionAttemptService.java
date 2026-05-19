@@ -357,27 +357,25 @@ public class SolutionAttemptService {
     // MAPPERS
     // -------------------------------------------------------------------------
 
-    private SolutionAttemptResponse mapToResponse(SolutionAttempt attempt,
-                                                  List<SubtaskSubmission> submissions) {
+    private SolutionAttemptResponse mapToResponse(SolutionAttempt attempt, List<SubtaskSubmission> submissions) {
         List<SubtaskSubmissionResponse> submissionResponses = submissions.stream()
                 .map(this::mapSubmissionToResponse)
                 .collect(Collectors.toList());
 
         SolverProfile solver = attempt.getSolver();
+
+        // Extract parent info if it exists
+        UUID parentId = attempt.getParentAttempt() != null ? attempt.getParentAttempt().getId() : null;
+        String parentName = attempt.getParentAttempt() != null ?
+                attempt.getParentAttempt().getSolver().getFirstName() + " " + attempt.getParentAttempt().getSolver().getLastName() : null;
+
         return new SolutionAttemptResponse(
-                attempt.getId(),
-                attempt.getProblem().getId(),
-                attempt.getProblem().getTitle(),
-                solver.getId(),
-                solver.getFirstName(),
-                solver.getLastName(),
-                solver.getInstitution(),
-                solver.getDegreeProgram(),
-                attempt.getStatus().name(),
-                submissionResponses,
-                attempt.getClaimedAt(),
-                attempt.getUpdatedAt(),
-                attempt.getCompletedAt()
+                attempt.getId(), attempt.getProblem().getId(), attempt.getProblem().getTitle(),
+                solver.getId(), solver.getFirstName(), solver.getLastName(),
+                solver.getInstitution(), solver.getDegreeProgram(),
+                attempt.getStatus().name(), submissionResponses,
+                attempt.getClaimedAt(), attempt.getUpdatedAt(), attempt.getCompletedAt(),
+                parentId, parentName // <-- Added here
         );
     }
 

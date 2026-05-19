@@ -65,16 +65,17 @@ export default function SolverProblemDetailPage() {
     }
   };
 
-  // Updated to accept an optional parentAttemptId for forking
+  // Updated to accept the optional parentAttemptId
   const handleClaim = async (parentAttemptId?: string) => {
     if (!problem) return;
     setClaiming(true);
     setError(null);
 
     try {
+      // Pass both IDs to our updated API function
       const attempt = await claimProblem(problemId, parentAttemptId);
       setMyAttempt(attempt);
-      // Navigate straight to the work page
+      
       router.push(`/solver/problem/${problemId}/work`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to claim problem");
@@ -320,14 +321,17 @@ export default function SolverProblemDetailPage() {
                           onClick={() => setExpandedAttempt(expandedAttempt === attempt.id ? null : attempt.id)}
                         >
                           <div>
-                            <h3 className="font-bold text-gray-900 text-lg">{attempt.solverFirstName} {attempt.solverLastName}</h3>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-bold text-gray-900 text-lg">{attempt.solverFirstName} {attempt.solverLastName}</h3>
+                              {/* --- NEW: The Fork / Delta Indicator --- */}
+                              {attempt.parentAttemptId && (
+                                <span className="px-2 py-0.5 bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold rounded-full flex items-center gap-1">
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7l-2 2m2-2l2 2m4 4v-4a2 2 0 00-2-2h-6"/></svg>
+                                  Built upon {attempt.parentSolverName}'s solution
+                                </span>
+                              )}
+                            </div>
                             <p className="text-sm text-gray-600 font-medium">{attempt.solverDegreeProgram} • {attempt.solverInstitution}</p>
-                          </div>
-                          <div className="text-right">
-                            <span className={`inline-block px-3 py-1 text-xs font-bold rounded-full mb-2 ${attempt.status === 'COMPLETED' ? 'bg-green-100 text-green-700 border border-green-200' : attempt.status === 'ABANDONED' ? 'bg-red-100 text-red-700 border border-red-200' : 'bg-yellow-100 text-yellow-700 border border-yellow-200'}`}>
-                              {attempt.status}
-                            </span>
-                            <p className="text-xs text-gray-500 font-medium">{attemptDate.toLocaleDateString()}</p>
                           </div>
                         </div>
 

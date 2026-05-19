@@ -10,6 +10,7 @@ import {
   deleteFileFromSubmission,
   abandonClaim,
   submitFullAttempt,
+  getAttemptById
 } from "@/lib/api/attempts";
 import type { ProblemResponse } from "@/types/problem";
 import type { SolutionAttemptResponse, SubtaskSubmissionResponse } from "@/types/attempt";
@@ -24,6 +25,7 @@ export default function SolverWorkPage() {
 
   const [problem, setProblem] = useState<ProblemResponse | null>(null);
   const [attempt, setAttempt] = useState<SolutionAttemptResponse | null>(null);
+  const [parentAttempt, setParentAttempt] = useState<SolutionAttemptResponse | null>(null); // <-- Add this
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [workState, setWorkState] = useState<WorkState>("IDLE");
@@ -64,6 +66,16 @@ export default function SolverWorkPage() {
       }
       
       setAttempt(attemptData);
+
+      // Inside loadData, right after setAttempt(attemptData);
+      if (attemptData.parentAttemptId) {
+        try {
+          const parentData = await getAttemptById(attemptData.parentAttemptId);
+          setParentAttempt(parentData);
+        } catch (e) {
+          console.error("Could not load parent attempt details");
+        }
+      }
 
       if (problemData.subtasks.length > 0) {
         setActiveSubtaskId(problemData.subtasks[0].id);
@@ -451,6 +463,37 @@ export default function SolverWorkPage() {
                 ) : (
                   /* Editable draft form */
                   <div className="space-y-4">
+
+                    {/* --- NEW: Parent Reference Box --- */}
+                    {parentAttempt && (
+                      <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-4 mb-6">
+                        <div className="flex items-center gap-2 mb-2">
+                          <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                          <h4 className="text-sm font-semibold text-blue-900">
+                            Reference: Original Solution by {parentAttempt.solverFirstName}
+                          </h4>
+                        </div>
+                        <p className="text-sm text-blue-800/80 whitespace-pre-wrap pl-6 border-l-2 border-blue-200">
+                          {parentAttempt.submissions.find(s => s.subtaskId === activeSubtaskId)?.description || "No description provided in parent solution."}
+                        </p>
+                        
+                        {/* Show parent files if they exist */}
+                        {parentAttempt.submissions.find(s => s.subtaskId === activeSubtaskId)?.fileUrls && parentAttempt.submissions.find(s => s.subtaskId === activeSubtaskId)!.fileUrls.length > 0 && (
+                          <div className="mt-3 pl-6">
+                            <p className="text-xs font-semibold text-blue-700 mb-1">Original Attachments:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {parentAttempt.submissions.find(s => s.subtaskId === activeSubtaskId)!.fileUrls.map((url, i) => (
+                                <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-xs flex items-center gap-1 bg-white border border-blue-200 px-2 py-1 rounded text-blue-700 hover:bg-blue-100">
+                                  📎 {getFileName(url)}
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {/* --- END Parent Reference Box --- */}
+                    
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Description / Solution Write-up
