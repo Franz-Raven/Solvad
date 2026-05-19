@@ -5,6 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getProblemById, updateProblemStatus, deleteProblem } from "@/lib/api/problem";
 import type { ProblemResponse } from "@/types/problem";
+import { getAllAttempts } from "@/lib/api/attempts";
+import type { SolutionAttemptResponse } from "@/types/attempt";
 
 type TabType = "problem" | "insights" | "solvers" | "history" | "settings";
 
@@ -201,7 +203,7 @@ export default function ProblemDetailPage() {
         {activeTab === "problem" && <ProblemTab problem={problem} />}
         {activeTab === "insights" && <PlaceholderTab title="AI Insights & Similarity" />}
         {activeTab === "solvers" && <PlaceholderTab title="Assigned Solvers" />}
-        {activeTab === "history" && <PlaceholderTab title="Audit Timeline" />}
+        {activeTab === "history" && <AuditTimelineTab problemId={problemId} />}
         {activeTab === "settings" && (
           <SettingsTab problem={problem} onDelete={handleDeleteProblem} />
         )}
@@ -464,6 +466,104 @@ function PlaceholderTab({ title }: { title: string }) {
         </div>
         <h3 className="text-xl font-bold text-gray-900 mb-2">{title}</h3>
         <p className="text-gray-600">This feature is coming soon. Stay tuned!</p>
+      </div>
+    </div>
+  );
+}
+
+// Tab 4: Audit Timeline
+function AuditTimelineTab({ problemId }: { problemId: string }) {
+  const [attempts, setAttempts] = useState<SolutionAttemptResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expandedAttempt, setExpandedAttempt] = useState<string | null>(null);
+
+  useEffect(() => {
+    getAllAttempts(problemId)
+      .then(setAttempts)
+      .catch((err) => console.error(err))
+      .finally(() => setLoading(false));
+  }, [problemId]);
+
+  if (loading) {
+    return <div className="text-center py-12 text-gray-500">Loading timeline...</div>;
+  }
+
+  if (attempts.length === 0) {
+    return (
+      <div className="bg-white rounded-xl shadow-md border border-gray-200 p-12 text-center text-gray-500">
+        No solution attempts have been made yet.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 max-w-4xl mx-auto">
+      <h2 className="text-2xl font-bold text-gray-900 mb-6">Solution Audit Timeline</h2>
+      <div className="relative border-l-2 border-accent/30 ml-4 space-y-8">
+        {attempts.map((attempt) => (
+          <div key={attempt.id} className="relative pl-8">
+            {/* Timeline Dot */}
+            <div className={`absolute -left-[9px] top-1.5 w-4 h-4 rounded-full border-2 border-white ${attempt.status === 'COMPLETED' ? 'bg-green-500' : attempt.status === 'ABANDONED' ? 'bg-red-400' : 'bg-yellow-400'}`}></div>
+            
+            {/* Attempt Header Card */}
+            <div 
+              onClick={() => setExpandedAttempt(expandedAttempt === attempt.id ? null : attempt.id)}
+              className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 cursor-pointer hover:border-accent transition-colors"
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="font-bold text-gray-900">{attempt.solverFirstName} {attempt.solverLastName}</h3>
+                  <p className="text-sm text-gray-600">{attempt.solverDegreeProgram} • {attempt.solverInstitution}</p>
+                </div>
+                <div className="text-right">
+                  <span className={`inline-block px-3 py-1 text-xs font-bold rounded-full mb-1 ${attempt.status === 'COMPLETED' ? 'bg-green-100 text-green-700' : attempt.status === 'ABANDONED' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                    {attempt.status}
+                  </span>
+                  <p className="text-xs text-gray-500">{new Date(attempt.claimedAt).toLocaleDateString()}</p>
+                </div>
+              </div>
+
+              <div className="mt-4 text-sm text-gray-600 flex items-center gap-2">
+                <span className="font-medium">{attempt.submissions.filter(s => s.status === 'SUBMITTED').length}</span> sub-tasks submitted
+                <span className="text-accent ml-auto">
+                  {expandedAttempt === attempt.id ? 'Hide Details ▲' : 'View Details ▼'}
+                </span>
+              </div>
+            </div>
+
+            {/* Expanded Content (Submissions) */}
+            {expandedAttempt === attempt.id && attempt.submissions.length > 0 && (
+              <div className="mt-4 ml-4 space-y-4">
+                {attempt.submissions.map((sub) => (
+                  <div key={sub.id} className="bg-gray-50 rounded-lg border border-gray-200 p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className={`w-2 h-2 rounded-full ${sub.status === 'SUBMITTED' ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+                      <h4 className="font-semibold text-gray-900">{sub.subtaskTitle}</h4>
+                      <span className="px-2 py-0.5 bg-gray-200 text-gray-600 text-xs rounded-full ml-auto">{sub.status}</span>
+                    </div>
+                    
+                    {sub.description && (
+                      <p className="text-sm text-gray-700 mt-2 bg-white p-3 border border-gray-100 rounded whitespace-pre-wrap">
+                        {sub.description}
+                      </p>
+                    )}
+
+                    {sub.fileUrls && sub.fileUrls.length > 0 && (
+                      <div className="mt-3 space-y-2">
+                        <p className="text-xs font-semibold text-gray-500 uppercase">Attachments:</p>
+                        {sub.fileUrls.map((url, i) => (
+                          <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-accent hover:underline bg-accent/5 p-2 rounded border border-accent/10">
+                            📎 Attachment {i + 1}
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );

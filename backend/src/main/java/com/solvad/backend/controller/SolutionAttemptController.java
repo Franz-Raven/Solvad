@@ -215,4 +215,24 @@ public class SolutionAttemptController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    // -------------------------------------------------------------------------
+    // SUBMIT FULL ATTEMPT — Solver finishes their overall attempt
+    // POST /api/attempts/{attemptId}/submit
+    // -------------------------------------------------------------------------
+    @PostMapping("/api/attempts/{attemptId}/submit")
+    @PreAuthorize("hasRole('SOLVER')")
+    public ResponseEntity<?> submitFullAttempt(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable UUID attemptId) {
+        try {
+            String token = authHeader.substring(7);
+            UUID solverUserId = jwtService.extractUserId(token);
+
+            SolutionAttemptResponse response = attemptService.submitFullAttempt(solverUserId, attemptId);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 }

@@ -127,3 +127,14 @@ export async function getMyActiveAttempts(): Promise<SolutionAttemptResponse[]> 
     method: "GET",
   });
 }
+
+/**
+ * Submit the entire solution attempt (Solver)
+ */
+export async function submitFullAttempt(
+  attemptId: string
+): Promise<SolutionAttemptResponse> {
+  return apiRequest<SolutionAttemptResponse>(`/attempts/${attemptId}/submit`, {
+    method: "POST",
+  });
+}

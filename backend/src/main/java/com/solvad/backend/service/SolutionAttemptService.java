@@ -400,4 +400,37 @@ public class SolutionAttemptService {
                 subtaskResponses
         );
     }
+
+    // -------------------------------------------------------------------------
+    // SUBMIT FULL ATTEMPT — Solver finishes their work, reopening the problem
+    // -------------------------------------------------------------------------
+    @Transactional
+    public SolutionAttemptResponse submitFullAttempt(UUID solverUserId, UUID attemptId) {
+        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
+                .orElseThrow(() -> new RuntimeException("Solver profile not found"));
+
+        SolutionAttempt attempt = attemptRepository.findById(attemptId)
+                .orElseThrow(() -> new RuntimeException("Attempt not found"));
+
+        if (!attempt.getSolver().getId().equals(solver.getId())) {
+            throw new RuntimeException("You do not own this attempt");
+        }
+
+        if (attempt.getStatus() != SolutionAttemptStatus.ACTIVE) {
+            throw new RuntimeException("Attempt is not active");
+        }
+
+        // Mark attempt as COMPLETED
+        attempt.setStatus(SolutionAttemptStatus.COMPLETED);
+        attempt.setCompletedAt(LocalDateTime.now());
+        SolutionAttempt savedAttempt = attemptRepository.save(attempt);
+
+        // Reopen the problem for other solvers
+        Problem problem = attempt.getProblem();
+        problem.setStatus(ProblemStatus.OPEN);
+        problemRepository.save(problem);
+
+        List<SubtaskSubmission> submissions = submissionRepository.findByAttempt(savedAttempt);
+        return mapToResponse(savedAttempt, submissions);
+    }
 }

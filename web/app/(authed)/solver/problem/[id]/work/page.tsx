@@ -9,6 +9,7 @@ import {
   saveOrSubmitSubtask,
   deleteFileFromSubmission,
   abandonClaim,
+  submitFullAttempt,
 } from "@/lib/api/attempts";
 import type { ProblemResponse } from "@/types/problem";
 import type { SolutionAttemptResponse, SubtaskSubmissionResponse } from "@/types/attempt";
@@ -197,6 +198,20 @@ export default function SolverWorkPage() {
     }
   };
 
+  const handleFinalSubmit = async () => {
+    if (!attempt) return;
+    if (!confirm("Are you sure you want to submit your final solution? You won't be able to edit this attempt anymore, and the problem will be reopened for others.")) return;
+    
+    setWorkState("SUBMITTING");
+    try {
+      await submitFullAttempt(attempt.id);
+      router.push("/solver/dashboard");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to submit final solution");
+      setWorkState("IDLE");
+    }
+  };
+
   const getFileIcon = (url: string) => {
     const ext = url.split(".").pop()?.toLowerCase();
     if (["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(ext ?? "")) return "🖼️";
@@ -283,6 +298,13 @@ export default function SolverWorkPage() {
               className="px-4 py-2 text-sm text-red-600 hover:text-red-700 border border-red-200 hover:border-red-300 rounded-lg transition-colors disabled:opacity-50"
             >
               {workState === "ABANDONING" ? "Abandoning..." : "Abandon Problem"}
+            </button>
+            <button
+              onClick={handleFinalSubmit}
+              disabled={workState !== "IDLE" || submittedCount === 0}
+              className="px-4 py-2 text-sm bg-accent hover:bg-secondary text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+            >
+              {workState === "SUBMITTING" ? "Submitting..." : "Finish & Submit Project"}
             </button>
           </div>
         </div>
