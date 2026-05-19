@@ -53,3 +53,12 @@ export async function deleteProblem(problemId: string): Promise<void> {
     method: "DELETE",
   });
 }
+
+/**
+ * Get all OPEN problems (solver browse)
+ */
+export async function getOpenProblems(): Promise<ProblemResponse[]> {
+  return apiRequest<ProblemResponse[]>("/problems/open", {
+    method: "GET",
+  });
+}
