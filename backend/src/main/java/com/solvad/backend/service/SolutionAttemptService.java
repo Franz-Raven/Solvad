@@ -37,6 +37,9 @@ public class SolutionAttemptService {
     @Autowired
     private SupabaseStorageService storageService;
 
+    @Autowired
+    private AuditService auditService;
+
     // -------------------------------------------------------------------------
     // CLAIM
     // -------------------------------------------------------------------------
@@ -57,37 +60,61 @@ public class SolutionAttemptService {
             throw new RuntimeException("You have already claimed this problem");
         }
 
-        // Create the new attempt
+        String solverFullName = solver.getFirstName() + " " + solver.getLastName();
+
         SolutionAttempt attempt = new SolutionAttempt(problem, solver);
 
-        // --- THE BRANCHING LOGIC ---
         if (parentAttemptId != null) {
             SolutionAttempt parent = attemptRepository.findById(parentAttemptId)
                     .orElseThrow(() -> new RuntimeException("Parent attempt not found"));
 
-            // Link them in the tree
             attempt.setParentAttempt(parent);
             SolutionAttempt savedAttempt = attemptRepository.save(attempt);
 
-            // Copy parent's submitted text into the new solver's DRAFTs
             List<SubtaskSubmission> parentSubmissions = submissionRepository.findByAttempt(parent);
             for (SubtaskSubmission parentSub : parentSubmissions) {
                 if (parentSub.getStatus() == SubtaskSubmissionStatus.SUBMITTED) {
                     SubtaskSubmission newDraft = new SubtaskSubmission(savedAttempt, parentSub.getSubtask());
-                    // Copy text so they can edit/improve it
                     newDraft.setDescription(parentSub.getDescription());
-                    // Leave fileUrls blank to prevent accidental deletion of parent files
                     newDraft.setStatus(SubtaskSubmissionStatus.DRAFT);
                     submissionRepository.save(newDraft);
                 }
             }
+
+            String parentName = parent.getSolver().getFirstName() + " " + parent.getSolver().getLastName();
+            auditService.log(
+                    problemId,
+                    solverUserId,
+                    solverFullName,
+                    "SOLVER",
+                    AuditEventType.ATTEMPT_FORKED,
+                    solverFullName + " forked this attempt, building on " + parentName + "'s previous work."
+            );
+
         } else {
             attemptRepository.save(attempt);
+
+            auditService.log(
+                    problemId,
+                    solverUserId,
+                    solverFullName,
+                    "SOLVER",
+                    AuditEventType.ATTEMPT_CLAIMED,
+                    solverFullName + " claimed this problem."
+            );
         }
-        // ---------------------------
 
         problem.setStatus(ProblemStatus.CLAIMED);
         problemRepository.save(problem);
+
+        auditService.log(
+                problemId,
+                null,
+                "SYSTEM",
+                "SYSTEM",
+                AuditEventType.STATUS_CHANGED,
+                "Status automatically changed from OPEN → CLAIMED after solver claimed the problem."
+        );
 
         return mapToResponse(attempt, submissionRepository.findByAttempt(attempt));
     }
@@ -108,32 +135,49 @@ public class SolutionAttemptService {
                         problem, solver, SolutionAttemptStatus.ACTIVE)
                 .orElseThrow(() -> new RuntimeException("No active claim found for this problem"));
 
-        // Mark attempt as abandoned
+        String solverFullName = solver.getFirstName() + " " + solver.getLastName();
+
         attempt.setStatus(SolutionAttemptStatus.ABANDONED);
         attemptRepository.save(attempt);
 
-        // Reopen the problem
+        auditService.log(
+                problem.getId(),
+                solverUserId,
+                solverFullName,
+                "SOLVER",
+                AuditEventType.ATTEMPT_ABANDONED,
+                solverFullName + " abandoned their attempt."
+        );
+
         problem.setStatus(ProblemStatus.OPEN);
         problemRepository.save(problem);
+
+        auditService.log(
+                problem.getId(),
+                null,
+                "SYSTEM",
+                "SYSTEM",
+                AuditEventType.STATUS_CHANGED,
+                "Status automatically changed from CLAIMED → OPEN after solver abandoned."
+        );
     }
 
     // -------------------------------------------------------------------------
     // SAVE DRAFT / SUBMIT subtask submission
     // -------------------------------------------------------------------------
 
-
     @Transactional
     public SubtaskSubmissionResponse saveOrSubmitSubtask(UUID solverUserId, UUID attemptId,
                                                          UUID subtaskId, String description,
                                                          String action,
-                                                         List<MultipartFile> files, String deltaDescription) {
+                                                         List<MultipartFile> files,
+                                                         String deltaDescription) {
         SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
                 .orElseThrow(() -> new RuntimeException("Solver profile not found"));
 
         SolutionAttempt attempt = attemptRepository.findById(attemptId)
                 .orElseThrow(() -> new RuntimeException("Solution attempt not found"));
 
-        // Ownership check
         if (!attempt.getSolver().getId().equals(solver.getId())) {
             throw new RuntimeException("You do not own this solution attempt");
         }
@@ -145,22 +189,20 @@ public class SolutionAttemptService {
         ProblemSubtask subtask = subtaskRepository.findById(subtaskId)
                 .orElseThrow(() -> new RuntimeException("Subtask not found"));
 
-        // Subtask must belong to the same problem
         if (!subtask.getProblem().getId().equals(attempt.getProblem().getId())) {
             throw new RuntimeException("Subtask does not belong to this problem");
         }
 
-        // Get or create the submission
         SubtaskSubmission submission = submissionRepository
                 .findByAttemptAndSubtask(attempt, subtask)
                 .orElseGet(() -> new SubtaskSubmission(attempt, subtask));
 
-        // Cannot edit a SUBMITTED submission
         if (submission.getStatus() == SubtaskSubmissionStatus.SUBMITTED) {
             throw new RuntimeException("This subtask has already been submitted and cannot be edited");
         }
 
-        // Upload new files if provided
+        int newFileCount = 0;
+
         if (files != null && !files.isEmpty()) {
             List<String> existingUrls = submission.getFileUrlsAsList();
             List<String> newUrls = new ArrayList<>(existingUrls);
@@ -169,6 +211,7 @@ public class SolutionAttemptService {
                 if (file != null && !file.isEmpty()) {
                     String url = storageService.uploadFile(file, attemptId, subtaskId);
                     newUrls.add(url);
+                    newFileCount++;
                 }
             }
             submission.setFileUrls(String.join(",", newUrls));
@@ -177,23 +220,60 @@ public class SolutionAttemptService {
         submission.setDescription(description);
         submission.setDeltaDescription(deltaDescription);
 
+        String solverFullName = solver.getFirstName() + " " + solver.getLastName();
         boolean isSubmitting = "SUBMIT".equalsIgnoreCase(action);
+
         if (isSubmitting) {
             submission.setStatus(SubtaskSubmissionStatus.SUBMITTED);
             submission.setSubmittedAt(LocalDateTime.now());
 
-            // Auto-transition problem to IN_PROGRESS on first submission
             Problem problem = attempt.getProblem();
+            String deltaMsg = "Subtask \"" + subtask.getTitle() + "\" submitted by " + solverFullName;
+            if (deltaDescription != null && !deltaDescription.isBlank()) {
+                deltaMsg += " — Delta: " + deltaDescription;
+            }
+            if (newFileCount > 0) {
+                deltaMsg += " (" + newFileCount + " file(s) attached)";
+            }
+
+            auditService.log(
+                    problem.getId(),
+                    solverUserId,
+                    solverFullName,
+                    "SOLVER",
+                    AuditEventType.SUBTASK_SUBMITTED,
+                    deltaMsg
+            );
+
             if (problem.getStatus() == ProblemStatus.CLAIMED) {
                 problem.setStatus(ProblemStatus.IN_PROGRESS);
                 problemRepository.save(problem);
+
+                auditService.log(
+                        problem.getId(),
+                        null,
+                        "SYSTEM",
+                        "SYSTEM",
+                        AuditEventType.STATUS_CHANGED,
+                        "Status automatically changed from CLAIMED → IN_PROGRESS after first subtask submission."
+                );
             }
+
         } else {
             submission.setStatus(SubtaskSubmissionStatus.DRAFT);
+
+            if (newFileCount > 0) {
+                auditService.log(
+                        attempt.getProblem().getId(),
+                        solverUserId,
+                        solverFullName,
+                        "SOLVER",
+                        AuditEventType.FILE_UPLOADED,
+                        solverFullName + " uploaded " + newFileCount + " file(s) to subtask \""
+                                + subtask.getTitle() + "\"."
+                );
+            }
         }
-
-
-
 
         SubtaskSubmission saved = submissionRepository.save(submission);
         return mapSubmissionToResponse(saved);
@@ -220,13 +300,11 @@ public class SolutionAttemptService {
             throw new RuntimeException("Cannot modify a submitted submission");
         }
 
-        // Remove URL from list
         List<String> urls = new ArrayList<>(submission.getFileUrlsAsList());
         urls.remove(fileUrl);
         submission.setFileUrls(urls.isEmpty() ? null : String.join(",", urls));
         submissionRepository.save(submission);
 
-        // Delete from Supabase
         storageService.deleteFile(fileUrl);
 
         return mapSubmissionToResponse(submission);
@@ -253,17 +331,16 @@ public class SolutionAttemptService {
     }
 
     // -------------------------------------------------------------------------
-    // GET all attempts for a specific solver (for solver dashboard)
+    // GET all attempts for a specific solver (solver dashboard)
     // -------------------------------------------------------------------------
+
     @Transactional(readOnly = true)
     public List<SolutionAttemptResponse> getMyAttempts(UUID solverUserId) {
         SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
                 .orElseThrow(() -> new RuntimeException("Solver profile not found"));
 
-        // Find all attempts by this solver, newest first
         List<SolutionAttempt> attempts = attemptRepository.findBySolverOrderByClaimedAtDesc(solver);
 
-        // Map to responses
         return attempts.stream().map(attempt -> {
             List<SubtaskSubmission> submissions = submissionRepository.findByAttempt(attempt);
             return mapToResponse(attempt, submissions);
@@ -274,15 +351,10 @@ public class SolutionAttemptService {
     // GET all attempts for a problem (seeker / attempt tree view)
     // -------------------------------------------------------------------------
 
-    // -------------------------------------------------------------------------
-    // GET all attempts for a problem (seeker / attempt tree view)
-    // -------------------------------------------------------------------------
     @Transactional(readOnly = true)
     public List<SolutionAttemptResponse> getAllAttemptsForProblem(UUID problemId) {
         Problem problem = problemRepository.findById(problemId)
                 .orElseThrow(() -> new RuntimeException("Problem not found"));
-
-        // Removed the Seeker ownership verification so Solvers can view the timeline too!
 
         List<SolutionAttempt> attempts = attemptRepository.findByProblemOrderByClaimedAtDesc(problem);
 
@@ -293,7 +365,7 @@ public class SolutionAttemptService {
     }
 
     // -------------------------------------------------------------------------
-    // GET single attempt detail by ID (seeker or solver can view)
+    // GET single attempt by ID
     // -------------------------------------------------------------------------
 
     @Transactional(readOnly = true)
@@ -306,7 +378,7 @@ public class SolutionAttemptService {
     }
 
     // -------------------------------------------------------------------------
-    // GET all open problems (for solver browse page)
+    // GET all open problems (solver browse)
     // -------------------------------------------------------------------------
 
     @Transactional(readOnly = true)
@@ -341,7 +413,6 @@ public class SolutionAttemptService {
             throw new RuntimeException("Problem must be IN_PROGRESS to mark as solved");
         }
 
-        // Find the active attempt and complete it
         SolutionAttempt attempt = attemptRepository
                 .findByProblemAndStatus(problem, SolutionAttemptStatus.ACTIVE)
                 .orElseThrow(() -> new RuntimeException("No active attempt found"));
@@ -353,33 +424,115 @@ public class SolutionAttemptService {
         problem.setStatus(ProblemStatus.SOLVED);
         problemRepository.save(problem);
 
+        auditService.log(
+                problem.getId(),
+                seekerUserId,
+                seeker.getOrganizationName(),
+                "SEEKER",
+                AuditEventType.STATUS_CHANGED,
+                "Problem marked as SOLVED by " + seeker.getOrganizationName() + "."
+        );
+
+        auditService.log(
+                problem.getId(),
+                null,
+                "SYSTEM",
+                "SYSTEM",
+                AuditEventType.ATTEMPT_COMPLETED,
+                "Active attempt was automatically completed when problem was marked SOLVED."
+        );
+
         List<SubtaskSubmission> submissions = submissionRepository.findByAttempt(attempt);
         return mapToResponse(attempt, submissions);
+    }
+
+    // -------------------------------------------------------------------------
+    // SUBMIT FULL ATTEMPT (solver finishes, problem reopens)
+    // -------------------------------------------------------------------------
+
+    @Transactional
+    public SolutionAttemptResponse submitFullAttempt(UUID solverUserId, UUID attemptId) {
+        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
+                .orElseThrow(() -> new RuntimeException("Solver profile not found"));
+
+        SolutionAttempt attempt = attemptRepository.findById(attemptId)
+                .orElseThrow(() -> new RuntimeException("Attempt not found"));
+
+        if (!attempt.getSolver().getId().equals(solver.getId())) {
+            throw new RuntimeException("You do not own this attempt");
+        }
+
+        if (attempt.getStatus() != SolutionAttemptStatus.ACTIVE) {
+            throw new RuntimeException("Attempt is not active");
+        }
+
+        String solverFullName = solver.getFirstName() + " " + solver.getLastName();
+
+        attempt.setStatus(SolutionAttemptStatus.COMPLETED);
+        attempt.setCompletedAt(LocalDateTime.now());
+        SolutionAttempt savedAttempt = attemptRepository.save(attempt);
+
+        auditService.log(
+                attempt.getProblem().getId(),
+                solverUserId,
+                solverFullName,
+                "SOLVER",
+                AuditEventType.ATTEMPT_COMPLETED,
+                solverFullName + " completed and submitted their full attempt."
+        );
+
+        Problem problem = attempt.getProblem();
+        problem.setStatus(ProblemStatus.OPEN);
+        problemRepository.save(problem);
+
+        auditService.log(
+                problem.getId(),
+                null,
+                "SYSTEM",
+                "SYSTEM",
+                AuditEventType.STATUS_CHANGED,
+                "Status automatically changed back to OPEN after solver submitted their completed attempt."
+        );
+
+        List<SubtaskSubmission> submissions = submissionRepository.findByAttempt(savedAttempt);
+        return mapToResponse(savedAttempt, submissions);
     }
 
     // -------------------------------------------------------------------------
     // MAPPERS
     // -------------------------------------------------------------------------
 
-    private SolutionAttemptResponse mapToResponse(SolutionAttempt attempt, List<SubtaskSubmission> submissions) {
+    private SolutionAttemptResponse mapToResponse(SolutionAttempt attempt,
+                                                  List<SubtaskSubmission> submissions) {
         List<SubtaskSubmissionResponse> submissionResponses = submissions.stream()
                 .map(this::mapSubmissionToResponse)
                 .collect(Collectors.toList());
 
         SolverProfile solver = attempt.getSolver();
 
-        // Extract parent info if it exists
-        UUID parentId = attempt.getParentAttempt() != null ? attempt.getParentAttempt().getId() : null;
-        String parentName = attempt.getParentAttempt() != null ?
-                attempt.getParentAttempt().getSolver().getFirstName() + " " + attempt.getParentAttempt().getSolver().getLastName() : null;
+        UUID parentId = attempt.getParentAttempt() != null
+                ? attempt.getParentAttempt().getId() : null;
+        String parentName = attempt.getParentAttempt() != null
+                ? attempt.getParentAttempt().getSolver().getFirstName() + " "
+                + attempt.getParentAttempt().getSolver().getLastName()
+                : null;
 
         return new SolutionAttemptResponse(
-                attempt.getId(), attempt.getProblem().getId(), attempt.getProblem().getTitle(),
-                solver.getId(), solver.getFirstName(), solver.getLastName(),
-                solver.getInstitution(), solver.getDegreeProgram(),
-                attempt.getStatus().name(), submissionResponses,
-                attempt.getClaimedAt(), attempt.getUpdatedAt(), attempt.getCompletedAt(),
-                parentId, parentName // <-- Added here
+                attempt.getId(),
+                attempt.getProblem().getId(),
+                attempt.getProblem().getTitle(),
+                solver.getId(),
+                solver.getFirstName(),
+                solver.getLastName(),
+                solver.getInstitution(),
+                solver.getDegreeProgram(),
+                attempt.getStatus().name(),
+                submissionResponses,
+                attempt.getClaimedAt(),
+                attempt.getUpdatedAt(),
+                attempt.getCompletedAt(),
+                parentId,
+                parentName
         );
     }
 
@@ -396,7 +549,6 @@ public class SolutionAttemptService {
                 submission.getUpdatedAt(),
                 submission.getSubmittedAt(),
                 submission.getDeltaDescription()
-
         );
     }
 
@@ -423,38 +575,5 @@ public class SolutionAttemptService {
                 problem.getCreatedAt(),
                 subtaskResponses
         );
-    }
-
-    // -------------------------------------------------------------------------
-    // SUBMIT FULL ATTEMPT — Solver finishes their work, reopening the problem
-    // -------------------------------------------------------------------------
-    @Transactional
-    public SolutionAttemptResponse submitFullAttempt(UUID solverUserId, UUID attemptId) {
-        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
-                .orElseThrow(() -> new RuntimeException("Solver profile not found"));
-
-        SolutionAttempt attempt = attemptRepository.findById(attemptId)
-                .orElseThrow(() -> new RuntimeException("Attempt not found"));
-
-        if (!attempt.getSolver().getId().equals(solver.getId())) {
-            throw new RuntimeException("You do not own this attempt");
-        }
-
-        if (attempt.getStatus() != SolutionAttemptStatus.ACTIVE) {
-            throw new RuntimeException("Attempt is not active");
-        }
-
-        // Mark attempt as COMPLETED
-        attempt.setStatus(SolutionAttemptStatus.COMPLETED);
-        attempt.setCompletedAt(LocalDateTime.now());
-        SolutionAttempt savedAttempt = attemptRepository.save(attempt);
-
-        // Reopen the problem for other solvers
-        Problem problem = attempt.getProblem();
-        problem.setStatus(ProblemStatus.OPEN);
-        problemRepository.save(problem);
-
-        List<SubtaskSubmission> submissions = submissionRepository.findByAttempt(savedAttempt);
-        return mapToResponse(savedAttempt, submissions);
     }
 }

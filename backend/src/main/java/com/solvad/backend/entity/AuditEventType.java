@@ -1,0 +1,13 @@
+package com.solvad.backend.entity;
+
+public enum AuditEventType {
+    PROBLEM_CREATED,
+    STATUS_CHANGED,
+    ATTEMPT_CLAIMED,
+    ATTEMPT_FORKED,
+    SUBTASK_SUBMITTED,
+    SUBTASK_DRAFT_SAVED,
+    ATTEMPT_ABANDONED,
+    ATTEMPT_COMPLETED,
+    FILE_UPLOADED
+}

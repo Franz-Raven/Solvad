@@ -1,5 +1,6 @@
 import { apiRequest } from "../api";
 import type { SolutionAttemptResponse, SubtaskSubmissionResponse } from "@/types/attempt";
+import type { AuditLogEntry } from "@/types/attempt";
 
 /**
  * Claim a problem (solver)
@@ -41,47 +42,46 @@ export async function saveOrSubmitSubtask(
   description: string,
   action: "SAVE_DRAFT" | "SUBMIT",
   files?: File[],
-  deltaDescription?: string // <-- ADDED PARAMETER
+  deltaDescription?: string
 ): Promise<SubtaskSubmissionResponse> {
   const formData = new FormData();
   formData.append("description", description);
   formData.append("action", action);
   if (deltaDescription) {
-    formData.append("deltaDescription", deltaDescription); // <-- ADDED
+    formData.append("deltaDescription", deltaDescription);
   }
   if (files && files.length > 0) {
-    files.forEach((file) => formData.append("files", file)); // [cite: 487-488]
+    files.forEach((file) => formData.append("files", file));
   }
 
   const token =
-    typeof window !== "undefined" ? localStorage.getItem("token") : null; // [cite: 488]
-  const res = await fetch( // [cite: 489]
-    `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"}/attempts/${attemptId}/subtasks/${subtaskId}`, // [cite: 489]
+    typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"}/attempts/${attemptId}/subtasks/${subtaskId}`,
     {
       method: "POST",
       headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}), // [cite: 489]
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: formData,
     }
-  ); // [cite: 489]
+  );
 
-  const contentType = res.headers.get("content-type") || ""; // [cite: 490]
-  const data = contentType.includes("application/json") // [cite: 490]
-    ? await res.json() // [cite: 490-491]
-    : await res.text(); // [cite: 491]
+  const contentType = res.headers.get("content-type") || "";
+  const data = contentType.includes("application/json")
+    ? await res.json()
+    : await res.text();
 
-  if (!res.ok) { // [cite: 491]
-    const msg = // [cite: 491]
-      typeof data === "object" && data !== null // [cite: 491]
-        ? (data as any).message || (data as any).error || "Request failed" // [cite: 492]
-        : String(data); // [cite: 492]
+  if (!res.ok) {
+    const msg =
+      typeof data === "object" && data !== null
+        ? (data as any).message || (data as any).error || "Request failed"
+        : String(data);
     throw new Error(msg); 
   }
 
   return data as SubtaskSubmissionResponse;
 }
-
 
 export async function deleteFileFromSubmission(
   submissionId: string,
@@ -141,4 +141,13 @@ export async function submitFullAttempt(
   return apiRequest<SolutionAttemptResponse>(`/attempts/${attemptId}/submit`, {
     method: "POST",
   });
+} // <-- ADDED MISSING BRACE HERE
+
+export async function getAuditLog(
+  problemId: string
+): Promise<AuditLogEntry[]> {
+  return apiRequest<AuditLogEntry[]>(`/problems/${problemId}/audit-log`, {
+    method: "GET",
+  });
 }
+// <-- REMOVED EXTRA FLOATING BRACE FROM HERE

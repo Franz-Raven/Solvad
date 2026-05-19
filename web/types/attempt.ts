@@ -26,12 +26,34 @@ export interface SolutionAttemptResponse {
   claimedAt: string;
   updatedAt: string;
   completedAt: string | null;
-  parentAttemptId?: string;    // <-- Add this
-  parentSolverName?: string;   // <-- Add this
-  
+  parentAttemptId?: string;
+  parentSolverName?: string;
 }
-// Add this interface here
+
 export interface TreeAttemptNode extends SolutionAttemptResponse {
   children: TreeAttemptNode[];
 }
 
+// ── Audit log ─────────────────────────────────────────────────────────────────
+
+export type AuditEventType =
+  | "PROBLEM_CREATED"
+  | "STATUS_CHANGED"
+  | "ATTEMPT_CLAIMED"
+  | "ATTEMPT_FORKED"
+  | "SUBTASK_SUBMITTED"
+  | "SUBTASK_DRAFT_SAVED"
+  | "ATTEMPT_ABANDONED"
+  | "ATTEMPT_COMPLETED"
+  | "FILE_UPLOADED";
+
+export interface AuditLogEntry {
+  id: string;
+  problemId: string;
+  actorId: string | null;
+  actorName: string;
+  actorRole: "SEEKER" | "SOLVER" | "SYSTEM";
+  eventType: AuditEventType;
+  delta: string;
+  timestamp: string;
+}
