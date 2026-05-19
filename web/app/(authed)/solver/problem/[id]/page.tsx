@@ -65,17 +65,14 @@ export default function SolverProblemDetailPage() {
     }
   };
 
-  // Updated to accept the optional parentAttemptId
   const handleClaim = async (parentAttemptId?: string) => {
     if (!problem) return;
     setClaiming(true);
     setError(null);
 
     try {
-      // Pass both IDs to our updated API function
       const attempt = await claimProblem(problemId, parentAttemptId);
       setMyAttempt(attempt);
-      
       router.push(`/solver/problem/${problemId}/work`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to claim problem");
@@ -323,7 +320,6 @@ export default function SolverProblemDetailPage() {
                           <div>
                             <div className="flex items-center gap-2 mb-1">
                               <h3 className="font-bold text-gray-900 text-lg">{attempt.solverFirstName} {attempt.solverLastName}</h3>
-                              {/* --- NEW: The Fork / Delta Indicator --- */}
                               {attempt.parentAttemptId && (
                                 <span className="px-2 py-0.5 bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold rounded-full flex items-center gap-1">
                                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7l-2 2m2-2l2 2m4 4v-4a2 2 0 00-2-2h-6"/></svg>
@@ -332,6 +328,12 @@ export default function SolverProblemDetailPage() {
                               )}
                             </div>
                             <p className="text-sm text-gray-600 font-medium">{attempt.solverDegreeProgram} • {attempt.solverInstitution}</p>
+                          </div>
+                          <div className="text-right">
+                            <span className={`inline-block px-3 py-1 text-xs font-bold rounded-full mb-2 ${attempt.status === 'COMPLETED' ? 'bg-green-100 text-green-700 border border-green-200' : attempt.status === 'ABANDONED' ? 'bg-red-100 text-red-700 border border-red-200' : 'bg-yellow-100 text-yellow-700 border border-yellow-200'}`}>
+                              {attempt.status}
+                            </span>
+                            <p className="text-xs text-gray-500 font-medium">{attemptDate.toLocaleDateString()}</p>
                           </div>
                         </div>
 
@@ -344,11 +346,10 @@ export default function SolverProblemDetailPage() {
                           </div>
                           
                           <div className="flex items-center gap-4">
-                            {/* NEW: Build Upon Button (Forking) */}
                             {attempt.status === 'COMPLETED' && !isAlreadyClaimed && !isUnavailable && (
                               <button
                                 onClick={(e) => {
-                                  e.stopPropagation(); // Prevent toggling the expanded view
+                                  e.stopPropagation();
                                   handleClaim(attempt.id);
                                 }}
                                 disabled={claiming}
@@ -367,49 +368,147 @@ export default function SolverProblemDetailPage() {
                           </div>
                         </div>
 
-                        {/* Expanded Content (Submissions) */}
+                        {/* Expanded Content (Submissions & Before-After evolution panel) */}
                         {expandedAttempt === attempt.id && attempt.submissions.length > 0 && (
                           <div className="mt-4 space-y-4">
-                            {attempt.submissions.map((sub) => (
-                              <div key={sub.id} className="bg-white rounded-lg border border-gray-200 p-5">
-                                <div className="flex items-center gap-3 mb-3">
-                                  <span className={`w-2.5 h-2.5 rounded-full ${sub.status === 'SUBMITTED' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-gray-400'}`}></span>
-                                  <h4 className="font-semibold text-gray-900">{sub.subtaskTitle}</h4>
-                                  <span className="px-2.5 py-1 bg-gray-50 border border-gray-200 text-gray-600 text-xs font-medium rounded-full ml-auto">
-                                    {sub.status}
-                                  </span>
-                                </div>
-                                
-                                {sub.description && (
-                                  <div className="mt-3">
-                                    <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Solution Overview:</p>
-                                    <p className="text-sm text-gray-700 bg-gray-50 p-4 border border-gray-100 rounded-lg whitespace-pre-wrap leading-relaxed">
-                                      {sub.description}
-                                    </p>
-                                  </div>
-                                )}
+                            {attempt.submissions.map((sub) => {
+                              // Perform lookup across client state array to isolate historical parent baseline context
+                              const parentAttemptRecord = attempt.parentAttemptId
+                                ? attempts.find((a) => a.id === attempt.parentAttemptId)
+                                : null;
 
-                                {sub.fileUrls && sub.fileUrls.length > 0 && (
-                                  <div className="mt-4">
-                                    <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Attachments ({sub.fileUrls.length}):</p>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                      {sub.fileUrls.map((url, i) => (
-                                        <a 
-                                          key={i} 
-                                          href={url} 
-                                          target="_blank" 
-                                          rel="noopener noreferrer" 
-                                          className="flex items-center gap-3 text-sm text-gray-700 hover:text-accent bg-gray-50 p-3 rounded-lg border border-gray-100 hover:border-accent/30 transition-all"
-                                        >
-                                          <span className="text-lg">📎</span>
-                                          <span className="truncate flex-1 font-medium">Attachment {i + 1}</span>
-                                        </a>
-                                      ))}
-                                    </div>
+                              const predecessorSubtask = parentAttemptRecord
+                                ? parentAttemptRecord.submissions.find((s) => s.subtaskId === sub.subtaskId)
+                                : null;
+
+                              return (
+                                <div key={sub.id} className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm">
+                                  <div className="flex items-center gap-3 mb-3">
+                                    <span className={`w-2.5 h-2.5 rounded-full ${sub.status === 'SUBMITTED' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-gray-400'}`}></span>
+                                    <h4 className="font-semibold text-gray-900">{sub.subtaskTitle}</h4>
+                                    <span className="px-2.5 py-1 bg-gray-50 border border-gray-200 text-gray-600 text-xs font-medium rounded-full ml-auto">
+                                      {sub.status}
+                                    </span>
                                   </div>
-                                )}
-                              </div>
-                            ))}
+
+                                  {/* Render technical delta modifications note overview */}
+                                  {sub.deltaDescription && (
+                                    <div className="mb-4 bg-blue-50/50 border border-blue-200 rounded-xl p-4 text-sm">
+                                      <p className="text-xs font-bold text-blue-800 uppercase tracking-wide mb-1 flex items-center gap-1">
+                                        🔧 Technical Delta (Stated Improvements)
+                                      </p>
+                                      <p className="text-blue-950 leading-relaxed font-medium">
+                                        "{sub.deltaDescription}"
+                                      </p>
+                                    </div>
+                                  )}
+
+                                  {/* Dynamic Comparative Split Layout block */}
+                                  {predecessorSubtask ? (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                                      {/* Baseline predecessor context panel */}
+                                      <div className="bg-gray-50/80 rounded-xl p-4 border border-gray-200 flex flex-col justify-between">
+                                        <div>
+                                          <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1">
+                                            ⏮️ Before (Original Solution by {attempt.parentSolverName})
+                                          </p>
+                                          <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed bg-white p-3 border border-gray-100 rounded-lg shadow-sm">
+                                            {predecessorSubtask.description || "No description provided."}
+                                          </p>
+                                        </div>
+
+                                        {/* Predecessor Attachments */}
+                                        {predecessorSubtask.fileUrls && predecessorSubtask.fileUrls.length > 0 && (
+                                          <div className="mt-4 pt-3 border-t border-gray-100">
+                                            <p className="text-[11px] font-bold text-gray-400 uppercase mb-2">Original Files ({predecessorSubtask.fileUrls.length}):</p>
+                                            <div className="space-y-1">
+                                              {predecessorSubtask.fileUrls.map((url, i) => (
+                                                <a 
+                                                  key={i} 
+                                                  href={url} 
+                                                  target="_blank" 
+                                                  rel="noopener noreferrer" 
+                                                  className="flex items-center gap-2 text-xs text-gray-500 hover:text-accent bg-white p-2 rounded border border-gray-200 truncate shadow-xs"
+                                                >
+                                                  <span>📎</span>
+                                                  <span className="truncate flex-1 font-medium">Attachment {i + 1}</span>
+                                                </a>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* Current variant solution fork overview panel */}
+                                      <div className="bg-green-50/10 rounded-xl p-4 border border-green-100 flex flex-col justify-between">
+                                        <div>
+                                          <p className="text-xs font-bold text-green-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+                                            ⏭️ After (Current Enhanced Version)
+                                          </p>
+                                          <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed bg-white p-3 border border-green-200/50 rounded-lg shadow-sm font-medium">
+                                            {sub.description || "No description provided."}
+                                          </p>
+                                        </div>
+
+                                        {/* Current Version Attachments */}
+                                        {sub.fileUrls && sub.fileUrls.length > 0 && (
+                                          <div className="mt-4 pt-3 border-t border-gray-100">
+                                            <p className="text-[11px] font-bold text-green-700 uppercase mb-2">Modified Files ({sub.fileUrls.length}):</p>
+                                            <div className="space-y-1">
+                                              {sub.fileUrls.map((url, i) => (
+                                                <a 
+                                                  key={i} 
+                                                  href={url} 
+                                                  target="_blank" 
+                                                  rel="noopener noreferrer" 
+                                                  className="flex items-center gap-3 text-xs text-gray-700 hover:text-accent bg-white p-2 rounded border border-green-200 transition-all shadow-xs"
+                                                >
+                                                  <span>📎</span>
+                                                  <span className="truncate flex-1 font-medium">Attachment {i + 1}</span>
+                                                </a>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    /* Root parent attempt setup fallback write-up display if starting from scratch */
+                                    <div className="space-y-4">
+                                      {sub.description && (
+                                        <div className="mt-3">
+                                          <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Solution Overview:</p>
+                                          <p className="text-sm text-gray-700 bg-gray-50 p-4 border border-gray-100 rounded-lg whitespace-pre-wrap leading-relaxed">
+                                            {sub.description}
+                                          </p>
+                                        </div>
+                                      )}
+
+                                      {/* Standard Attachments Mapping Row (Root baseline) */}
+                                      {sub.fileUrls && sub.fileUrls.length > 0 && (
+                                        <div className="mt-4 pt-3 border-t border-gray-100">
+                                          <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Attachments ({sub.fileUrls.length}):</p>
+                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                            {sub.fileUrls.map((url, i) => (
+                                              <a 
+                                                key={i} 
+                                                href={url} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer" 
+                                                className="flex items-center gap-3 text-sm text-gray-700 hover:text-accent bg-gray-50 p-3 rounded-lg border border-gray-100 hover:border-accent/30 transition-all shadow-sm"
+                                              >
+                                                <span className="text-lg">📎</span>
+                                                <span className="truncate flex-1 font-medium">Attachment {i + 1}</span>
+                                              </a>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
                         )}
                       </div>
