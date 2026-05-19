@@ -9,6 +9,7 @@ export interface SubtaskSubmissionResponse {
   createdAt: string;
   updatedAt: string;
   submittedAt: string | null;
+  deltaDescription?: string;
 }
 
 export interface SolutionAttemptResponse {
@@ -27,5 +28,6 @@ export interface SolutionAttemptResponse {
   completedAt: string | null;
   parentAttemptId?: string;    // <-- Add this
   parentSolverName?: string;   // <-- Add this
+  
 }
 

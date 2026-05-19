@@ -16,6 +16,7 @@ public class SubtaskSubmissionResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private LocalDateTime submittedAt;
+    private String deltaDescription;
 
     public SubtaskSubmissionResponse() {
     }
@@ -24,7 +25,7 @@ public class SubtaskSubmissionResponse {
                                      String subtaskDepartmentFocus, String description,
                                      List<String> fileUrls, String status,
                                      LocalDateTime createdAt, LocalDateTime updatedAt,
-                                     LocalDateTime submittedAt) {
+                                     LocalDateTime submittedAt, String deltaDescription) {
         this.id = id;
         this.subtaskId = subtaskId;
         this.subtaskTitle = subtaskTitle;
@@ -35,6 +36,14 @@ public class SubtaskSubmissionResponse {
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         this.submittedAt = submittedAt;
+        this.deltaDescription = deltaDescription;
+    }
+
+    public String getDeltaDescription() {
+        return deltaDescription;
+    }
+    public void setDeltaDescription(String deltaDescription) {
+        this.deltaDescription = deltaDescription;
     }
 
     public UUID getId() { return id; }

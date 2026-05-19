@@ -92,6 +92,8 @@ public class SolutionAttemptResponse {
     public void setCompletedAt(LocalDateTime completedAt) { this.completedAt = completedAt; }
     // Add these right before the final closing brace } of the class
 
+    private String deltaDescription;
+
     public UUID getParentAttemptId() {
         return parentAttemptId;
     }
@@ -105,5 +107,8 @@ public class SolutionAttemptResponse {
     public void setParentSolverName(String parentSolverName) {
         this.parentSolverName = parentSolverName;
     }
+
+    public String getDeltaDescription() { return deltaDescription; }
+    public void setDeltaDescription(String deltaDescription) { this.deltaDescription = deltaDescription; }
 
 }

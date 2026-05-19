@@ -126,7 +126,7 @@ public class SolutionAttemptService {
     public SubtaskSubmissionResponse saveOrSubmitSubtask(UUID solverUserId, UUID attemptId,
                                                          UUID subtaskId, String description,
                                                          String action,
-                                                         List<MultipartFile> files) {
+                                                         List<MultipartFile> files, String deltaDescription) {
         SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
                 .orElseThrow(() -> new RuntimeException("Solver profile not found"));
 
@@ -175,6 +175,7 @@ public class SolutionAttemptService {
         }
 
         submission.setDescription(description);
+        submission.setDeltaDescription(deltaDescription);
 
         boolean isSubmitting = "SUBMIT".equalsIgnoreCase(action);
         if (isSubmitting) {
@@ -190,6 +191,9 @@ public class SolutionAttemptService {
         } else {
             submission.setStatus(SubtaskSubmissionStatus.DRAFT);
         }
+
+
+
 
         SubtaskSubmission saved = submissionRepository.save(submission);
         return mapSubmissionToResponse(saved);
@@ -390,7 +394,9 @@ public class SolutionAttemptService {
                 submission.getStatus().name(),
                 submission.getCreatedAt(),
                 submission.getUpdatedAt(),
-                submission.getSubmittedAt()
+                submission.getSubmittedAt(),
+                submission.getDeltaDescription()
+
         );
     }
 

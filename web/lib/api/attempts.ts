@@ -40,49 +40,49 @@ export async function saveOrSubmitSubtask(
   subtaskId: string,
   description: string,
   action: "SAVE_DRAFT" | "SUBMIT",
-  files?: File[]
+  files?: File[],
+  deltaDescription?: string // <-- ADDED PARAMETER
 ): Promise<SubtaskSubmissionResponse> {
   const formData = new FormData();
   formData.append("description", description);
   formData.append("action", action);
+  if (deltaDescription) {
+    formData.append("deltaDescription", deltaDescription); // <-- ADDED
+  }
   if (files && files.length > 0) {
-    files.forEach((file) => formData.append("files", file));
+    files.forEach((file) => formData.append("files", file)); // [cite: 487-488]
   }
 
   const token =
-    typeof window !== "undefined" ? localStorage.getItem("token") : null;
-
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"}/attempts/${attemptId}/subtasks/${subtaskId}`,
+    typeof window !== "undefined" ? localStorage.getItem("token") : null; // [cite: 488]
+  const res = await fetch( // [cite: 489]
+    `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"}/attempts/${attemptId}/subtasks/${subtaskId}`, // [cite: 489]
     {
       method: "POST",
       headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        // Do NOT set Content-Type — browser sets it with boundary for multipart
+        ...(token ? { Authorization: `Bearer ${token}` } : {}), // [cite: 489]
       },
       body: formData,
     }
-  );
+  ); // [cite: 489]
 
-  const contentType = res.headers.get("content-type") || "";
-  const data = contentType.includes("application/json")
-    ? await res.json()
-    : await res.text();
+  const contentType = res.headers.get("content-type") || ""; // [cite: 490]
+  const data = contentType.includes("application/json") // [cite: 490]
+    ? await res.json() // [cite: 490-491]
+    : await res.text(); // [cite: 491]
 
-  if (!res.ok) {
-    const msg =
-      typeof data === "object" && data !== null
-        ? (data as any).message || (data as any).error || "Request failed"
-        : String(data);
-    throw new Error(msg);
+  if (!res.ok) { // [cite: 491]
+    const msg = // [cite: 491]
+      typeof data === "object" && data !== null // [cite: 491]
+        ? (data as any).message || (data as any).error || "Request failed" // [cite: 492]
+        : String(data); // [cite: 492]
+    throw new Error(msg); 
   }
 
   return data as SubtaskSubmissionResponse;
 }
 
-/**
- * Delete a file from a draft submission
- */
+
 export async function deleteFileFromSubmission(
   submissionId: string,
   fileUrl: string

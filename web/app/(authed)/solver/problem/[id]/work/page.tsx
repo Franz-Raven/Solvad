@@ -10,7 +10,7 @@ import {
   deleteFileFromSubmission,
   abandonClaim,
   submitFullAttempt,
-  getAttemptById
+  getAttemptById,
 } from "@/lib/api/attempts";
 import type { ProblemResponse } from "@/types/problem";
 import type { SolutionAttemptResponse, SubtaskSubmissionResponse } from "@/types/attempt";
@@ -25,7 +25,7 @@ export default function SolverWorkPage() {
 
   const [problem, setProblem] = useState<ProblemResponse | null>(null);
   const [attempt, setAttempt] = useState<SolutionAttemptResponse | null>(null);
-  const [parentAttempt, setParentAttempt] = useState<SolutionAttemptResponse | null>(null); // <-- Add this
+  const [parentAttempt, setParentAttempt] = useState<SolutionAttemptResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [workState, setWorkState] = useState<WorkState>("IDLE");
@@ -33,8 +33,9 @@ export default function SolverWorkPage() {
   // Which subtask is currently selected in the sidebar
   const [activeSubtaskId, setActiveSubtaskId] = useState<string | null>(null);
 
-  // Per-subtask form state: description + pending files
+  // Per-subtask form state: description, deltas, + pending files
   const [descriptions, setDescriptions] = useState<Record<string, string>>({});
+  const [deltas, setDeltas] = useState<Record<string, string>>({});
   const [pendingFiles, setPendingFiles] = useState<Record<string, File[]>>({});
 
   // Inline success/error per subtask
@@ -46,7 +47,6 @@ export default function SolverWorkPage() {
     loadData();
   }, [problemId]);
 
-  // Inside your loadData function on work/page.tsx, replace the loadData implementation with this:
   const loadData = async () => {
     try {
       setLoading(true);
@@ -67,13 +67,13 @@ export default function SolverWorkPage() {
       
       setAttempt(attemptData);
 
-      // Inside loadData, right after setAttempt(attemptData);
+      // Fetch Parent Attempt reference if available
       if (attemptData.parentAttemptId) {
         try {
           const parentData = await getAttemptById(attemptData.parentAttemptId);
           setParentAttempt(parentData);
         } catch (e) {
-          console.error("Could not load parent attempt details");
+          console.error("Could not load parent attempt details", e);
         }
       }
 
@@ -81,11 +81,15 @@ export default function SolverWorkPage() {
         setActiveSubtaskId(problemData.subtasks[0].id);
       }
 
+      // Pre-fill descriptions and deltas from existing submissions (drafts)
       const descMap: Record<string, string> = {};
+      const deltaMap: Record<string, string> = {};
       attemptData.submissions.forEach((sub) => {
         descMap[sub.subtaskId] = sub.description ?? "";
+        deltaMap[sub.subtaskId] = sub.deltaDescription ?? "";
       });
       setDescriptions(descMap);
+      setDeltas(deltaMap);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load workspace");
     } finally {
@@ -149,22 +153,19 @@ export default function SolverWorkPage() {
     action: "SAVE_DRAFT" | "SUBMIT"
   ) => {
     if (!attempt) return;
-
     setWorkState(action === "SUBMIT" ? "SUBMITTING" : "SAVING");
     setSubtaskMessages((prev) => ({ ...prev, [subtaskId]: undefined as any }));
-
     try {
       const updated = await saveOrSubmitSubtask(
         attempt.id,
         subtaskId,
         descriptions[subtaskId] ?? "",
         action,
-        pendingFiles[subtaskId] ?? []
+        pendingFiles[subtaskId] ?? [],
+        deltas[subtaskId] ?? ""
       );
-
       // Clear pending files for this subtask
       setPendingFiles((prev) => ({ ...prev, [subtaskId]: [] }));
-
       // Update attempt submissions
       setAttempt((prev) => {
         if (!prev) return prev;
@@ -174,7 +175,6 @@ export default function SolverWorkPage() {
           : [...prev.submissions, updated];
         return { ...prev, submissions: updatedSubmissions };
       });
-
       setSubtaskMessages((prev) => ({
         ...prev,
         [subtaskId]: {
@@ -213,7 +213,6 @@ export default function SolverWorkPage() {
   const handleFinalSubmit = async () => {
     if (!attempt) return;
     if (!confirm("Are you sure you want to submit your final solution? You won't be able to edit this attempt anymore, and the problem will be reopened for others.")) return;
-    
     setWorkState("SUBMITTING");
     try {
       await submitFullAttempt(attempt.id);
@@ -236,10 +235,6 @@ export default function SolverWorkPage() {
     const parts = url.split("/");
     return parts[parts.length - 1] ?? url;
   };
-
-  // -------------------------------------------------------------------------
-  // Loading / Error states
-  // -------------------------------------------------------------------------
 
   if (loading) {
     return (
@@ -265,22 +260,12 @@ export default function SolverWorkPage() {
   }
 
   const activeSubtask = problem.subtasks.find((s) => s.id === activeSubtaskId);
-  const activeSubmission = activeSubtaskId
-    ? getSubmissionForSubtask(activeSubtaskId)
-    : undefined;
+  const activeSubmission = activeSubtaskId ? getSubmissionForSubtask(activeSubtaskId) : undefined;
   const isActiveSubmitted = activeSubmission?.status === "SUBMITTED";
-
-  const submittedCount = attempt.submissions.filter(
-    (s) => s.status === "SUBMITTED"
-  ).length;
-
-  // -------------------------------------------------------------------------
-  // Render
-  // -------------------------------------------------------------------------
+  const submittedCount = attempt.submissions.filter((s) => s.status === "SUBMITTED").length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-accent/20 via-background to-accent/10 flex flex-col">
-
       {/* Top bar */}
       <div className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -324,15 +309,12 @@ export default function SolverWorkPage() {
 
       {/* Two-column layout */}
       <div className="flex flex-1 max-w-7xl mx-auto w-full px-6 py-6 gap-6">
-
         {/* LEFT: Subtask sidebar */}
         <div className="w-72 flex-shrink-0">
           <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
             <div className="p-4 border-b border-gray-200">
               <h2 className="font-semibold text-gray-900 text-sm">Sub-tasks</h2>
-              <p className="text-xs text-gray-500 mt-0.5">
-                You can solve any or all of them
-              </p>
+              <p className="text-xs text-gray-500 mt-0.5">You can solve any or all of them</p>
             </div>
             <div className="divide-y divide-gray-100">
               {problem.subtasks.map((subtask, index) => {
@@ -346,39 +328,25 @@ export default function SolverWorkPage() {
                     key={subtask.id}
                     onClick={() => setActiveSubtaskId(subtask.id)}
                     className={`w-full text-left p-4 transition-colors ${
-                      isActive
-                        ? "bg-accent/10 border-l-2 border-accent"
-                        : "hover:bg-gray-50 border-l-2 border-transparent"
+                      isActive ? "bg-accent/10 border-l-2 border-accent" : "hover:bg-gray-50 border-l-2 border-transparent"
                     }`}
                   >
                     <div className="flex items-start gap-3">
                       <div
                         className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5 ${
-                          isSubmitted
-                            ? "bg-green-500 text-white"
-                            : isDraft
-                            ? "bg-yellow-400 text-white"
-                            : "bg-gray-200 text-gray-600"
+                          isSubmitted ? "bg-green-500 text-white" : isDraft ? "bg-yellow-400 text-white" : "bg-gray-200 text-gray-600"
                         }`}
                       >
                         {isSubmitted ? "✓" : index + 1}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 leading-tight">
-                          {subtask.title}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-0.5 truncate">
-                          {subtask.departmentFocus}
-                        </p>
+                        <p className="text-sm font-medium text-gray-900 leading-tight">{subtask.title}</p>
+                        <p className="text-xs text-gray-500 mt-0.5 truncate">{subtask.departmentFocus}</p>
                         {isSubmitted && (
-                          <span className="inline-block mt-1 text-xs text-green-600 font-medium">
-                            Submitted ✓
-                          </span>
+                          <span className="inline-block mt-1 text-xs text-green-600 font-medium">Submitted ✓</span>
                         )}
                         {isDraft && (
-                          <span className="inline-block mt-1 text-xs text-yellow-600 font-medium">
-                            Draft saved
-                          </span>
+                          <span className="inline-block mt-1 text-xs text-yellow-600 font-medium">Draft saved</span>
                         )}
                       </div>
                     </div>
@@ -393,7 +361,6 @@ export default function SolverWorkPage() {
         <div className="flex-1 min-w-0">
           {activeSubtask ? (
             <div className="space-y-4">
-
               {/* Subtask header */}
               <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
                 <div className="flex items-start gap-4">
@@ -426,6 +393,17 @@ export default function SolverWorkPage() {
                 {/* Submitted view (read-only) */}
                 {isActiveSubmitted && activeSubmission ? (
                   <div className="space-y-4">
+                    {activeSubmission.deltaDescription && (
+                      <div className="bg-amber-50/60 border border-amber-200 rounded-xl p-4 text-sm">
+                        <p className="text-xs font-bold text-amber-800 uppercase tracking-wide mb-1 flex items-center gap-1">
+                          🔧 Incremental Improvement (Delta)
+                        </p>
+                        <p className="text-amber-900 leading-relaxed font-medium italic">
+                          "{activeSubmission.deltaDescription}"
+                        </p>
+                      </div>
+                    )}
+
                     <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                       <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
                         {activeSubmission.description || (
@@ -433,11 +411,10 @@ export default function SolverWorkPage() {
                         )}
                       </p>
                     </div>
+
                     {activeSubmission.fileUrls.length > 0 && (
                       <div>
-                        <p className="text-sm font-medium text-gray-700 mb-2">
-                          Attached Files
-                        </p>
+                        <p className="text-sm font-medium text-gray-700 mb-2">Attached Files</p>
                         <div className="space-y-2">
                           {activeSubmission.fileUrls.map((url) => (
                             <a
@@ -448,9 +425,7 @@ export default function SolverWorkPage() {
                               className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-accent/10 transition-colors"
                             >
                               <span className="text-lg">{getFileIcon(url)}</span>
-                              <span className="text-sm text-gray-700 flex-1 truncate">
-                                {getFileName(url)}
-                              </span>
+                              <span className="text-sm text-gray-700 flex-1 truncate">{getFileName(url)}</span>
                               <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                               </svg>
@@ -463,64 +438,85 @@ export default function SolverWorkPage() {
                 ) : (
                   /* Editable draft form */
                   <div className="space-y-4">
-
-                    {/* --- NEW: Parent Reference Box --- */}
+                    {/* --- Parent Reference Box --- */}
                     {parentAttempt && (
                       <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-4 mb-6">
                         <div className="flex items-center gap-2 mb-2">
-                          <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                          <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
                           <h4 className="text-sm font-semibold text-blue-900">
                             Reference: Original Solution by {parentAttempt.solverFirstName}
                           </h4>
                         </div>
                         <p className="text-sm text-blue-800/80 whitespace-pre-wrap pl-6 border-l-2 border-blue-200">
-                          {parentAttempt.submissions.find(s => s.subtaskId === activeSubtaskId)?.description || "No description provided in parent solution."}
+                          {parentAttempt.submissions.find((s) => s.subtaskId === activeSubtaskId)?.description ||
+                            "No description provided in parent solution."}
                         </p>
-                        
+
                         {/* Show parent files if they exist */}
-                        {parentAttempt.submissions.find(s => s.subtaskId === activeSubtaskId)?.fileUrls && parentAttempt.submissions.find(s => s.subtaskId === activeSubtaskId)!.fileUrls.length > 0 && (
-                          <div className="mt-3 pl-6">
-                            <p className="text-xs font-semibold text-blue-700 mb-1">Original Attachments:</p>
-                            <div className="flex flex-wrap gap-2">
-                              {parentAttempt.submissions.find(s => s.subtaskId === activeSubtaskId)!.fileUrls.map((url, i) => (
-                                <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-xs flex items-center gap-1 bg-white border border-blue-200 px-2 py-1 rounded text-blue-700 hover:bg-blue-100">
-                                  📎 {getFileName(url)}
-                                </a>
-                              ))}
+                        {parentAttempt.submissions.find((s) => s.subtaskId === activeSubtaskId)?.fileUrls &&
+                          parentAttempt.submissions.find((s) => s.subtaskId === activeSubtaskId)!.fileUrls.length > 0 && (
+                            <div className="mt-3 pl-6">
+                              <p className="text-xs font-semibold text-blue-700 mb-1">Original Attachments:</p>
+                              <div className="flex flex-wrap gap-2">
+                                {parentAttempt.submissions
+                                  .find((s) => s.subtaskId === activeSubtaskId)!
+                                  .fileUrls.map((url, i) => (
+                                    <a
+                                      key={i}
+                                      href={url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-xs flex items-center gap-1 bg-white border border-blue-200 px-2 py-1 rounded text-blue-700 hover:bg-blue-100"
+                                    >
+                                      📎 {getFileName(url)}
+                                    </a>
+                                  ))}
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
                       </div>
                     )}
                     {/* --- END Parent Reference Box --- */}
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Description / Solution Write-up
                       </label>
                       <textarea
                         value={descriptions[activeSubtask.id] ?? ""}
-                        onChange={(e) =>
-                          handleDescriptionChange(activeSubtask.id, e.target.value)
-                        }
+                        onChange={(e) => handleDescriptionChange(activeSubtask.id, e.target.value)}
                         rows={8}
                         className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all text-foreground placeholder:text-muted-foreground resize-none"
                         placeholder="Describe your solution approach, findings, and implementation details..."
                       />
                     </div>
 
+                    {/* --- Dedicated Delta Field (Only for Forked Attempts) --- */}
+                    {attempt.parentAttemptId && (
+                      <div className="mt-4">
+                        <label className="block text-sm font-medium text-blue-950 mb-2 font-semibold flex items-center gap-1.5">
+                          <span>🔄</span> Technical Delta (What did you change or improve from the parent solution?)
+                        </label>
+                        <textarea
+                          value={deltas[activeSubtask.id] ?? ""}
+                          onChange={(e) => setDeltas((prev) => ({ ...prev, [activeSubtask.id]: e.target.value }))}
+                          rows={4}
+                          className="w-full px-4 py-3 bg-blue-50/20 border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-800 placeholder:text-blue-400/60 resize-none shadow-sm"
+                          placeholder="Example: Refactored the runtime lookup routes to utilize dynamic structural indexes, reducing overhead computation latency..."
+                        />
+                      </div>
+                    )}
+                    {/* --- END DELTA FIELD --- */}
+
                     {/* Already-uploaded files (from saved draft) */}
                     {activeSubmission && activeSubmission.fileUrls.length > 0 && (
                       <div>
-                        <p className="text-sm font-medium text-gray-700 mb-2">
-                          Uploaded Files
-                        </p>
+                        <p className="text-sm font-medium text-gray-700 mb-2">Uploaded Files</p>
                         <div className="space-y-2">
                           {activeSubmission.fileUrls.map((url) => (
-                            <div
-                              key={url}
-                              className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
-                            >
+                            <div key={url} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
                               <span className="text-lg">{getFileIcon(url)}</span>
                               <a
                                 href={url}
@@ -531,13 +527,7 @@ export default function SolverWorkPage() {
                                 {getFileName(url)}
                               </a>
                               <button
-                                onClick={() =>
-                                  handleDeleteUploadedFile(
-                                    activeSubtask.id,
-                                    activeSubmission.id,
-                                    url
-                                  )
-                                }
+                                onClick={() => handleDeleteUploadedFile(activeSubtask.id, activeSubmission.id, url)}
                                 className="text-red-400 hover:text-red-600 transition-colors"
                                 title="Remove file"
                               >
@@ -554,23 +544,14 @@ export default function SolverWorkPage() {
                     {/* Pending (not yet uploaded) files */}
                     {(pendingFiles[activeSubtask.id] ?? []).length > 0 && (
                       <div>
-                        <p className="text-sm font-medium text-gray-700 mb-2">
-                          Pending Upload
-                        </p>
+                        <p className="text-sm font-medium text-gray-700 mb-2">Pending Upload</p>
                         <div className="space-y-2">
                           {(pendingFiles[activeSubtask.id] ?? []).map((file, i) => (
-                            <div
-                              key={i}
-                              className="flex items-center gap-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200"
-                            >
+                            <div key={i} className="flex items-center gap-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
                               <span className="text-lg">📎</span>
-                              <span className="text-sm text-gray-700 flex-1 truncate">
-                                {file.name}
-                              </span>
+                              <span className="text-sm text-gray-700 flex-1 truncate">{file.name}</span>
                               <button
-                                onClick={() =>
-                                  removePendingFile(activeSubtask.id, i)
-                                }
+                                onClick={() => removePendingFile(activeSubtask.id, i)}
                                 className="text-red-400 hover:text-red-600 transition-colors"
                               >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -591,9 +572,7 @@ export default function SolverWorkPage() {
                         multiple
                         accept="image/*,.pdf,.doc,.docx,.txt,.zip"
                         className="hidden"
-                        onChange={(e) =>
-                          handleFileSelect(activeSubtask.id, e.target.files)
-                        }
+                        onChange={(e) => handleFileSelect(activeSubtask.id, e.target.files)}
                       />
                       <button
                         type="button"
@@ -602,9 +581,7 @@ export default function SolverWorkPage() {
                       >
                         + Attach Supporting Documents / Images
                       </button>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Images, PDFs, Word docs, ZIPs — max 20MB per file
-                      </p>
+                      <p className="text-xs text-gray-500 mt-1">Images, PDFs, Word docs, ZIPs — max 20MB per file</p>
                     </div>
 
                     {/* Inline message */}
@@ -623,22 +600,15 @@ export default function SolverWorkPage() {
                     {/* Action buttons */}
                     <div className="flex gap-3 pt-2">
                       <button
-                        onClick={() =>
-                          handleSaveOrSubmit(activeSubtask.id, "SAVE_DRAFT")
-                        }
+                        onClick={() => handleSaveOrSubmit(activeSubtask.id, "SAVE_DRAFT")}
                         disabled={workState !== "IDLE"}
                         className="flex-1 px-4 py-2.5 border border-border text-foreground font-medium rounded-lg hover:bg-accent/10 transition-all disabled:opacity-50 text-sm"
                       >
                         {workState === "SAVING" ? "Saving..." : "Save Draft"}
                       </button>
                       <button
-                        onClick={() =>
-                          handleSaveOrSubmit(activeSubtask.id, "SUBMIT")
-                        }
-                        disabled={
-                          workState !== "IDLE" ||
-                          !(descriptions[activeSubtask.id] ?? "").trim()
-                        }
+                        onClick={() => handleSaveOrSubmit(activeSubtask.id, "SUBMIT")}
+                        disabled={workState !== "IDLE" || !(descriptions[activeSubtask.id] ?? "").trim()}
                         className="flex-1 px-4 py-2.5 bg-secondary hover:bg-accent text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                       >
                         {workState === "SUBMITTING" ? (
@@ -651,9 +621,7 @@ export default function SolverWorkPage() {
                         )}
                       </button>
                     </div>
-                    <p className="text-xs text-gray-500 text-center">
-                      Once submitted, this sub-task cannot be edited.
-                    </p>
+                    <p className="text-xs text-gray-500 text-center">Once submitted, this sub-task cannot be edited.</p>
                   </div>
                 )}
               </div>

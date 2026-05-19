@@ -33,6 +33,12 @@ public class SubtaskSubmission {
     @Column(name = "file_urls", columnDefinition = "TEXT")
     private String fileUrls;
 
+    // Add this field right under your description or fileUrls fields
+    @Column(name = "delta_description", columnDefinition = "TEXT")
+    private String deltaDescription;
+
+
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private SubtaskSubmissionStatus status = SubtaskSubmissionStatus.DRAFT;
@@ -83,6 +89,7 @@ public class SubtaskSubmission {
     public LocalDateTime getSubmittedAt() { return submittedAt; }
     public void setSubmittedAt(LocalDateTime submittedAt) { this.submittedAt = submittedAt; }
 
+
     // Helper to get file URLs as a List
     public List<String> getFileUrlsAsList() {
         if (fileUrls == null || fileUrls.isBlank()) return new ArrayList<>();
@@ -93,4 +100,13 @@ public class SubtaskSubmission {
         }
         return list;
     }
+
+    public String getDeltaDescription() {
+        return deltaDescription;
+    }
+    public void setDeltaDescription(String deltaDescription) {
+        this.deltaDescription = deltaDescription;
+    }
+
+
 }

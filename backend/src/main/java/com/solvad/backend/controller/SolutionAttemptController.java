@@ -107,12 +107,13 @@ public class SolutionAttemptController {
             @PathVariable UUID subtaskId,
             @RequestParam("description") String description,
             @RequestParam("action") String action,
+            @RequestParam(value = "deltaDescription", required = false, defaultValue = "") String deltaDescription, // <-- Added
             @RequestParam(value = "files", required = false) List<MultipartFile> files) {
         try {
-            UUID solverUserId = extractUserId(authHeader);
+            UUID solverUserId = extractUserId(authHeader); // [cite: 1840]
             SubtaskSubmissionResponse response = attemptService.saveOrSubmitSubtask(
-                    solverUserId, attemptId, subtaskId, description, action, files);
-            return ResponseEntity.ok(response);
+                    solverUserId, attemptId, subtaskId, description, action, files, deltaDescription); // <-- Passed parameter
+            return ResponseEntity.ok(response); // [cite: 1842]
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
