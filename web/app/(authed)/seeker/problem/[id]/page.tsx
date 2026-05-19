@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import Portal from "@/components/portal"; // Assuming you have your Portal component here, same as solver side
+import Portal from "@/components/portal";
 import { getProblemById, updateProblemStatus, deleteProblem } from "@/lib/api/problem";
 import type { ProblemResponse } from "@/types/problem";
 import { ProblemTab } from "@/components/problem-detail-seeker/ProblemTab";
@@ -24,6 +24,22 @@ const STATUS_COLORS: Record<string, string> = {
   TERMINATED: "bg-red-500 text-white",
 };
 
+// Human-readable labels for each status
+const STATUS_LABELS: Record<string, string> = {
+  OPEN: "Open",
+  SOLVED_OPEN_FOR_IMPROVEMENT: "Solved – Open for Improvement",
+  COMPLETED: "Completed",
+  CLOSED: "Closed",
+};
+
+// Description shown in the general confirmation modal
+const STATUS_DESCRIPTIONS: Record<string, string> = {
+  OPEN: "The problem will be visible to solvers and open for new claims.",
+  SOLVED_OPEN_FOR_IMPROVEMENT: "The problem will be marked as solved but remain visible so solvers can continue to improve upon it.",
+  COMPLETED: "The problem will be marked as fully completed and hidden from the solver browse page.",
+  CLOSED: "The problem will be hidden from all solvers. You can reopen it later.",
+};
+
 export default function ProblemDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -33,7 +49,12 @@ export default function ProblemDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>("problem");
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
-  const [pendingStatus, setPendingStatus] = useState<string | null>(null); // State for the warning modal
+
+  // Modal state
+  // "confirm"  → general "are you sure?" modal
+  // "terminate" → specific warning when a solver is still active
+  const [pendingStatus, setPendingStatus] = useState<string | null>(null);
+  const [modalMode, setModalMode] = useState<"confirm" | "terminate" | null>(null);
 
   useEffect(() => { loadProblem(); }, [problemId]);
 
@@ -50,28 +71,42 @@ export default function ProblemDetailPage() {
     }
   };
 
-  // Step 1: Intercept the click. Check if we need to warn the seeker.
   const handleStatusChangeClick = (newStatus: string) => {
-    setShowStatusDropdown(false);
-    
-    // If the problem is currently being worked on, and they are trying to close it
-    if ((newStatus === "COMPLETED" || newStatus === "CLOSED") && 
-        (problem?.status === "CLAIMED" || problem?.status === "IN_PROGRESS")) {
-      setPendingStatus(newStatus);
-    } else {
-      executeStatusChange(newStatus);
-    }
+  setShowStatusDropdown(false);
+  setPendingStatus(newStatus);
+
+  console.log("Current problem status:", problem?.status); // add this
+  console.log("New status:", newStatus);
+
+  const solverIsActive =
+    problem?.status === "CLAIMED" || problem?.status === "IN_PROGRESS";
+  const isClosingAction =
+    newStatus === "COMPLETED" || newStatus === "CLOSED";
+
+  console.log("solverIsActive:", solverIsActive); // add this
+
+  if (isClosingAction && solverIsActive) {
+    setModalMode("terminate");
+  } else {
+    setModalMode("confirm");
+  }
+};
+
+  const cancelModal = () => {
+    setPendingStatus(null);
+    setModalMode(null);
   };
 
-  // Step 2: Actually execute the API call
-  const executeStatusChange = async (newStatus: string) => {
+  // Actually call the API
+  const executeStatusChange = async (status: string) => {
     try {
-      const updatedProblem = await updateProblemStatus(problemId, newStatus);
+      const updatedProblem = await updateProblemStatus(problemId, status);
       setProblem(updatedProblem);
-      setPendingStatus(null);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to update status");
+    } finally {
       setPendingStatus(null);
+      setModalMode(null);
     }
   };
 
@@ -118,9 +153,48 @@ export default function ProblemDetailPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-accent/20 via-background to-accent/10">
-      
-      {/* ── Warning Modal (Portaled) ── */}
-      {pendingStatus && (
+
+      {/* ── General Confirmation Modal ── */}
+      {modalMode === "confirm" && pendingStatus && (
+        <Portal>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 p-6">
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h2 className="text-lg font-bold text-gray-900 text-center mb-1">Confirm Status Change</h2>
+              <p className="text-sm text-gray-500 text-center mb-1">You are changing the status to</p>
+              <p className="text-base font-semibold text-gray-900 text-center mb-4">
+                {STATUS_LABELS[pendingStatus] ?? pendingStatus.replace(/_/g, " ")}
+              </p>
+              <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 mb-6">
+                <p className="text-sm text-gray-600 text-center">
+                  {STATUS_DESCRIPTIONS[pendingStatus] ?? "This will update the visibility and state of your problem."}
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={cancelModal}
+                  className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => executeStatusChange(pendingStatus)}
+                  className="flex-1 px-4 py-2.5 bg-accent hover:bg-secondary text-white font-semibold rounded-lg transition-colors text-sm"
+                >
+                  Confirm
+                </button>
+              </div>
+            </div>
+          </div>
+        </Portal>
+      )}
+
+      {/* ── Active Solver Warning Modal ── */}
+      {modalMode === "terminate" && pendingStatus && (
         <Portal>
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/65 backdrop-blur-md">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 p-6">
@@ -129,13 +203,23 @@ export default function ProblemDetailPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
               </div>
-              <h2 className="text-lg font-bold text-gray-900 text-center mb-2">Active Solver Warning</h2>
-              <p className="text-sm text-gray-600 text-center mb-6">
-                There is currently a solver actively working on this problem. Changing the status to <strong>{pendingStatus}</strong> will instantly terminate their attempt. Are you sure you want to proceed?
+              <h2 className="text-lg font-bold text-gray-900 text-center mb-2">⚠️ Active Solver Warning</h2>
+              <p className="text-sm text-gray-600 text-center mb-4">
+                A solver is <strong>currently working</strong> on this problem. Setting the status to{" "}
+                <strong>{STATUS_LABELS[pendingStatus] ?? pendingStatus.replace(/_/g, " ")}</strong> will
+                immediately <span className="text-red-600 font-semibold">terminate their active attempt</span>.
               </p>
+              <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-6 space-y-1">
+                <p className="text-xs text-red-700 font-semibold">This will:</p>
+                <ul className="text-xs text-red-700 space-y-0.5 list-disc list-inside">
+                  <li>End their attempt and mark it as <strong>Terminated</strong></li>
+                  <li>Lock them out of submitting any further work</li>
+                  <li>Be logged permanently in the Audit Timeline</li>
+                </ul>
+              </div>
               <div className="flex gap-3">
                 <button
-                  onClick={() => setPendingStatus(null)}
+                  onClick={cancelModal}
                   className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-sm"
                 >
                   Cancel
@@ -144,7 +228,7 @@ export default function ProblemDetailPage() {
                   onClick={() => executeStatusChange(pendingStatus)}
                   className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors text-sm"
                 >
-                  Yes, Terminate Attempt
+                  Yes, Terminate & {pendingStatus === "COMPLETED" ? "Complete" : "Close"}
                 </button>
               </div>
             </div>
@@ -166,10 +250,14 @@ export default function ProblemDetailPage() {
             <div className="flex-1 min-w-0 pr-4">
               <h1 className="text-3xl font-bold text-gray-900 mb-3 leading-tight">{problem.title}</h1>
             </div>
- 
+
             <div className="relative flex-shrink-0">
               <button
-                onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+                onClick={async () => {
+                  const fresh = await getProblemById(problemId);
+                  setProblem(fresh);
+                  setShowStatusDropdown(!showStatusDropdown);
+                }}
                 className="px-4 py-2.5 bg-secondary hover:bg-accent text-white rounded-lg font-medium transition-colors flex items-center gap-2 shadow-sm"
               >
                 Change Status
@@ -178,16 +266,32 @@ export default function ProblemDetailPage() {
                 </svg>
               </button>
               {showStatusDropdown && (
-                <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-20">
-                  {["OPEN", "SOLVED_OPEN_FOR_IMPROVEMENT", "COMPLETED", "CLOSED"].map((status) => (
-                    <button
-                      key={status}
-                      onClick={() => handleStatusChangeClick(status)}
-                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 text-gray-700"
-                    >
-                      {status.replace(/_/g, " ")}
-                    </button>
-                  ))}
+                <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-20">
+                  {(["OPEN", "SOLVED_OPEN_FOR_IMPROVEMENT", "COMPLETED", "CLOSED"] as const).map((status) => {
+                    const isDestructive = status === "COMPLETED" || status === "CLOSED";
+                    const solverIsActive =
+                      problem.status === "CLAIMED" || problem.status === "IN_PROGRESS";
+                    const willTerminate = isDestructive && solverIsActive;
+
+                    return (
+                      <button
+                        key={status}
+                        onClick={() => handleStatusChangeClick(status)}
+                        className={`w-full px-4 py-2.5 text-left text-sm transition-colors flex items-center justify-between gap-2 ${
+                          willTerminate
+                            ? "hover:bg-red-50 text-red-700"
+                            : "hover:bg-gray-100 text-gray-700"
+                        }`}
+                      >
+                        <span>{STATUS_LABELS[status]}</span>
+                        {willTerminate && (
+                          <span className="text-[10px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full flex-shrink-0">
+                            TERMINATES SOLVER
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
