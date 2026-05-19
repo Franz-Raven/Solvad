@@ -49,7 +49,7 @@ public class SolutionAttemptService {
         Problem problem = problemRepository.findById(problemId)
                 .orElseThrow(() -> new RuntimeException("Problem not found"));
 
-        if (problem.getStatus() != ProblemStatus.OPEN) {
+        if (problem.getStatus() != ProblemStatus.OPEN && problem.getStatus() != ProblemStatus.SOLVED_OPEN_FOR_IMPROVEMENT) {
             throw new RuntimeException("Problem is not available for claiming");
         }
 
@@ -82,6 +82,7 @@ public class SolutionAttemptService {
             }
 
             String parentName = parent.getSolver().getFirstName() + " " + parent.getSolver().getLastName();
+
             auditService.log(
                     problemId,
                     solverUserId,
@@ -104,17 +105,20 @@ public class SolutionAttemptService {
             );
         }
 
-        problem.setStatus(ProblemStatus.CLAIMED);
-        problemRepository.save(problem);
+        // Only transition to CLAIMED if it was OPEN. If it's already SOLVED_OPEN_FOR_IMPROVEMENT, leave it.
+        if (problem.getStatus() == ProblemStatus.OPEN) {
+            problem.setStatus(ProblemStatus.CLAIMED);
+            problemRepository.save(problem);
 
-        auditService.log(
-                problemId,
-                null,
-                "SYSTEM",
-                "SYSTEM",
-                AuditEventType.STATUS_CHANGED,
-                "Status automatically changed from OPEN → CLAIMED after solver claimed the problem."
-        );
+            auditService.log(
+                    problemId,
+                    null,
+                    "SYSTEM",
+                    "SYSTEM",
+                    AuditEventType.STATUS_CHANGED,
+                    "Status automatically changed from OPEN → CLAIMED after solver claimed the problem."
+            );
+        }
 
         return mapToResponse(attempt, submissionRepository.findByAttempt(attempt));
     }
@@ -149,17 +153,20 @@ public class SolutionAttemptService {
                 solverFullName + " abandoned their attempt."
         );
 
-        problem.setStatus(ProblemStatus.OPEN);
-        problemRepository.save(problem);
+        // Only revert to OPEN if it's not already in an open-for-improvement state
+        if (problem.getStatus() != ProblemStatus.SOLVED_OPEN_FOR_IMPROVEMENT) {
+            problem.setStatus(ProblemStatus.OPEN);
+            problemRepository.save(problem);
 
-        auditService.log(
-                problem.getId(),
-                null,
-                "SYSTEM",
-                "SYSTEM",
-                AuditEventType.STATUS_CHANGED,
-                "Status automatically changed from CLAIMED → OPEN after solver abandoned."
-        );
+            auditService.log(
+                    problem.getId(),
+                    null,
+                    "SYSTEM",
+                    "SYSTEM",
+                    AuditEventType.STATUS_CHANGED,
+                    "Status automatically changed to OPEN after solver abandoned."
+            );
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -229,6 +236,7 @@ public class SolutionAttemptService {
 
             Problem problem = attempt.getProblem();
             String deltaMsg = "Subtask \"" + subtask.getTitle() + "\" submitted by " + solverFullName;
+
             if (deltaDescription != null && !deltaDescription.isBlank()) {
                 deltaMsg += " — Delta: " + deltaDescription;
             }
@@ -303,8 +311,8 @@ public class SolutionAttemptService {
         List<String> urls = new ArrayList<>(submission.getFileUrlsAsList());
         urls.remove(fileUrl);
         submission.setFileUrls(urls.isEmpty() ? null : String.join(",", urls));
-        submissionRepository.save(submission);
 
+        submissionRepository.save(submission);
         storageService.deleteFile(fileUrl);
 
         return mapSubmissionToResponse(submission);
@@ -383,7 +391,14 @@ public class SolutionAttemptService {
 
     @Transactional(readOnly = true)
     public List<com.solvad.backend.dto.ProblemResponse> getOpenProblems() {
-        List<Problem> openProblems = problemRepository.findByStatus(ProblemStatus.OPEN);
+        // Fetch both OPEN problems and problems marked as SOLVED_OPEN_FOR_IMPROVEMENT
+        List<ProblemStatus> visibleStatuses = Arrays.asList(
+                ProblemStatus.OPEN,
+                ProblemStatus.SOLVED_OPEN_FOR_IMPROVEMENT
+        );
+
+        List<Problem> openProblems = problemRepository.findByStatusIn(visibleStatuses);
+
         return openProblems.stream()
                 .map(problem -> {
                     List<com.solvad.backend.entity.ProblemSubtask> subtasks =
@@ -421,7 +436,9 @@ public class SolutionAttemptService {
         attempt.setCompletedAt(LocalDateTime.now());
         attemptRepository.save(attempt);
 
-        problem.setStatus(ProblemStatus.SOLVED);
+        // We mark it as SOLVED_OPEN_FOR_IMPROVEMENT by default so others can keep working on it.
+        // The seeker can manually change it to COMPLETED if they want to hide it completely.
+        problem.setStatus(ProblemStatus.SOLVED_OPEN_FOR_IMPROVEMENT);
         problemRepository.save(problem);
 
         auditService.log(
@@ -430,7 +447,7 @@ public class SolutionAttemptService {
                 seeker.getOrganizationName(),
                 "SEEKER",
                 AuditEventType.STATUS_CHANGED,
-                "Problem marked as SOLVED by " + seeker.getOrganizationName() + "."
+                "Problem marked as Solved by " + seeker.getOrganizationName() + " and left Open for Improvement."
         );
 
         auditService.log(
@@ -439,7 +456,7 @@ public class SolutionAttemptService {
                 "SYSTEM",
                 "SYSTEM",
                 AuditEventType.ATTEMPT_COMPLETED,
-                "Active attempt was automatically completed when problem was marked SOLVED."
+                "Active attempt was automatically completed when problem was marked Solved."
         );
 
         List<SubtaskSubmission> submissions = submissionRepository.findByAttempt(attempt);
@@ -470,6 +487,7 @@ public class SolutionAttemptService {
 
         attempt.setStatus(SolutionAttemptStatus.COMPLETED);
         attempt.setCompletedAt(LocalDateTime.now());
+
         SolutionAttempt savedAttempt = attemptRepository.save(attempt);
 
         auditService.log(
@@ -482,17 +500,21 @@ public class SolutionAttemptService {
         );
 
         Problem problem = attempt.getProblem();
-        problem.setStatus(ProblemStatus.OPEN);
-        problemRepository.save(problem);
 
-        auditService.log(
-                problem.getId(),
-                null,
-                "SYSTEM",
-                "SYSTEM",
-                AuditEventType.STATUS_CHANGED,
-                "Status automatically changed back to OPEN after solver submitted their completed attempt."
-        );
+        // Only transition to OPEN if it isn't already marked open for improvement
+        if (problem.getStatus() != ProblemStatus.SOLVED_OPEN_FOR_IMPROVEMENT) {
+            problem.setStatus(ProblemStatus.OPEN);
+            problemRepository.save(problem);
+
+            auditService.log(
+                    problem.getId(),
+                    null,
+                    "SYSTEM",
+                    "SYSTEM",
+                    AuditEventType.STATUS_CHANGED,
+                    "Status automatically changed back to OPEN after solver submitted their completed attempt."
+            );
+        }
 
         List<SubtaskSubmission> submissions = submissionRepository.findByAttempt(savedAttempt);
         return mapToResponse(savedAttempt, submissions);

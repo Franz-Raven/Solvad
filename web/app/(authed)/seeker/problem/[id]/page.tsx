@@ -5,7 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getProblemById, updateProblemStatus, deleteProblem } from "@/lib/api/problem";
 import type { ProblemResponse } from "@/types/problem";
-
 import { ProblemTab } from "@/components/problem-detail-seeker/ProblemTab";
 import { AuditTimelineTab } from "@/components/problem-detail-seeker/AuditTimelineTab";
 import { SettingsTab } from "@/components/problem-detail-seeker/SettingsTab";
@@ -14,11 +13,12 @@ import { PlaceholderTab } from "@/components/problem-detail-seeker/PlaceholderTa
 
 type TabType = "problem" | "insights" | "tree" | "history" | "settings";
 
-const STATUS_COLORS = {
+const STATUS_COLORS: Record<string, string> = {
   OPEN: "bg-blue-500 text-white",
   CLAIMED: "bg-purple-500 text-white",
   IN_PROGRESS: "bg-yellow-500 text-white",
-  SOLVED: "bg-green-500 text-white",
+  SOLVED_OPEN_FOR_IMPROVEMENT: "bg-green-500 text-white",
+  COMPLETED: "bg-gray-800 text-white",
   CLOSED: "bg-gray-500 text-white",
 };
 
@@ -26,7 +26,6 @@ export default function ProblemDetailPage() {
   const params = useParams();
   const router = useRouter();
   const problemId = params.id as string;
-
   const [problem, setProblem] = useState<ProblemResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -116,6 +115,7 @@ export default function ProblemDetailPage() {
             <div className="flex-1 min-w-0 pr-4">
               <h1 className="text-3xl font-bold text-gray-900 mb-3 leading-tight">{problem.title}</h1>
             </div>
+ 
             <div className="relative flex-shrink-0">
               <button
                 onClick={() => setShowStatusDropdown(!showStatusDropdown)}
@@ -127,14 +127,15 @@ export default function ProblemDetailPage() {
                 </svg>
               </button>
               {showStatusDropdown && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-20">
-                  {["OPEN", "CLAIMED", "IN_PROGRESS", "SOLVED", "CLOSED"].map((status) => (
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-20">
+                  {/* Notice we ONLY map the statuses seekers are allowed to manually select */}
+                  {["OPEN", "SOLVED_OPEN_FOR_IMPROVEMENT", "COMPLETED", "CLOSED"].map((status) => (
                     <button
                       key={status}
                       onClick={() => handleStatusChange(status)}
                       className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 text-gray-700"
                     >
-                      {status.replace("_", " ")}
+                      {status.replace(/_/g, " ")}
                     </button>
                   ))}
                 </div>
@@ -143,8 +144,8 @@ export default function ProblemDetailPage() {
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
-            <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold ${STATUS_COLORS[problem.status as keyof typeof STATUS_COLORS] || STATUS_COLORS.OPEN}`}>
-              {problem.status.replace("_", " ")}
+            <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold ${STATUS_COLORS[problem.status] || STATUS_COLORS.OPEN}`}>
+              {problem.status.replace(/_/g, " ")}
             </span>
             <span className="inline-flex items-center px-3 py-1.5 bg-accent/10 text-accent rounded-full text-sm font-medium border border-accent/20">
               Required: {problem.requiredCourse}

@@ -15,7 +15,8 @@ const STATUS_COLORS: Record<string, string> = {
   OPEN: "bg-blue-500 text-white",
   CLAIMED: "bg-purple-500 text-white",
   IN_PROGRESS: "bg-yellow-500 text-white",
-  SOLVED: "bg-green-500 text-white",
+  SOLVED_OPEN_FOR_IMPROVEMENT: "bg-green-500 text-white",
+  COMPLETED: "bg-gray-800 text-white",
   CLOSED: "bg-gray-500 text-white",
 };
 
@@ -666,7 +667,10 @@ export default function SolverProblemDetailPage() {
   if (!problem) return null;
 
   const isAlreadyClaimed = myAttempt?.status === "ACTIVE";
-  const isUnavailable = problem.status !== "OPEN" && !isAlreadyClaimed;
+  const isUnavailable = 
+    problem.status !== "OPEN" && 
+    problem.status !== "SOLVED_OPEN_FOR_IMPROVEMENT" && 
+    !isAlreadyClaimed;
   const structuredTreeRoots = buildHierarchyTree(attempts);
 
   const tabs: { id: TabType; label: string }[] = [

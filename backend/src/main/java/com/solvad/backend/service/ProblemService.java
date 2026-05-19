@@ -34,12 +34,12 @@ public class ProblemService {
     public GenerateScopeResponse generateScope(GenerateScopeRequest request) {
         // Call Gemini AI to generate subtasks
         List<SubtaskResponse> generatedSubtasks = geminiService.generateSubtasks(
-            request.getTitle(),
-            request.getBackgroundContext(),
-            request.getPrimaryStatement(),
-            request.getObjectives(),
-            request.getConstraints(),
-            request.getRequiredCourse()
+                request.getTitle(),
+                request.getBackgroundContext(),
+                request.getPrimaryStatement(),
+                request.getObjectives(),
+                request.getConstraints(),
+                request.getRequiredCourse()
         );
 
         return new GenerateScopeResponse(generatedSubtasks);
@@ -49,17 +49,17 @@ public class ProblemService {
     public ProblemResponse createProblem(UUID seekerUserId, ProblemRequest request) {
         // Find seeker profile by user ID
         SeekerProfile seeker = seekerProfileRepository.findByUserId(seekerUserId)
-            .orElseThrow(() -> new RuntimeException("Seeker profile not found"));
+                .orElseThrow(() -> new RuntimeException("Seeker profile not found"));
 
         // Create and save Problem entity
         Problem problem = new Problem(
-            seeker,
-            request.getTitle(),
-            request.getBackgroundContext(),
-            request.getPrimaryStatement(),
-            request.getObjectives(),
-            request.getConstraints(),
-            request.getRequiredCourse()
+                seeker,
+                request.getTitle(),
+                request.getBackgroundContext(),
+                request.getPrimaryStatement(),
+                request.getObjectives(),
+                request.getConstraints(),
+                request.getRequiredCourse()
         );
         Problem savedProblem = problemRepository.save(problem);
 
@@ -74,14 +74,14 @@ public class ProblemService {
 
         // Create and save ProblemSubtask entities
         List<ProblemSubtask> subtasks = request.getSubtasks().stream()
-            .map(subtaskReq -> new ProblemSubtask(
-                savedProblem,
-                subtaskReq.getTitle(),
-                subtaskReq.getDescription(),
-                subtaskReq.getDepartmentFocus()
-            ))
-            .collect(Collectors.toList());
-        
+                .map(subtaskReq -> new ProblemSubtask(
+                        savedProblem,
+                        subtaskReq.getTitle(),
+                        subtaskReq.getDescription(),
+                        subtaskReq.getDepartmentFocus()
+                ))
+                .collect(Collectors.toList());
+
         List<ProblemSubtask> savedSubtasks = subtaskRepository.saveAll(subtasks);
 
         // Map to response DTO
@@ -90,57 +90,64 @@ public class ProblemService {
 
     public List<ProblemResponse> getMyProblems(UUID seekerUserId) {
         SeekerProfile seeker = seekerProfileRepository.findByUserId(seekerUserId)
-            .orElseThrow(() -> new RuntimeException("Seeker profile not found"));
+                .orElseThrow(() -> new RuntimeException("Seeker profile not found"));
 
         List<Problem> problems = problemRepository.findBySeeker(seeker);
-        
+
         return problems.stream()
-            .map(problem -> {
-                List<ProblemSubtask> subtasks = subtaskRepository.findByProblem(problem);
-                return mapToResponse(problem, subtasks, seeker);
-            })
-            .collect(Collectors.toList());
+                .map(problem -> {
+                    List<ProblemSubtask> subtasks = subtaskRepository.findByProblem(problem);
+                    return mapToResponse(problem, subtasks, seeker);
+                })
+                .collect(Collectors.toList());
     }
 
     public ProblemResponse getProblemById(UUID problemId) {
         Problem problem = problemRepository.findById(problemId)
-            .orElseThrow(() -> new RuntimeException("Problem not found"));
-        
+                .orElseThrow(() -> new RuntimeException("Problem not found"));
+
         List<ProblemSubtask> subtasks = subtaskRepository.findByProblem(problem);
-        
+
         return mapToResponse(problem, subtasks, problem.getSeeker());
     }
 
     @Transactional
-    public ProblemResponse updateProblemStatus(UUID seekerUserId, UUID problemId, String newStatus) {
+    public ProblemResponse updateProblemStatus(UUID seekerUserId, UUID problemId, String newStatusStr) {
         // Find the problem
         Problem problem = problemRepository.findById(problemId)
-            .orElseThrow(() -> new RuntimeException("Problem not found"));
+                .orElseThrow(() -> new RuntimeException("Problem not found"));
 
         // Verify ownership
         SeekerProfile seeker = seekerProfileRepository.findByUserId(seekerUserId)
-            .orElseThrow(() -> new RuntimeException("Seeker profile not found"));
-        
+                .orElseThrow(() -> new RuntimeException("Seeker profile not found"));
+
         if (!problem.getSeeker().getId().equals(seeker.getId())) {
             throw new RuntimeException("You do not have permission to update this problem");
         }
 
-        // Update status
         try {
-            String oldStatus = problem.getStatus().name();
+            ProblemStatus newStatus = ProblemStatus.valueOf(newStatusStr);
+            ProblemStatus oldStatus = problem.getStatus();
 
-            problem.setStatus(ProblemStatus.valueOf(newStatus));
+            // Guardrail: Prevent manual shifts to automated solver states
+            if (newStatus == ProblemStatus.CLAIMED || newStatus == ProblemStatus.IN_PROGRESS) {
+                throw new RuntimeException("Status " + newStatus + " is driven by solver actions and cannot be set manually.");
+            }
+
+            problem.setStatus(newStatus);
             problemRepository.save(problem);
+
             auditService.log(
                     problemId,
                     seekerUserId,
                     seeker.getOrganizationName(),
                     "SEEKER",
                     AuditEventType.STATUS_CHANGED,
-                    "Status changed from " + oldStatus + " → " + newStatus
+                    "Status manually changed from " + oldStatus.name() + " → " + newStatus.name()
             );
+
         } catch (IllegalArgumentException e) {
-            throw new RuntimeException("Invalid status: " + newStatus);
+            throw new RuntimeException("Invalid status: " + newStatusStr);
         }
 
         // Return updated problem
@@ -152,12 +159,12 @@ public class ProblemService {
     public void deleteProblem(UUID seekerUserId, UUID problemId) {
         // Find the problem
         Problem problem = problemRepository.findById(problemId)
-            .orElseThrow(() -> new RuntimeException("Problem not found"));
+                .orElseThrow(() -> new RuntimeException("Problem not found"));
 
         // Verify ownership
         SeekerProfile seeker = seekerProfileRepository.findByUserId(seekerUserId)
-            .orElseThrow(() -> new RuntimeException("Seeker profile not found"));
-        
+                .orElseThrow(() -> new RuntimeException("Seeker profile not found"));
+
         if (!problem.getSeeker().getId().equals(seeker.getId())) {
             throw new RuntimeException("You do not have permission to delete this problem");
         }
@@ -172,27 +179,27 @@ public class ProblemService {
 
     private ProblemResponse mapToResponse(Problem problem, List<ProblemSubtask> subtasks, SeekerProfile seeker) {
         List<SubtaskResponse> subtaskResponses = subtasks.stream()
-            .map(subtask -> new SubtaskResponse(
-                subtask.getId(),
-                subtask.getTitle(),
-                subtask.getDepartmentFocus(),
-                subtask.getDescription()
-            ))
-            .collect(Collectors.toList());
+                .map(subtask -> new SubtaskResponse(
+                        subtask.getId(),
+                        subtask.getTitle(),
+                        subtask.getDepartmentFocus(),
+                        subtask.getDescription()
+                ))
+                .collect(Collectors.toList());
 
         return new ProblemResponse(
-            problem.getId(),
-            problem.getTitle(),
-            problem.getBackgroundContext(),
-            problem.getPrimaryStatement(),
-            problem.getObjectives(),
-            problem.getConstraints(),
-            problem.getRequiredCourse(),
-            problem.getStatus().name(),
-            seeker.getId(),
-            seeker.getOrganizationName(),
-            problem.getCreatedAt(),
-            subtaskResponses
+                problem.getId(),
+                problem.getTitle(),
+                problem.getBackgroundContext(),
+                problem.getPrimaryStatement(),
+                problem.getObjectives(),
+                problem.getConstraints(),
+                problem.getRequiredCourse(),
+                problem.getStatus().name(),
+                seeker.getId(),
+                seeker.getOrganizationName(),
+                problem.getCreatedAt(),
+                subtaskResponses
         );
     }
 }
