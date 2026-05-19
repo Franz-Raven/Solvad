@@ -110,10 +110,153 @@ const AUDIT_EVENT_CONFIG: Record<
   },
 };
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+type SortOrder = "newest-first" | "oldest-first";
+type RoleFilter = "ALL" | "SEEKER" | "SOLVER" | "SYSTEM";
+
+// ─── Helper: get today's date label ──────────────────────────────────────────
+function getTodayLabel(): string {
+  return new Date().toLocaleDateString("en-US", {
+    month: "long", day: "numeric", year: "numeric",
+  });
+}
+
+// ─── Collapsible day group ────────────────────────────────────────────────────
+function DayGroup({
+  dateLabel,
+  entries,
+  defaultOpen,
+  sortOrder,
+}: {
+  dateLabel: string;
+  entries: AuditLogEntry[];
+  defaultOpen: boolean;
+  sortOrder: SortOrder;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  const isToday = dateLabel === getTodayLabel();
+
+  const sortedEntries = sortOrder === "newest-first"
+    ? [...entries].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    : [...entries].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+  return (
+    <div className="overflow-visible">
+      {/* ── Day header (clickable) ── */}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="relative flex items-center gap-3 mb-2 mt-6 first:mt-0 w-full text-left group overflow-visible"
+      >
+        {/* Node on the spine */}
+        <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 z-50 isolate ring-2 ring-white ring-offset-0 shadow-md bg-white group-hover:shadow-lg transition-all">
+          <div className={`w-2.5 h-2.5 rounded-full transition-colors ${isToday ? "bg-accent" : "bg-gray-300"}`} />
+        </div>
+
+        <span className={`text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full border transition-colors ${
+          isToday
+            ? "bg-accent/10 text-accent border-accent/20"
+            : "bg-gray-50 text-gray-500 border-gray-200"
+        }`}>
+          {isToday ? `Today — ${dateLabel}` : dateLabel}
+        </span>
+
+        {/* Entry count badge */}
+        <span className="text-[10px] font-semibold text-gray-400 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-full">
+          {entries.length} event{entries.length !== 1 ? "s" : ""}
+        </span>
+
+        {/* Chevron */}
+        <span className="ml-auto mr-1 text-gray-400 group-hover:text-gray-600 transition-colors">
+          <svg
+            className={`w-4 h-4 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+            fill="none" stroke="currentColor" viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </span>
+      </button>
+
+      {/* ── Entries ── */}
+      {open && (
+        <div className="space-y-3 ml-0 overflow-visible">
+          {sortedEntries.map((entry) => {
+            const config = AUDIT_EVENT_CONFIG[entry.eventType] ?? {
+              label: entry.eventType,
+              icon: null,
+              color: "bg-gray-50 text-gray-600 border-gray-200",
+              dotColor: "bg-gray-400",
+            };
+            const time = new Date(entry.timestamp).toLocaleTimeString("en-US", {
+              hour: "numeric", minute: "2-digit", hour12: true,
+            });
+
+            return (
+              <div key={entry.id} className="relative flex items-start gap-3">
+                {/*
+                  FIX: Icon dot — use `ring` instead of `border-white` so the dot
+                  always looks correct regardless of scroll position / background.
+                  Also `isolate` + explicit z-index ensures it paints above the spine.
+                */}
+                <div
+                  className={`
+                    w-10 h-10 rounded-full flex items-center justify-center
+                    flex-shrink-0 z-50 isolate
+                    ring-2 ring-white ring-offset-0
+                    shadow-md
+                    ${config.dotColor}
+                  `}
+                >
+                  <span className="text-white">{config.icon}</span>
+                </div>
+
+                {/* Card */}
+                <div className="flex-1 bg-white rounded-xl border border-gray-200 shadow-sm p-4 hover:shadow-md transition-shadow min-w-0">
+                  <div className="flex items-start justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${config.color}`}>
+                        {config.label}
+                      </span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                        entry.actorRole === "SYSTEM"
+                          ? "bg-gray-100 text-gray-500 border-gray-200"
+                          : entry.actorRole === "SEEKER"
+                          ? "bg-accent/10 text-accent border-accent/20"
+                          : "bg-purple-50 text-purple-600 border-purple-200"
+                      }`}>
+                        {entry.actorRole}
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-gray-400 flex-shrink-0">{time}</span>
+                  </div>
+
+                  {/* Actor */}
+                  <p className="text-xs font-semibold text-gray-700 mt-2">
+                    {entry.actorRole === "SYSTEM"
+                      ? <span className="text-gray-400 font-normal italic">System automation</span>
+                      : entry.actorName
+                    }
+                  </p>
+
+                  {/* Delta */}
+                  <p className="text-sm text-gray-600 mt-1 leading-relaxed break-words">
+                    {entry.delta}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
 export function AuditTimelineTab({ problemId }: { problemId: string }) {
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterRole, setFilterRole] = useState<"ALL" | "SEEKER" | "SOLVER" | "SYSTEM">("ALL");
+  const [filterRole, setFilterRole] = useState<RoleFilter>("ALL");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("newest-first");
 
   useEffect(() => {
     getAuditLog(problemId)
@@ -145,25 +288,37 @@ export function AuditTimelineTab({ problemId }: { problemId: string }) {
     );
   }
 
+  // ── Filter ──
   const filtered = filterRole === "ALL" ? logs : logs.filter((l) => l.actorRole === filterRole);
 
-  // Group by date
-  const groups: { dateLabel: string; entries: AuditLogEntry[] }[] = [];
+  // ── Group by date ──
+  const groupMap = new Map<string, AuditLogEntry[]>();
   filtered.forEach((entry) => {
     const dateLabel = new Date(entry.timestamp).toLocaleDateString("en-US", {
       month: "long", day: "numeric", year: "numeric",
     });
-    const last = groups[groups.length - 1];
-    if (last && last.dateLabel === dateLabel) {
-      last.entries.push(entry);
-    } else {
-      groups.push({ dateLabel, entries: [entry] });
-    }
+    if (!groupMap.has(dateLabel)) groupMap.set(dateLabel, []);
+    groupMap.get(dateLabel)!.push(entry);
   });
+
+  // ── Sort date groups ──
+  const groups = Array.from(groupMap.entries()).map(([dateLabel, entries]) => ({
+    dateLabel,
+    entries,
+    // Use the latest timestamp in the group for sorting the group itself
+    latestTs: Math.max(...entries.map((e) => new Date(e.timestamp).getTime())),
+  }));
+
+  const sortedGroups = sortOrder === "newest-first"
+    ? groups.sort((a, b) => b.latestTs - a.latestTs)
+    : groups.sort((a, b) => a.latestTs - b.latestTs);
+
+  const todayLabel = getTodayLabel();
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      {/* Header + stats */}
+      {/* ── Header + stats ── */}
+      {/* ── Header + stats ── */}
       <div className="bg-white rounded-xl shadow-md border border-gray-200 p-5">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
@@ -177,104 +332,78 @@ export function AuditTimelineTab({ problemId }: { problemId: string }) {
           </span>
         </div>
 
-        {/* Role filter */}
-        <div className="flex items-center gap-2 mt-4 flex-wrap">
-          <span className="text-xs text-gray-500 font-medium">Filter:</span>
-          {(["ALL", "SEEKER", "SOLVER", "SYSTEM"] as const).map((role) => (
-            <button
-              key={role}
-              onClick={() => setFilterRole(role)}
-              className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
-                filterRole === role
-                  ? "bg-accent text-white border-accent"
-                  : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
-              }`}
-            >
-              {role}
-              {role !== "ALL" && (
-                <span className="ml-1.5 opacity-70">
-                  {logs.filter((l) => l.actorRole === role).length}
-                </span>
-              )}
-            </button>
-          ))}
+        {/* ── Controls row ── */}
+        <div className="flex items-center gap-4 mt-4 flex-wrap">
+          {/* Role filter */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-gray-500 font-medium">Actor:</span>
+            {(["ALL", "SEEKER", "SOLVER", "SYSTEM"] as const).map((role) => (
+              <button
+                key={role}
+                onClick={() => setFilterRole(role)}
+                className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
+                  filterRole === role
+                    ? "bg-accent text-white border-accent"
+                    : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                {role}
+                {role !== "ALL" && (
+                  <span className="ml-1.5 opacity-70">
+                    {logs.filter((l) => l.actorRole === role).length}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Divider */}
+          <div className="hidden sm:block w-px h-5 bg-gray-200" />
+
+          {/* Sort order */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500 font-medium">Order:</span>
+            {(
+              [
+                { value: "newest-first", label: "Newest first" },
+                { value: "oldest-first", label: "Oldest first" },
+              ] as { value: SortOrder; label: string }[]
+            ).map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setSortOrder(opt.value)}
+                className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
+                  sortOrder === opt.value
+                    ? "bg-accent text-white border-accent"
+                    : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Timeline */}
-      <div className="relative">
-        {/* Vertical spine */}
-        <div className="absolute left-[19px] top-0 bottom-0 w-0.5 bg-gray-200" />
+      {/* ── Timeline ── */}
+      <div className="relative overflow-visible">
+        {/*
+          FIX: The spine is now `pointer-events-none` so it never
+          intercepts clicks on the day-header buttons.
+          It's also `z-0` so icon dots (z-10) always render above it.
+        */}
+        <div className="absolute left-[19px] top-0 bottom-0 w-0.5 bg-gray-200 z-0 pointer-events-none" />
 
-        <div className="space-y-1">
-          {groups.map((group) => (
-            <div key={group.dateLabel}>
-              {/* Date header */}
-              <div className="relative flex items-center gap-3 mb-3 mt-6 first:mt-0">
-                <div className="w-10 h-10 rounded-full bg-white border-2 border-gray-200 flex items-center justify-center flex-shrink-0 z-10">
-                  <div className="w-2 h-2 rounded-full bg-gray-300" />
-                </div>
-                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 px-3 py-1 rounded-full border border-gray-200">
-                  {group.dateLabel}
-                </span>
-              </div>
-
-              {/* Entries */}
-              {group.entries.map((entry) => {
-                const config = AUDIT_EVENT_CONFIG[entry.eventType] ?? {
-                  label: entry.eventType,
-                  icon: null,
-                  color: "bg-gray-50 text-gray-600 border-gray-200",
-                  dotColor: "bg-gray-400",
-                };
-                const time = new Date(entry.timestamp).toLocaleTimeString("en-US", {
-                  hour: "numeric", minute: "2-digit", hour12: true,
-                });
-
-                return (
-                  <div key={entry.id} className="relative flex items-start gap-3 mb-3">
-                    {/* Dot */}
-                    <div className={`w-10 h-10 rounded-full border-2 border-white shadow-sm flex items-center justify-center flex-shrink-0 z-10 ${config.dotColor}`}>
-                      <span className="text-white">{config.icon}</span>
-                    </div>
-
-                    {/* Card */}
-                    <div className="flex-1 bg-white rounded-xl border border-gray-200 shadow-sm p-4 hover:shadow-md transition-shadow min-w-0">
-                      <div className="flex items-start justify-between gap-2 flex-wrap">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${config.color}`}>
-                            {config.label}
-                          </span>
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                            entry.actorRole === "SYSTEM"
-                              ? "bg-gray-100 text-gray-500 border-gray-200"
-                              : entry.actorRole === "SEEKER"
-                              ? "bg-accent/10 text-accent border-accent/20"
-                              : "bg-purple-50 text-purple-600 border-purple-200"
-                          }`}>
-                            {entry.actorRole}
-                          </span>
-                        </div>
-                        <span className="text-[11px] text-gray-400 flex-shrink-0">{time}</span>
-                      </div>
-
-                      {/* Actor */}
-                      <p className="text-xs font-semibold text-gray-700 mt-2">
-                        {entry.actorRole === "SYSTEM"
-                          ? <span className="text-gray-400 font-normal italic">System automation</span>
-                          : entry.actorName
-                        }
-                      </p>
-
-                      {/* Delta */}
-                      <p className="text-sm text-gray-600 mt-1 leading-relaxed break-words">
-                        {entry.delta}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+        <div className="space-y-1 overflow-visible">
+          {sortedGroups.map((group) => (
+            <DayGroup
+              key={group.dateLabel}
+              dateLabel={group.dateLabel}
+              entries={group.entries}
+              sortOrder={sortOrder}
+              // Today's group is open by default; all other days are collapsed
+              defaultOpen={group.dateLabel === todayLabel}
+            />
           ))}
         </div>
       </div>
