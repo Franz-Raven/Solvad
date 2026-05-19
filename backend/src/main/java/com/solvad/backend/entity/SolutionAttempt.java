@@ -43,6 +43,15 @@ public class SolutionAttempt {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
+    // Add this below your other @ManyToOne relationships
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_attempt_id")
+    private SolutionAttempt parentAttempt;
+
+    // Add Getter and Setter
+    public SolutionAttempt getParentAttempt() { return parentAttempt; }
+    public void setParentAttempt(SolutionAttempt parentAttempt) { this.parentAttempt = parentAttempt; }
+
     public SolutionAttempt() {
     }
 
@@ -50,6 +59,8 @@ public class SolutionAttempt {
         this.problem = problem;
         this.solver = solver;
     }
+
+
 
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }

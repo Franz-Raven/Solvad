@@ -19,6 +19,11 @@ public class SolutionAttemptResponse {
     private LocalDateTime claimedAt;
     private LocalDateTime updatedAt;
     private LocalDateTime completedAt;
+    // Add these fields
+    private UUID parentAttemptId;
+    private String parentSolverName;
+
+    // Update your constructor to accept these, and add getters/setters!
 
     public SolutionAttemptResponse() {
     }

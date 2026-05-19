@@ -39,18 +39,15 @@ public class SolutionAttemptController {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // CLAIM — Solver claims a problem
-    // POST /api/problems/{problemId}/claim
-    // -------------------------------------------------------------------------
     @PostMapping("/api/problems/{problemId}/claim")
     @PreAuthorize("hasRole('SOLVER')")
     public ResponseEntity<?> claimProblem(
             @RequestHeader("Authorization") String authHeader,
-            @PathVariable UUID problemId) {
+            @PathVariable UUID problemId,
+            @RequestParam(required = false) UUID parentAttemptId) { // <-- Added parameter
         try {
             UUID solverUserId = extractUserId(authHeader);
-            SolutionAttemptResponse response = attemptService.claimProblem(solverUserId, problemId);
+            SolutionAttemptResponse response = attemptService.claimProblem(solverUserId, problemId, parentAttemptId);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -147,14 +144,11 @@ public class SolutionAttemptController {
     // GET /api/problems/{problemId}/attempts
     // -------------------------------------------------------------------------
     @GetMapping("/api/problems/{problemId}/attempts")
-    @PreAuthorize("hasRole('SEEKER')")
-    public ResponseEntity<?> getAllAttempts(
-            @RequestHeader("Authorization") String authHeader,
-            @PathVariable UUID problemId) {
+    @PreAuthorize("hasAnyRole('SEEKER', 'SOLVER', 'ADMIN')")
+    public ResponseEntity<?> getAllAttempts(@PathVariable UUID problemId) {
         try {
-            UUID seekerUserId = extractUserId(authHeader);
-            List<SolutionAttemptResponse> responses = attemptService.getAllAttemptsForProblem(
-                    seekerUserId, problemId);
+            // We no longer need to extract the seekerUserId here
+            List<SolutionAttemptResponse> responses = attemptService.getAllAttemptsForProblem(problemId);
             return ResponseEntity.ok(responses);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());

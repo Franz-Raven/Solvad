@@ -42,31 +42,54 @@ public class SolutionAttemptService {
     // -------------------------------------------------------------------------
 
     @Transactional
-    public SolutionAttemptResponse claimProblem(UUID solverUserId, UUID problemId) {
+    public SolutionAttemptResponse claimProblem(UUID solverUserId, UUID problemId, UUID parentAttemptId) {
         Problem problem = problemRepository.findById(problemId)
                 .orElseThrow(() -> new RuntimeException("Problem not found"));
 
         if (problem.getStatus() != ProblemStatus.OPEN) {
-            throw new RuntimeException("Problem is not available for claiming (status: " + problem.getStatus() + ")");
+            throw new RuntimeException("Problem is not available for claiming");
         }
 
         SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
                 .orElseThrow(() -> new RuntimeException("Solver profile not found"));
 
-        // Prevent double-claim by same solver
         if (attemptRepository.existsByProblemAndSolverAndStatus(problem, solver, SolutionAttemptStatus.ACTIVE)) {
             throw new RuntimeException("You have already claimed this problem");
         }
 
-        // Create attempt
+        // Create the new attempt
         SolutionAttempt attempt = new SolutionAttempt(problem, solver);
-        SolutionAttempt savedAttempt = attemptRepository.save(attempt);
 
-        // Update problem status to CLAIMED
+        // --- THE BRANCHING LOGIC ---
+        if (parentAttemptId != null) {
+            SolutionAttempt parent = attemptRepository.findById(parentAttemptId)
+                    .orElseThrow(() -> new RuntimeException("Parent attempt not found"));
+
+            // Link them in the tree
+            attempt.setParentAttempt(parent);
+            SolutionAttempt savedAttempt = attemptRepository.save(attempt);
+
+            // Copy parent's submitted text into the new solver's DRAFTs
+            List<SubtaskSubmission> parentSubmissions = submissionRepository.findByAttempt(parent);
+            for (SubtaskSubmission parentSub : parentSubmissions) {
+                if (parentSub.getStatus() == SubtaskSubmissionStatus.SUBMITTED) {
+                    SubtaskSubmission newDraft = new SubtaskSubmission(savedAttempt, parentSub.getSubtask());
+                    // Copy text so they can edit/improve it
+                    newDraft.setDescription(parentSub.getDescription());
+                    // Leave fileUrls blank to prevent accidental deletion of parent files
+                    newDraft.setStatus(SubtaskSubmissionStatus.DRAFT);
+                    submissionRepository.save(newDraft);
+                }
+            }
+        } else {
+            attemptRepository.save(attempt);
+        }
+        // ---------------------------
+
         problem.setStatus(ProblemStatus.CLAIMED);
         problemRepository.save(problem);
 
-        return mapToResponse(savedAttempt, new ArrayList<>());
+        return mapToResponse(attempt, submissionRepository.findByAttempt(attempt));
     }
 
     // -------------------------------------------------------------------------
@@ -247,18 +270,15 @@ public class SolutionAttemptService {
     // GET all attempts for a problem (seeker / attempt tree view)
     // -------------------------------------------------------------------------
 
+    // -------------------------------------------------------------------------
+    // GET all attempts for a problem (seeker / attempt tree view)
+    // -------------------------------------------------------------------------
     @Transactional(readOnly = true)
-    public List<SolutionAttemptResponse> getAllAttemptsForProblem(UUID seekerUserId, UUID problemId) {
+    public List<SolutionAttemptResponse> getAllAttemptsForProblem(UUID problemId) {
         Problem problem = problemRepository.findById(problemId)
                 .orElseThrow(() -> new RuntimeException("Problem not found"));
 
-        // Verify the seeker owns this problem
-        SeekerProfile seeker = seekerProfileRepository.findByUserId(seekerUserId)
-                .orElseThrow(() -> new RuntimeException("Seeker profile not found"));
-
-        if (!problem.getSeeker().getId().equals(seeker.getId())) {
-            throw new RuntimeException("You do not have permission to view attempts for this problem");
-        }
+        // Removed the Seeker ownership verification so Solvers can view the timeline too!
 
         List<SolutionAttempt> attempts = attemptRepository.findByProblemOrderByClaimedAtDesc(problem);
 

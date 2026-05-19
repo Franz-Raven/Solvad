@@ -4,8 +4,12 @@ import type { SolutionAttemptResponse, SubtaskSubmissionResponse } from "@/types
 /**
  * Claim a problem (solver)
  */
-export async function claimProblem(problemId: string): Promise<SolutionAttemptResponse> {
-  return apiRequest<SolutionAttemptResponse>(`/problems/${problemId}/claim`, {
+export async function claimProblem(problemId: string, parentAttemptId?: string): Promise<SolutionAttemptResponse> {
+  const url = parentAttemptId 
+    ? `/problems/${problemId}/claim?parentAttemptId=${parentAttemptId}`
+    : `/problems/${problemId}/claim`;
+
+  return apiRequest<SolutionAttemptResponse>(url, {
     method: "POST",
   });
 }
