@@ -671,7 +671,7 @@ export default function SolverProblemDetailPage() {
 
   const tabs: { id: TabType; label: string }[] = [
     { id: "blueprint", label: "Problem Blueprint" },
-    { id: "subtasks", label: "AI Sub-problems" },
+    { id: "subtasks", label: "Sub-problems" },
     { id: "tree", label: `Solution Tree${attempts.length > 0 ? ` (${attempts.length})` : ""}` },
   ];
 
