@@ -128,3 +128,17 @@
     @apply font-sans;
   }
 }
+
+#portal-root {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  pointer-events: none;
+}
+
+#portal-root > * {
+  pointer-events: auto;
+}

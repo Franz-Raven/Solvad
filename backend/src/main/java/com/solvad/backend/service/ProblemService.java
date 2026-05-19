@@ -1,10 +1,7 @@
 package com.solvad.backend.service;
 
 import com.solvad.backend.dto.*;
-import com.solvad.backend.entity.Problem;
-import com.solvad.backend.entity.ProblemStatus;
-import com.solvad.backend.entity.ProblemSubtask;
-import com.solvad.backend.entity.SeekerProfile;
+import com.solvad.backend.entity.*;
 import com.solvad.backend.repository.ProblemRepository;
 import com.solvad.backend.repository.ProblemSubtaskRepository;
 import com.solvad.backend.repository.SeekerProfileRepository;
@@ -30,6 +27,9 @@ public class ProblemService {
 
     @Autowired
     private GeminiService geminiService;
+
+    @Autowired
+    private AuditService auditService;
 
     public GenerateScopeResponse generateScope(GenerateScopeRequest request) {
         // Call Gemini AI to generate subtasks
@@ -62,6 +62,15 @@ public class ProblemService {
             request.getRequiredCourse()
         );
         Problem savedProblem = problemRepository.save(problem);
+
+        auditService.log(
+                savedProblem.getId(),
+                seekerUserId,
+                seeker.getOrganizationName(),
+                "SEEKER",
+                AuditEventType.PROBLEM_CREATED,
+                "Problem \"" + savedProblem.getTitle() + "\" was created and published."
+        );
 
         // Create and save ProblemSubtask entities
         List<ProblemSubtask> subtasks = request.getSubtasks().stream()
@@ -118,8 +127,18 @@ public class ProblemService {
 
         // Update status
         try {
+            String oldStatus = problem.getStatus().name();
+
             problem.setStatus(ProblemStatus.valueOf(newStatus));
             problemRepository.save(problem);
+            auditService.log(
+                    problemId,
+                    seekerUserId,
+                    seeker.getOrganizationName(),
+                    "SEEKER",
+                    AuditEventType.STATUS_CHANGED,
+                    "Status changed from " + oldStatus + " → " + newStatus
+            );
         } catch (IllegalArgumentException e) {
             throw new RuntimeException("Invalid status: " + newStatus);
         }

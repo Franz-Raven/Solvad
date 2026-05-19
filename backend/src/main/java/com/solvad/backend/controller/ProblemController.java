@@ -1,10 +1,8 @@
 package com.solvad.backend.controller;
 
-import com.solvad.backend.dto.GenerateScopeRequest;
-import com.solvad.backend.dto.GenerateScopeResponse;
-import com.solvad.backend.dto.ProblemRequest;
-import com.solvad.backend.dto.ProblemResponse;
+import com.solvad.backend.dto.*;
 import com.solvad.backend.security.JwtService;
+import com.solvad.backend.service.AuditService;
 import com.solvad.backend.service.ProblemService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +23,9 @@ public class ProblemController {
 
     @Autowired
     private JwtService jwtService;
+
+    @Autowired
+    private AuditService auditService;
 
     @PostMapping("/generate-scope")
     @PreAuthorize("hasRole('SEEKER')")
@@ -120,4 +121,14 @@ public class ProblemController {
             this.status = status;
         }
     }
+
+    @GetMapping("/{problemId}/audit-log")
+    public ResponseEntity<List<AuditLogResponse>> getAuditLog(
+            @PathVariable UUID problemId) {
+
+        List<AuditLogResponse> logs = auditService.getLogsForProblem(problemId);
+        return ResponseEntity.ok(logs);
+    }
+
+
 }
