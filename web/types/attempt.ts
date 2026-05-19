@@ -30,4 +30,8 @@ export interface SolutionAttemptResponse {
   parentSolverName?: string;   // <-- Add this
   
 }
+// Add this interface here
+export interface TreeAttemptNode extends SolutionAttemptResponse {
+  children: TreeAttemptNode[];
+}
 
