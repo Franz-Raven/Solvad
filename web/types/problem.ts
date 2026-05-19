@@ -51,7 +51,7 @@ export interface ProblemResponse {
   requiredCourse: string;
   status: string;
   seekerId: string;
-  seekerOrganization: string;
+  organizationName: string;
   createdAt: string;
   subtasks: SubProblem[];
 }

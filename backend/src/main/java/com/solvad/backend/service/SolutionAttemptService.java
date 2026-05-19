@@ -98,6 +98,7 @@ public class SolutionAttemptService {
     // SAVE DRAFT / SUBMIT subtask submission
     // -------------------------------------------------------------------------
 
+
     @Transactional
     public SubtaskSubmissionResponse saveOrSubmitSubtask(UUID solverUserId, UUID attemptId,
                                                          UUID subtaskId, String description,
@@ -222,6 +223,24 @@ public class SolutionAttemptService {
 
         List<SubtaskSubmission> submissions = submissionRepository.findByAttempt(attempt);
         return mapToResponse(attempt, submissions);
+    }
+
+    // -------------------------------------------------------------------------
+    // GET all attempts for a specific solver (for solver dashboard)
+    // -------------------------------------------------------------------------
+    @Transactional(readOnly = true)
+    public List<SolutionAttemptResponse> getMyAttempts(UUID solverUserId) {
+        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
+                .orElseThrow(() -> new RuntimeException("Solver profile not found"));
+
+        // Find all attempts by this solver, newest first
+        List<SolutionAttempt> attempts = attemptRepository.findBySolverOrderByClaimedAtDesc(solver);
+
+        // Map to responses
+        return attempts.stream().map(attempt -> {
+            List<SubtaskSubmission> submissions = submissionRepository.findByAttempt(attempt);
+            return mapToResponse(attempt, submissions);
+        }).collect(Collectors.toList());
     }
 
     // -------------------------------------------------------------------------

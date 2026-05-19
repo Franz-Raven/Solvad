@@ -26,3 +26,4 @@ export interface SolutionAttemptResponse {
   updatedAt: string;
   completedAt: string | null;
 }
+

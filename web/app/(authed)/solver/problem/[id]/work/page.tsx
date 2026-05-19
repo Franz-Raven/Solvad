@@ -43,25 +43,31 @@ export default function SolverWorkPage() {
     loadData();
   }, [problemId]);
 
+  // Inside your loadData function on work/page.tsx, replace the loadData implementation with this:
   const loadData = async () => {
     try {
       setLoading(true);
       setError(null);
-
-      const [problemData, attemptData] = await Promise.all([
-        getProblemById(problemId),
-        getMyAttempt(problemId),
-      ]);
-
+      
+      const problemData = await getProblemById(problemId);
       setProblem(problemData);
+
+      // Attempt might take a second to propagate after clicking claim
+      let attemptData = null;
+      try {
+        attemptData = await getMyAttempt(problemId);
+      } catch (e) {
+        // If it throws an error immediately after routing, wait a second and retry
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        attemptData = await getMyAttempt(problemId);
+      }
+      
       setAttempt(attemptData);
 
-      // Set active subtask to first one
       if (problemData.subtasks.length > 0) {
         setActiveSubtaskId(problemData.subtasks[0].id);
       }
 
-      // Pre-fill descriptions from existing submissions (drafts)
       const descMap: Record<string, string> = {};
       attemptData.submissions.forEach((sub) => {
         descMap[sub.subtaskId] = sub.description ?? "";

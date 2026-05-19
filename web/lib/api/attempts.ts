@@ -121,3 +121,9 @@ export async function markAsSolved(
     method: "POST",
   });
 }
+
+export async function getMyActiveAttempts(): Promise<SolutionAttemptResponse[]> {
+  return apiRequest<SolutionAttemptResponse[]>("/attempts/my-attempts", {
+    method: "GET",
+  });
+}

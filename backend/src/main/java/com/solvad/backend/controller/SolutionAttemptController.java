@@ -201,4 +201,18 @@ public class SolutionAttemptController {
         String token = authHeader.substring(7);
         return jwtService.extractUserId(token);
     }
+
+    @GetMapping("/api/attempts/my-attempts")
+    @PreAuthorize("hasRole('SOLVER')")
+    public ResponseEntity<?> getMyActiveAttempts(@RequestHeader("Authorization") String authHeader) {
+        try {
+            String token = authHeader.substring(7);
+            UUID solverUserId = jwtService.extractUserId(token);
+
+            List<SolutionAttemptResponse> responses = attemptService.getMyAttempts(solverUserId);
+            return ResponseEntity.ok(responses);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 }
