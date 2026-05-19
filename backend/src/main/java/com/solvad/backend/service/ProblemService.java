@@ -5,6 +5,7 @@ import com.solvad.backend.entity.*;
 import com.solvad.backend.repository.ProblemRepository;
 import com.solvad.backend.repository.ProblemSubtaskRepository;
 import com.solvad.backend.repository.SeekerProfileRepository;
+import com.solvad.backend.repository.SolutionAttemptRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +25,9 @@ public class ProblemService {
 
     @Autowired
     private SeekerProfileRepository seekerProfileRepository;
+
+    @Autowired
+    private SolutionAttemptRepository attemptRepository; // <-- Added this
 
     @Autowired
     private GeminiService geminiService;
@@ -132,6 +136,24 @@ public class ProblemService {
             // Guardrail: Prevent manual shifts to automated solver states
             if (newStatus == ProblemStatus.CLAIMED || newStatus == ProblemStatus.IN_PROGRESS) {
                 throw new RuntimeException("Status " + newStatus + " is driven by solver actions and cannot be set manually.");
+            }
+
+            // FORCE CLOSE LOGIC: If moving to CLOSED or COMPLETED, we must terminate any active attempts
+            if (newStatus == ProblemStatus.CLOSED || newStatus == ProblemStatus.COMPLETED) {
+                attemptRepository.findByProblemAndStatus(problem, SolutionAttemptStatus.ACTIVE)
+                        .ifPresent(attempt -> {
+                            attempt.setStatus(SolutionAttemptStatus.TERMINATED); // <-- Updated
+                            attemptRepository.save(attempt);
+
+                            auditService.log(
+                                    problemId,
+                                    seekerUserId,
+                                    seeker.getOrganizationName(),
+                                    "SEEKER",
+                                    AuditEventType.STATUS_CHANGED,
+                                    "Seeker forcefully " + newStatus.name().toLowerCase() + " the problem. The active solution attempt was terminated."
+                            );
+                        });
             }
 
             problem.setStatus(newStatus);

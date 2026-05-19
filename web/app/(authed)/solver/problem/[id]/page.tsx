@@ -18,6 +18,7 @@ const STATUS_COLORS: Record<string, string> = {
   SOLVED_OPEN_FOR_IMPROVEMENT: "bg-green-500 text-white",
   COMPLETED: "bg-gray-800 text-white",
   CLOSED: "bg-gray-500 text-white",
+  TERMINATED: "bg-red-500 text-white",
 };
 
 // ─── Build parent→children hierarchy ────────────────────────────────────────

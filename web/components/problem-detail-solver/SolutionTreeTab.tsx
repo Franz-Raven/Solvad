@@ -1,8 +1,17 @@
 "use client";
-
 import { useState, useEffect, useRef } from "react";
 import Portal from "@/components/portal";
 import type { SolutionAttemptResponse, TreeAttemptNode } from "@/types/attempt";
+
+const STATUS_COLORS: Record<string, string> = {
+  OPEN: "bg-blue-500 text-white",
+  CLAIMED: "bg-purple-500 text-white",
+  IN_PROGRESS: "bg-yellow-500 text-white",
+  SOLVED_OPEN_FOR_IMPROVEMENT: "bg-green-500 text-white",
+  COMPLETED: "bg-gray-800 text-white",
+  CLOSED: "bg-gray-500 text-white",
+  TERMINATED: "bg-red-500 text-white",
+};
 
 // ─── Build parent→children hierarchy ────────────────────────────────────────
 function buildHierarchyTree(flatList: SolutionAttemptResponse[]): TreeAttemptNode[] {
@@ -10,6 +19,7 @@ function buildHierarchyTree(flatList: SolutionAttemptResponse[]): TreeAttemptNod
   const roots: TreeAttemptNode[] = [];
 
   flatList.forEach((item) => { map[item.id] = { ...item, children: [] }; });
+
   flatList.forEach((item) => {
     const node = map[item.id];
     if (item.parentAttemptId && map[item.parentAttemptId]) {
@@ -111,6 +121,7 @@ function AttemptDetailModal({
   onClose: () => void;
 }) {
   const attemptDate = new Date(node.claimedAt);
+
   const parentRec = node.parentAttemptId
     ? flatAttemptsList.find((a) => a.id === node.parentAttemptId)
     : null;
@@ -161,7 +172,7 @@ function AttemptDetailModal({
                     className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
                       node.status === "COMPLETED"
                         ? "bg-green-100 text-green-700 border-green-200"
-                        : node.status === "ABANDONED"
+                        : (node.status === "ABANDONED" || node.status === "TERMINATED")
                         ? "bg-red-100 text-red-700 border-red-200"
                         : "bg-yellow-100 text-yellow-700 border-yellow-200"
                     }`}
@@ -265,10 +276,10 @@ function AttemptDetailModal({
                         <>
                           <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-lg w-fit">
                             <button
-                               onClick={() => setViewPanel("current")}
+                              onClick={() => setViewPanel("current")}
                               className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
                                 viewPanel === "current"
-                                   ? "bg-white text-gray-900 shadow-sm border border-gray-200"
+                                  ? "bg-white text-gray-900 shadow-sm border border-gray-200"
                                   : "text-gray-500 hover:text-gray-800"
                               }`}
                             >
@@ -289,16 +300,16 @@ function AttemptDetailModal({
                           {viewPanel === "current" && (
                             <div className="bg-green-50/40 border border-green-100 rounded-xl p-4">
                               <p className="text-xs font-bold text-green-700 uppercase tracking-wide mb-2">
-                                 {node.solverFirstName}'s Solution
+                                {node.solverFirstName}'s Solution
                               </p>
                               <p className="text-sm text-gray-800 whitespace-pre-wrap break-words leading-relaxed">
-                               {activeSub.description || "No description provided."}
+                                {activeSub.description || "No description provided."}
                               </p>
                               {activeSub.fileUrls && activeSub.fileUrls.length > 0 && (
-                                 <div className="mt-3 pt-3 border-t border-green-100 space-y-1.5">
+                                <div className="mt-3 pt-3 border-t border-green-100 space-y-1.5">
                                   <p className="text-xs font-bold text-green-700 uppercase">Files</p>
                                   {activeSub.fileUrls.map((url, idx) => (
-                                     <a key={idx} href={url} target="_blank" rel="noopener noreferrer"
+                                    <a key={idx} href={url} target="_blank" rel="noopener noreferrer"
                                       className="flex items-center gap-1.5 text-xs text-green-700 hover:underline min-w-0">
                                       📎 <span className="truncate">Modified File {idx + 1}</span>
                                     </a>
@@ -310,7 +321,7 @@ function AttemptDetailModal({
 
                           {viewPanel === "previous" && (
                             <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-                               <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
+                              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
                                 {node.parentSolverName}'s Original
                               </p>
                               <p className="text-sm text-gray-600 whitespace-pre-wrap break-words leading-relaxed">
@@ -322,14 +333,14 @@ function AttemptDetailModal({
                                   {predecessorSub.fileUrls.map((url, idx) => (
                                     <a key={idx} href={url} target="_blank" rel="noopener noreferrer"
                                       className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-blue-500 min-w-0">
-                                       📎 <span className="truncate">Original File {idx + 1}</span>
+                                      📎 <span className="truncate">Original File {idx + 1}</span>
                                     </a>
                                   ))}
-                                 </div>
+                                </div>
                               )}
                             </div>
                           )}
-                         </>
+                        </>
                       ) : (
                         <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
                           <p className="text-sm text-gray-800 whitespace-pre-wrap break-words leading-relaxed">
@@ -337,7 +348,7 @@ function AttemptDetailModal({
                           </p>
                           {activeSub.fileUrls && activeSub.fileUrls.length > 0 && (
                             <div className="mt-3 pt-3 border-t border-gray-200 flex flex-wrap gap-2">
-                               {activeSub.fileUrls.map((url, idx) => (
+                              {activeSub.fileUrls.map((url, idx) => (
                                 <a key={idx} href={url} target="_blank" rel="noopener noreferrer"
                                   className="inline-flex items-center gap-1 text-xs bg-white border border-gray-200 px-2.5 py-1.5 rounded-lg text-gray-600 hover:text-blue-500 hover:border-blue-200 transition-colors">
                                   📎 File {idx + 1}
@@ -386,6 +397,7 @@ function AttemptCard({
   onBuildUponClick: () => void;
 }) {
   const attemptDate = new Date(node.claimedAt);
+
   return (
     <div
       className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:border-blue-300 hover:shadow-md transition-all w-56 select-none"
@@ -403,7 +415,7 @@ function AttemptCard({
           className={`flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full border ml-1 mt-0.5 ${
             node.status === "COMPLETED"
               ? "bg-green-100 text-green-700 border-green-200"
-              : node.status === "ABANDONED"
+              : (node.status === "ABANDONED" || node.status === "TERMINATED")
               ? "bg-red-100 text-red-700 border-red-200"
               : "bg-yellow-100 text-yellow-700 border-yellow-200"
           }`}
@@ -485,7 +497,7 @@ function SolutionFamilyTree({
             key={node.id}
             id={`tnode-${node.id}`}
             style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "0 16px" }}
-           >
+          >
             <AttemptCard
               node={node}
               isAlreadyClaimed={isAlreadyClaimed}
@@ -497,7 +509,7 @@ function SolutionFamilyTree({
             {node.children.length > 0 && (
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                 <div style={{ width: 2, height: 28, background: "#d1d5db" }} />
-                 {renderLevel(node.children)}
+                {renderLevel(node.children)}
               </div>
             )}
           </div>
@@ -533,6 +545,7 @@ function SolutionFamilyTree({
             top: r.top - containerRect.top + scroll.y,
             bottom: r.bottom - containerRect.top + scroll.y,
           });
+
           const p = toL(pRect);
           const cs = childRects.map(toL);
           const barY = p.bottom + 14;
@@ -570,7 +583,7 @@ function SolutionFamilyTree({
           height={treeHeight}
         >
           {svgLines}
-         </svg>
+        </svg>
       )}
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 700, paddingTop: 8, position: "relative", zIndex: 1 }}>
         {renderLevel(roots)}

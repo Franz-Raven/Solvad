@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import Portal from "@/components/portal"; // Assuming you have your Portal component here, same as solver side
 import { getProblemById, updateProblemStatus, deleteProblem } from "@/lib/api/problem";
 import type { ProblemResponse } from "@/types/problem";
 import { ProblemTab } from "@/components/problem-detail-seeker/ProblemTab";
@@ -20,6 +21,7 @@ const STATUS_COLORS: Record<string, string> = {
   SOLVED_OPEN_FOR_IMPROVEMENT: "bg-green-500 text-white",
   COMPLETED: "bg-gray-800 text-white",
   CLOSED: "bg-gray-500 text-white",
+  TERMINATED: "bg-red-500 text-white",
 };
 
 export default function ProblemDetailPage() {
@@ -31,6 +33,7 @@ export default function ProblemDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>("problem");
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<string | null>(null); // State for the warning modal
 
   useEffect(() => { loadProblem(); }, [problemId]);
 
@@ -47,14 +50,28 @@ export default function ProblemDetailPage() {
     }
   };
 
-  const handleStatusChange = async (newStatus: string) => {
+  // Step 1: Intercept the click. Check if we need to warn the seeker.
+  const handleStatusChangeClick = (newStatus: string) => {
+    setShowStatusDropdown(false);
+    
+    // If the problem is currently being worked on, and they are trying to close it
+    if ((newStatus === "COMPLETED" || newStatus === "CLOSED") && 
+        (problem?.status === "CLAIMED" || problem?.status === "IN_PROGRESS")) {
+      setPendingStatus(newStatus);
+    } else {
+      executeStatusChange(newStatus);
+    }
+  };
+
+  // Step 2: Actually execute the API call
+  const executeStatusChange = async (newStatus: string) => {
     try {
       const updatedProblem = await updateProblemStatus(problemId, newStatus);
       setProblem(updatedProblem);
-      setShowStatusDropdown(false);
+      setPendingStatus(null);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to update status");
-      setShowStatusDropdown(false);
+      setPendingStatus(null);
     }
   };
 
@@ -101,6 +118,40 @@ export default function ProblemDetailPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-accent/20 via-background to-accent/10">
+      
+      {/* ── Warning Modal (Portaled) ── */}
+      {pendingStatus && (
+        <Portal>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/65 backdrop-blur-md">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 p-6">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h2 className="text-lg font-bold text-gray-900 text-center mb-2">Active Solver Warning</h2>
+              <p className="text-sm text-gray-600 text-center mb-6">
+                There is currently a solver actively working on this problem. Changing the status to <strong>{pendingStatus}</strong> will instantly terminate their attempt. Are you sure you want to proceed?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setPendingStatus(null)}
+                  className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => executeStatusChange(pendingStatus)}
+                  className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors text-sm"
+                >
+                  Yes, Terminate Attempt
+                </button>
+              </div>
+            </div>
+          </div>
+        </Portal>
+      )}
+
       {/* Sticky Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
         <div className="max-w-7xl mx-auto px-8 py-6">
@@ -128,11 +179,10 @@ export default function ProblemDetailPage() {
               </button>
               {showStatusDropdown && (
                 <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-20">
-                  {/* Notice we ONLY map the statuses seekers are allowed to manually select */}
                   {["OPEN", "SOLVED_OPEN_FOR_IMPROVEMENT", "COMPLETED", "CLOSED"].map((status) => (
                     <button
                       key={status}
-                      onClick={() => handleStatusChange(status)}
+                      onClick={() => handleStatusChangeClick(status)}
                       className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 text-gray-700"
                     >
                       {status.replace(/_/g, " ")}

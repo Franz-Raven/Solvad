@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { getAllAttempts } from "@/lib/api/attempts";
@@ -17,6 +16,7 @@ function buildHierarchyTree(flatList: SolutionAttemptResponse[]): TreeAttemptNod
   const map: Record<string, TreeAttemptNode> = {};
   const roots: TreeAttemptNode[] = [];
   flatList.forEach((item) => { map[item.id] = { ...item, children: [] }; });
+
   flatList.forEach((item) => {
     const node = map[item.id];
     if (item.parentAttemptId && map[item.parentAttemptId]) {
@@ -42,6 +42,7 @@ function AttemptDetailModal({
   const parentRec = node.parentAttemptId
     ? flatAttemptsList.find((a) => a.id === node.parentAttemptId)
     : null;
+
   const [activeSubIdx, setActiveSubIdx] = useState(0);
   const [viewPanel, setViewPanel] = useState<"current" | "previous">("current");
 
@@ -80,7 +81,7 @@ function AttemptDetailModal({
                 <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
                   node.status === "COMPLETED"
                     ? "bg-green-100 text-green-700 border-green-200"
-                    : node.status === "ABANDONED"
+                    : (node.status === "ABANDONED" || node.status === "TERMINATED")
                     ? "bg-red-100 text-red-700 border-red-200"
                     : "bg-yellow-100 text-yellow-700 border-yellow-200"
                 }`}>
@@ -270,6 +271,7 @@ function AttemptCard({
   onViewClick: () => void;
 }) {
   const attemptDate = new Date(node.claimedAt);
+
   return (
     <div
       className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:border-blue-300 hover:shadow-md transition-all w-56 select-none"
@@ -286,7 +288,7 @@ function AttemptCard({
         <span className={`flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full border ml-1 mt-0.5 ${
           node.status === "COMPLETED"
             ? "bg-green-100 text-green-700 border-green-200"
-            : node.status === "ABANDONED"
+            : (node.status === "ABANDONED" || node.status === "TERMINATED")
             ? "bg-red-100 text-red-700 border-red-200"
             : "bg-yellow-100 text-yellow-700 border-yellow-200"
         }`}>
@@ -348,7 +350,7 @@ function SolutionFamilyTree({
             key={node.id}
             id={`tnode-${node.id}`}
             style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "0 16px" }}
-           >
+          >
             <AttemptCard node={node} onViewClick={() => onViewAttempt(node)} />
             {node.children.length > 0 && (
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -389,6 +391,7 @@ function SolutionFamilyTree({
             top: r.top - containerRect.top + scroll.y,
             bottom: r.bottom - containerRect.top + scroll.y,
           });
+
           const p = toL(pRect);
           const cs = childRects.map(toL);
           const barY = p.bottom + 14;
@@ -503,7 +506,7 @@ export function SolutionTreeTab({ problemId }: { problemId: string }) {
           </span>
           <span className="inline-flex items-center gap-1.5 text-xs text-red-700">
             <span className="w-2.5 h-2.5 rounded-full bg-red-100 border border-red-200 inline-block" />
-            Abandoned
+            Abandoned / Terminated
           </span>
           <span className="inline-flex items-center gap-1.5 text-xs text-blue-700">
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

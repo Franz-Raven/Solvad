@@ -497,7 +497,7 @@ export default function SolverWorkPage() {
                     {attempt.parentAttemptId && (
                       <div className="mt-4">
                         <label className="block text-sm font-medium text-blue-950 mb-2 font-semibold flex items-center gap-1.5">
-                          <span>🔄</span> Technical Delta (What did you change or improve from the parent solution?)
+                           What did you change or improve from the parent solution?
                         </label>
                         <textarea
                           value={deltas[activeSubtask.id] ?? ""}
