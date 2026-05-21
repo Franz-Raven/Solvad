@@ -267,7 +267,7 @@ function AttemptDetailModal({
 
                       {activeSub.deltaDescription && (
                         <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
-                          <p className="text-xs font-bold text-blue-700 uppercase tracking-wide mb-1">🔧 Technical Delta</p>
+                          <p className="text-xs font-bold text-blue-700 uppercase tracking-wide mb-1">What changed from the parent solution </p>
                           <p className="text-sm text-blue-900 italic leading-relaxed break-words">{activeSub.deltaDescription}</p>
                         </div>
                       )}
