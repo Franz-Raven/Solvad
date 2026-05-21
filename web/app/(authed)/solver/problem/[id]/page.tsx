@@ -8,8 +8,9 @@ import { getProblemById } from "@/lib/api/problem";
 import { claimProblem, getMyAttempt, getAllAttempts } from "@/lib/api/attempts";
 import type { ProblemResponse } from "@/types/problem";
 import type { SolutionAttemptResponse, TreeAttemptNode } from "@/types/attempt";
+import { AuditTimelineTab } from "@/components/problem-detail-solver/AuditTimelineTab";
 
-type TabType = "blueprint" | "subtasks" | "tree";
+type TabType = "blueprint" | "subtasks" | "tree" | "history";
 
 const STATUS_COLORS: Record<string, string> = {
   OPEN: "bg-blue-500 text-white",
@@ -27,7 +28,6 @@ function buildHierarchyTree(flatList: SolutionAttemptResponse[]): TreeAttemptNod
   const roots: TreeAttemptNode[] = [];
 
   flatList.forEach((item) => { map[item.id] = { ...item, children: [] }; });
-
   flatList.forEach((item) => {
     const node = map[item.id];
     if (item.parentAttemptId && map[item.parentAttemptId]) {
@@ -36,7 +36,6 @@ function buildHierarchyTree(flatList: SolutionAttemptResponse[]): TreeAttemptNod
       roots.push(node);
     }
   });
-
   return roots;
 }
 
@@ -71,13 +70,15 @@ function BuildUponConfirmModal({
       >
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 p-6">
           <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-6 h-6 text-blue-600" 
+              fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7l-2 2m2-2l2 2m4 4v-4a2 2 0 00-2-2h-6" />
             </svg>
           </div>
 
           <h2 className="text-lg font-bold text-gray-900 text-center mb-1">Build Upon This Solution?</h2>
           <p className="text-sm text-gray-500 text-center mb-1">You're about to fork the attempt by</p>
+    
           <p className="text-sm font-semibold text-gray-800 text-center mb-4">
             {node.solverFirstName} {node.solverLastName}
           </p>
@@ -275,7 +276,7 @@ function AttemptDetailModal({
 
                       {activeSub.deltaDescription && (
                         <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
-                          <p className="text-xs font-bold text-blue-700 uppercase tracking-wide mb-1">🔧 Technical Delta</p>
+                          <p className="text-xs font-bold text-blue-700 uppercase tracking-wide mb-1">What changed from the parent solution</p>
                           <p className="text-sm text-blue-900 italic leading-relaxed break-words">{activeSub.deltaDescription}</p>
                         </div>
                       )}
@@ -380,7 +381,10 @@ function AttemptDetailModal({
         <BuildUponConfirmModal
           node={node}
           claiming={claiming}
-          onConfirm={() => { onClaimCall(node.id); onClose(); }}
+          onConfirm={() => {
+            onClaimCall(node.id);
+            onClose();
+          }}
           onCancel={() => setShowConfirm(false)}
         />
       )}
@@ -452,7 +456,10 @@ function AttemptCard({
       <div className="flex items-center gap-1.5 mt-3 flex-wrap">
         {node.status === "COMPLETED" && !isAlreadyClaimed && !isUnavailable && (
           <button
-            onClick={(e) => { e.stopPropagation(); onBuildUponClick(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onBuildUponClick();
+            }}
             disabled={claiming}
             className="px-2.5 py-1 bg-blue-50 hover:bg-blue-500 text-blue-600 hover:text-white text-[11px] font-semibold rounded-lg transition-all border border-blue-200 shadow-sm"
           >
@@ -460,7 +467,10 @@ function AttemptCard({
           </button>
         )}
         <button
-          onClick={(e) => { e.stopPropagation(); onViewClick(); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onViewClick();
+          }}
           className="px-2.5 py-1 text-[11px] font-medium text-gray-500 hover:text-gray-800 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 transition-all"
         >
           View ↗
@@ -510,8 +520,7 @@ function SolutionFamilyTree({
               isAlreadyClaimed={isAlreadyClaimed}
               isUnavailable={isUnavailable}
               claiming={claiming}
-            
-              onBuildUponClick={() => onViewAttempt(node)} // let modal handle confirm
+              onBuildUponClick={() => onViewAttempt(node)} 
               onViewClick={() => onViewAttempt(node)}
             />
             {node.children.length > 0 && (
@@ -553,7 +562,6 @@ function SolutionFamilyTree({
             top: r.top - containerRect.top + scroll.y,
             bottom: r.bottom - containerRect.top + scroll.y,
           });
-
           const p = toL(pRect);
           const cs = childRects.map(toL);
           const barY = p.bottom + 14;
@@ -678,6 +686,7 @@ export default function SolverProblemDetailPage() {
     { id: "blueprint", label: "Problem Blueprint" },
     { id: "subtasks", label: "Sub-problems" },
     { id: "tree", label: `Solution Tree${attempts.length > 0 ? ` (${attempts.length})` : ""}` },
+    { id: "history", label: "History" },
   ];
 
   return (
@@ -922,6 +931,11 @@ export default function SolverProblemDetailPage() {
               </div>
             )}
           </>
+        )}
+
+        {/* ── Tab: History (Audit Timeline) ── */}
+        {activeTab === "history" && (
+          <AuditTimelineTab problemId={problemId} />
         )}
       </div>
     </div>
