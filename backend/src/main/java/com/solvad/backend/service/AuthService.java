@@ -54,6 +54,7 @@ public class AuthService {
         profile.setLastName(request.getLastName());
         profile.setInstitution(request.getInstitution());
         profile.setDegreeProgram(request.getDegreeProgram());
+        profile.setSkills(resolveRegistrationSkills(request.getSkills(), request.getDegreeProgram()));
         solverProfileRepository.save(profile);
 
         String token = jwtService.generateToken(user.getId(), user.getEmail(), user.getRole().name());
@@ -96,5 +97,12 @@ public class AuthService {
         String token = jwtService.generateToken(user.getId(), user.getEmail(), user.getRole().name());
 
         return new AuthResponse(token, user.getId(), user.getEmail(), user.getRole());
+    }
+
+    private String resolveRegistrationSkills(String skills, String degreeProgram) {
+        if (skills != null && !skills.isBlank()) {
+            return skills.trim();
+        }
+        return degreeProgram;
     }
 }

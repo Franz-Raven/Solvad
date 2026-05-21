@@ -1,6 +1,9 @@
 package com.solvad.backend.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -14,9 +17,13 @@ public class ProblemResponse {
     private String requiredCourse;
     private String status;
     private UUID seekerId;
+    @JsonProperty("organizationName")
     private String seekerOrganization;
     private LocalDateTime createdAt;
     private List<SubtaskResponse> subtasks;
+    private List<String> tags = new ArrayList<>();
+    private Double matchScore;
+    private Boolean courseMatch;
 
     public ProblemResponse() {
     }
@@ -24,7 +31,7 @@ public class ProblemResponse {
     public ProblemResponse(UUID id, String title, String backgroundContext, String primaryStatement,
                           String objectives, String constraints, String requiredCourse, String status,
                           UUID seekerId, String seekerOrganization, LocalDateTime createdAt,
-                          List<SubtaskResponse> subtasks) {
+                          List<SubtaskResponse> subtasks, List<String> tags) {
         this.id = id;
         this.title = title;
         this.backgroundContext = backgroundContext;
@@ -37,6 +44,7 @@ public class ProblemResponse {
         this.seekerOrganization = seekerOrganization;
         this.createdAt = createdAt;
         this.subtasks = subtasks;
+        this.tags = tags != null ? tags : new ArrayList<>();
     }
 
     public UUID getId() {
@@ -133,5 +141,29 @@ public class ProblemResponse {
 
     public void setSubtasks(List<SubtaskResponse> subtasks) {
         this.subtasks = subtasks;
+    }
+
+    public List<String> getTags() {
+        return tags;
+    }
+
+    public void setTags(List<String> tags) {
+        this.tags = tags;
+    }
+
+    public Double getMatchScore() {
+        return matchScore;
+    }
+
+    public void setMatchScore(Double matchScore) {
+        this.matchScore = matchScore;
+    }
+
+    public Boolean getCourseMatch() {
+        return courseMatch;
+    }
+
+    public void setCourseMatch(Boolean courseMatch) {
+        this.courseMatch = courseMatch;
     }
 }

@@ -2,29 +2,43 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { getMyProblems } from "@/lib/api/problem";
-import type { ProblemResponse } from "@/types/problem";
+import { getMyProblems, getSeekerNotifications } from "@/lib/api/problem";
+import type { ProblemResponse, SeekerNotification } from "@/types/problem";
 
 export default function SeekerDashboardPage() {
   const [problems, setProblems] = useState<ProblemResponse[]>([]);
+  const [notifications, setNotifications] = useState<SeekerNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadProblems();
+    loadDashboard();
   }, []);
 
-  const loadProblems = async () => {
+  const loadDashboard = async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await getMyProblems();
-      setProblems(data);
+      const [problemsData, notificationsData] = await Promise.all([
+        getMyProblems(),
+        getSeekerNotifications().catch(() => []),
+      ]);
+      setProblems(problemsData);
+      setNotifications(notificationsData);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load problems");
     } finally {
       setLoading(false);
     }
+  };
+
+  const formatNotificationTime = (dateString: string) => {
+    return new Date(dateString).toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
   };
 
   const getStatusColor = (status: string) => {
@@ -58,7 +72,10 @@ export default function SeekerDashboardPage() {
   const stats = {
     total: problems.length,
     inProgress: problems.filter((p) => p.status === "IN_PROGRESS").length,
-    solved: problems.filter((p) => p.status === "SOLVED").length,
+    solved: problems.filter(
+      (p) =>
+        p.status === "SOLVED_OPEN_FOR_IMPROVEMENT" || p.status === "COMPLETED"
+    ).length,
   };
 
   return (
@@ -90,6 +107,38 @@ export default function SeekerDashboardPage() {
             <p className="text-sm text-gray-600 mt-2">Successfully completed</p>
           </div>
         </div>
+
+        {/* Module 2.2 — claim & status notifications */}
+        {notifications.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-xl border border-secondary/30 p-8 mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Recent Activity</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Updates when solvers claim your problems or statuses change.
+            </p>
+            <div className="space-y-3 max-h-64 overflow-y-auto">
+              {notifications.slice(0, 10).map((n) => (
+                <Link
+                  key={n.id}
+                  href={`/seeker/problem/${n.problemId}`}
+                  className="block p-4 rounded-lg border border-gray-200 hover:border-accent hover:bg-accent/5 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">{n.problemTitle}</p>
+                      <p className="text-sm text-gray-700 mt-1">{n.message}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {n.actorName} • {n.eventType.replace(/_/g, " ")}
+                      </p>
+                    </div>
+                    <span className="text-xs text-gray-400 whitespace-nowrap">
+                      {formatNotificationTime(n.timestamp)}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Posted Problems */}
         <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8 mb-8">

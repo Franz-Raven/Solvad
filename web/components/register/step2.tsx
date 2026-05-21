@@ -17,6 +17,7 @@ interface Step2Props {
     lastName: string;
     university: string;
     course: string;
+    skills: string;
   };
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
   onSubmit: (e: React.FormEvent) => void;
@@ -112,6 +113,27 @@ export default function Step2({ data, onChange, onSubmit, onBack, isLoading, onU
             ))}
           </SelectContent>
         </Select>
+      </div>
+
+      <div className="space-y-2">
+        <label
+          htmlFor="skills"
+          className="block text-sm font-medium text-foreground"
+        >
+          Skills & interests (optional)
+        </label>
+        <input
+          id="skills"
+          name="skills"
+          type="text"
+          value={data.skills}
+          onChange={onChange}
+          className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all"
+          placeholder="e.g. react, api design, machine learning (comma-separated)"
+        />
+        <p className="text-xs text-muted-foreground">
+          Used for problem recommendations. Your course is included automatically if left blank.
+        </p>
       </div>
 
       <div className="grid grid-cols-3 gap-3">

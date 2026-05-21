@@ -54,4 +54,25 @@ export interface ProblemResponse {
   organizationName: string;
   createdAt: string;
   subtasks: SubProblem[];
+  tags?: string[];
+  matchScore?: number;
+  courseMatch?: boolean;
+}
+
+export interface DiscoveryDashboardResponse {
+  recommended: ProblemResponse[];
+  problems: ProblemResponse[];
+  availableTags: string[];
+  solverCourse: string;
+  solverSkills: string;
+}
+
+export interface SeekerNotification {
+  id: string;
+  problemId: string;
+  problemTitle: string;
+  eventType: string;
+  message: string;
+  actorName: string;
+  timestamp: string;
 }

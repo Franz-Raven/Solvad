@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -39,6 +41,11 @@ public class Problem {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ProblemStatus status = ProblemStatus.OPEN;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "problem_tags", joinColumns = @JoinColumn(name = "problem_id"))
+    @Column(name = "tag")
+    private List<String> tags = new ArrayList<>();
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -136,5 +143,13 @@ public class Problem {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public List<String> getTags() {
+        return tags;
+    }
+
+    public void setTags(List<String> tags) {
+        this.tags = tags != null ? tags : new ArrayList<>();
     }
 }
