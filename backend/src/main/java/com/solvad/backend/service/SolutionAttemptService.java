@@ -49,8 +49,14 @@ public class SolutionAttemptService {
         Problem problem = problemRepository.findById(problemId)
                 .orElseThrow(() -> new RuntimeException("Problem not found"));
 
-        if (problem.getStatus() != ProblemStatus.OPEN && problem.getStatus() != ProblemStatus.SOLVED_OPEN_FOR_IMPROVEMENT) {
-            throw new RuntimeException("Problem is not available for claiming");
+        boolean isFork = parentAttemptId != null;
+        if (isFork) {
+            if (problem.getStatus() != ProblemStatus.OPEN
+                    && problem.getStatus() != ProblemStatus.SOLVED_OPEN_FOR_IMPROVEMENT) {
+                throw new RuntimeException("Problem is not available for forking");
+            }
+        } else if (problem.getStatus() != ProblemStatus.OPEN) {
+            throw new RuntimeException("Only OPEN problems can be claimed");
         }
 
         SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
@@ -101,7 +107,7 @@ public class SolutionAttemptService {
                     solverFullName,
                     "SOLVER",
                     AuditEventType.ATTEMPT_CLAIMED,
-                    solverFullName + " claimed this problem."
+                    solverFullName + " claimed this problem. The seeker has been notified."
             );
         }
 
@@ -583,6 +589,10 @@ public class SolutionAttemptService {
                         s.getId(), s.getTitle(), s.getDepartmentFocus(), s.getDescription()))
                 .collect(Collectors.toList());
 
+        List<String> tags = problem.getTags() != null
+                ? problem.getTags()
+                : MatchmakingService.buildTagsForProblem(problem, subtasks);
+
         return new com.solvad.backend.dto.ProblemResponse(
                 problem.getId(),
                 problem.getTitle(),
@@ -595,7 +605,8 @@ public class SolutionAttemptService {
                 problem.getSeeker().getId(),
                 problem.getSeeker().getOrganizationName(),
                 problem.getCreatedAt(),
-                subtaskResponses
+                subtaskResponses,
+                tags
         );
     }
 }

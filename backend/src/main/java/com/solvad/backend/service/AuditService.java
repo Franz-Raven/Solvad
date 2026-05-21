@@ -1,13 +1,16 @@
 package com.solvad.backend.service;
 
 import com.solvad.backend.dto.AuditLogResponse;
+import com.solvad.backend.dto.SeekerNotificationResponse;
 import com.solvad.backend.entity.AuditEventType;
 import com.solvad.backend.entity.AuditLog;
 import com.solvad.backend.repository.AuditLogRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -36,6 +39,31 @@ public class AuditService {
                 .findByProblemIdOrderByTimestampAsc(problemId)
                 .stream()
                 .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    public List<SeekerNotificationResponse> getRecentNotificationsForProblems(
+            List<UUID> problemIds,
+            Map<UUID, String> problemTitles) {
+
+        List<AuditEventType> notifyTypes = Arrays.asList(
+                AuditEventType.ATTEMPT_CLAIMED,
+                AuditEventType.ATTEMPT_FORKED,
+                AuditEventType.STATUS_CHANGED
+        );
+
+        return auditLogRepository.findNotificationsForProblems(problemIds, notifyTypes)
+                .stream()
+                .limit(30)
+                .map(log -> new SeekerNotificationResponse(
+                        log.getId(),
+                        log.getProblemId(),
+                        problemTitles.getOrDefault(log.getProblemId(), "Problem"),
+                        log.getEventType().name(),
+                        log.getDelta(),
+                        log.getActorName(),
+                        log.getTimestamp()
+                ))
                 .collect(Collectors.toList());
     }
 

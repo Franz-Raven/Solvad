@@ -67,6 +67,18 @@ public class ProblemController {
         }
     }
 
+    @GetMapping("/notifications")
+    @PreAuthorize("hasRole('SEEKER')")
+    public ResponseEntity<?> getSeekerNotifications(@RequestHeader("Authorization") String authHeader) {
+        try {
+            String token = authHeader.substring(7);
+            UUID seekerUserId = jwtService.extractUserId(token);
+            return ResponseEntity.ok(problemService.getSeekerNotifications(seekerUserId));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     @GetMapping("/{problemId}")
     @PreAuthorize("hasAnyRole('SEEKER', 'SOLVER', 'ADMIN')")
     public ResponseEntity<?> getProblemById(@PathVariable UUID problemId) {
@@ -129,6 +141,5 @@ public class ProblemController {
         List<AuditLogResponse> logs = auditService.getLogsForProblem(problemId);
         return ResponseEntity.ok(logs);
     }
-
 
 }

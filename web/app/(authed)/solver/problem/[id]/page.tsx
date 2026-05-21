@@ -631,6 +631,7 @@ export default function SolverProblemDetailPage() {
       setError(null);
       const problemData = await getProblemById(problemId);
       setProblem(problemData);
+      setError(null);
       try { setMyAttempt(await getMyAttempt(problemId)); } catch { setMyAttempt(null); }
       try { setAttempts(await getAllAttempts(problemId)); } catch (err) { console.error("Failed to load historical attempts", err); }
     } catch (err) {
@@ -647,6 +648,8 @@ export default function SolverProblemDetailPage() {
     try {
       const attempt = await claimProblem(problemId, parentAttemptId);
       setMyAttempt(attempt);
+      const updated = await getProblemById(problemId);
+      setProblem(updated);
       router.push(`/solver/problem/${problemId}/work`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to claim problem");
@@ -676,10 +679,9 @@ export default function SolverProblemDetailPage() {
   if (!problem) return null;
 
   const isAlreadyClaimed = myAttempt?.status === "ACTIVE";
-  const isUnavailable = 
-    problem.status !== "OPEN" && 
-    problem.status !== "SOLVED_OPEN_FOR_IMPROVEMENT" && 
-    !isAlreadyClaimed;
+  const canClaimFresh = problem.status === "OPEN";
+  const isUnavailable =
+    !isAlreadyClaimed && !canClaimFresh && problem.status !== "SOLVED_OPEN_FOR_IMPROVEMENT";
   const structuredTreeRoots = buildHierarchyTree(attempts);
 
   const tabs: { id: TabType; label: string }[] = [
@@ -727,11 +729,7 @@ export default function SolverProblemDetailPage() {
                 >
                   Continue Working →
                 </Link>
-              ) : isUnavailable ? (
-                <span className="px-6 py-2.5 bg-gray-200 text-gray-500 rounded-lg font-medium cursor-not-allowed inline-block">
-                  Not Available
-                </span>
-              ) : (
+              ) : canClaimFresh ? (
                 <button
                   onClick={() => handleClaim()}
                   disabled={claiming}
@@ -741,7 +739,19 @@ export default function SolverProblemDetailPage() {
                     <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Claiming…</>
                   ) : "Claim Problem"}
                 </button>
-              )}
+              ) : problem.status === "SOLVED_OPEN_FOR_IMPROVEMENT" ? (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("tree")}
+                  className="px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors shadow-sm"
+                >
+                  Build Upon (Solution Tree)
+                </button>
+              ) : isUnavailable ? (
+                <span className="px-6 py-2.5 bg-gray-200 text-gray-500 rounded-lg font-medium cursor-not-allowed inline-block">
+                  Not Available
+                </span>
+              ) : null}
             </div>
           </div>
 

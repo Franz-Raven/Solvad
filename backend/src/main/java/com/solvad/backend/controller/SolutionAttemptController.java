@@ -4,6 +4,8 @@ import com.solvad.backend.dto.ProblemResponse;
 import com.solvad.backend.dto.SolutionAttemptResponse;
 import com.solvad.backend.dto.SubtaskSubmissionResponse;
 import com.solvad.backend.security.JwtService;
+import com.solvad.backend.dto.DiscoveryDashboardResponse;
+import com.solvad.backend.service.MatchmakingService;
 import com.solvad.backend.service.SolutionAttemptService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +26,9 @@ public class SolutionAttemptController {
     @Autowired
     private JwtService jwtService;
 
+    @Autowired
+    private MatchmakingService matchmakingService;
+
     // -------------------------------------------------------------------------
     // BROWSE — Solver sees all OPEN problems
     // GET /api/problems/open
@@ -34,6 +39,27 @@ public class SolutionAttemptController {
         try {
             List<ProblemResponse> problems = attemptService.getOpenProblems();
             return ResponseEntity.ok(problems);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // MODULE 2 — Discovery dashboard (recommendations + filtered list)
+    // GET /api/problems/discovery
+    // -------------------------------------------------------------------------
+    @GetMapping("/api/problems/discovery")
+    @PreAuthorize("hasRole('SOLVER')")
+    public ResponseEntity<?> getDiscoveryDashboard(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String tags,
+            @RequestParam(required = false, defaultValue = "newest") String sort) {
+        try {
+            UUID solverUserId = extractUserId(authHeader);
+            DiscoveryDashboardResponse dashboard = matchmakingService.getDiscoveryDashboard(
+                    solverUserId, search, tags, sort);
+            return ResponseEntity.ok(dashboard);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }

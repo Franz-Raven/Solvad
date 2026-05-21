@@ -31,6 +31,9 @@ public class SolverRegisterRequest {
     @NotBlank(message = "Degree program is required")
     private String degreeProgram;
 
+    /** Optional comma-separated skills for matchmaking (Module 2). */
+    private String skills;
+
     public SolverRegisterRequest() {
     }
 
@@ -89,5 +92,13 @@ public class SolverRegisterRequest {
 
     public void setDegreeProgram(String degreeProgram) {
         this.degreeProgram = degreeProgram;
+    }
+
+    public String getSkills() {
+        return skills;
+    }
+
+    public void setSkills(String skills) {
+        this.skills = skills;
     }
 }

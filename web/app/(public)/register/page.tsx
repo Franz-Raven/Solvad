@@ -25,6 +25,7 @@ export default function RegisterPage() {
     lastName: "",
     university: "",
     course: "",
+    skills: "",
   });
 
   const handleStep1Change = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,6 +82,7 @@ export default function RegisterPage() {
         lastName: step2Data.lastName,
         institution: step2Data.university,
         degreeProgram: step2Data.course,
+        skills: step2Data.skills.trim() || undefined,
       });
 
       // Store auth data

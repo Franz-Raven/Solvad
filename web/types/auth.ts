@@ -29,6 +29,7 @@ export interface SolverRegisterPayload extends BaseRegisterPayload {
   lastName: string;
   institution: string;
   degreeProgram: string;
+  skills?: string;
 }
 
 // Seeker-specific registration

@@ -28,6 +28,10 @@ public class SolverProfile {
     @Column(name = "degree_program", nullable = false)
     private String degreeProgram;
 
+    /** Comma-separated skill keywords used for Jaccard matchmaking (Module 2). */
+    @Column(columnDefinition = "TEXT")
+    private String skills;
+
     public SolverProfile() {
     }
 
@@ -37,6 +41,12 @@ public class SolverProfile {
         this.lastName = lastName;
         this.institution = institution;
         this.degreeProgram = degreeProgram;
+    }
+
+    public SolverProfile(User user, String firstName, String lastName, String institution,
+                         String degreeProgram, String skills) {
+        this(user, firstName, lastName, institution, degreeProgram);
+        this.skills = skills;
     }
 
     public UUID getId() {
@@ -85,5 +95,13 @@ public class SolverProfile {
 
     public void setDegreeProgram(String degreeProgram) {
         this.degreeProgram = degreeProgram;
+    }
+
+    public String getSkills() {
+        return skills;
+    }
+
+    public void setSkills(String skills) {
+        this.skills = skills;
     }
 }

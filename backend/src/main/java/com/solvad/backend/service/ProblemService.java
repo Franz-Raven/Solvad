@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -67,15 +68,6 @@ public class ProblemService {
         );
         Problem savedProblem = problemRepository.save(problem);
 
-        auditService.log(
-                savedProblem.getId(),
-                seekerUserId,
-                seeker.getOrganizationName(),
-                "SEEKER",
-                AuditEventType.PROBLEM_CREATED,
-                "Problem \"" + savedProblem.getTitle() + "\" was created and published."
-        );
-
         // Create and save ProblemSubtask entities
         List<ProblemSubtask> subtasks = request.getSubtasks().stream()
                 .map(subtaskReq -> new ProblemSubtask(
@@ -87,6 +79,18 @@ public class ProblemService {
                 .collect(Collectors.toList());
 
         List<ProblemSubtask> savedSubtasks = subtaskRepository.saveAll(subtasks);
+
+        savedProblem.setTags(MatchmakingService.buildTagsForProblem(savedProblem, savedSubtasks));
+        problemRepository.save(savedProblem);
+
+        auditService.log(
+                savedProblem.getId(),
+                seekerUserId,
+                seeker.getOrganizationName(),
+                "SEEKER",
+                AuditEventType.PROBLEM_CREATED,
+                "Problem \"" + savedProblem.getTitle() + "\" was created and published."
+        );
 
         // Map to response DTO
         return mapToResponse(savedProblem, savedSubtasks, seeker);
@@ -209,6 +213,8 @@ public class ProblemService {
                 ))
                 .collect(Collectors.toList());
 
+        List<String> tags = problem.getTags() != null ? problem.getTags() : List.of();
+
         return new ProblemResponse(
                 problem.getId(),
                 problem.getTitle(),
@@ -221,7 +227,25 @@ public class ProblemService {
                 seeker.getId(),
                 seeker.getOrganizationName(),
                 problem.getCreatedAt(),
-                subtaskResponses
+                subtaskResponses,
+                tags
         );
+    }
+
+    @Transactional(readOnly = true)
+    public List<com.solvad.backend.dto.SeekerNotificationResponse> getSeekerNotifications(UUID seekerUserId) {
+        SeekerProfile seeker = seekerProfileRepository.findByUserId(seekerUserId)
+                .orElseThrow(() -> new RuntimeException("Seeker profile not found"));
+
+        List<Problem> problems = problemRepository.findBySeeker(seeker);
+        if (problems.isEmpty()) {
+            return List.of();
+        }
+
+        List<UUID> problemIds = problems.stream().map(Problem::getId).collect(Collectors.toList());
+        Map<UUID, String> titles = problems.stream()
+                .collect(Collectors.toMap(Problem::getId, Problem::getTitle));
+
+        return auditService.getRecentNotificationsForProblems(problemIds, titles);
     }
 }
