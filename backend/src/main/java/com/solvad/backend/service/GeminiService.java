@@ -39,32 +39,62 @@ public class GeminiService {
         }
     }
 
-    private String buildPrompt(String title, String backgroundContext, String primaryStatement, 
-                              String objectives, String constraints, String requiredCourse) {
-        StringBuilder prompt = new StringBuilder();
-        prompt.append("You are an expert at breaking down complex industry problems into academic sub-tasks for students.\n\n");
-        prompt.append("Problem Title: ").append(title).append("\n");
-        if (backgroundContext != null && !backgroundContext.isEmpty()) {
-            prompt.append("Background: ").append(backgroundContext).append("\n");
-        }
-        prompt.append("Primary Statement: ").append(primaryStatement).append("\n");
-        if (objectives != null && !objectives.isEmpty()) {
-            prompt.append("Objectives: ").append(objectives).append("\n");
-        }
-        if (constraints != null && !constraints.isEmpty()) {
-            prompt.append("Constraints: ").append(constraints).append("\n");
-        }
-        prompt.append("Required Academic Course: ").append(requiredCourse).append("\n\n");
-        
-        prompt.append("Generate 3-5 sub-tasks that break this problem down by department focus areas ");
-        prompt.append("(e.g., Backend Development, Frontend Development, Database Design, UI/UX Design, DevOps, etc.).\n\n");
-        prompt.append("Format your response as JSON array with this exact structure:\n");
-        prompt.append("[{\"title\": \"Task Title\", \"departmentFocus\": \"Department Name\", \"description\": \"Detailed description\"}]\n");
-        prompt.append("Only return the JSON array, nothing else.");
-        
-        return prompt.toString();
+//    private String buildPrompt(String title, String backgroundContext, String primaryStatement,
+//                              String objectives, String constraints, String requiredCourse) {
+//        StringBuilder prompt = new StringBuilder();
+//        prompt.append("You are an expert at breaking down complex industry problems into academic sub-tasks for students.\n\n");
+//        prompt.append("Problem Title: ").append(title).append("\n");
+//        if (backgroundContext != null && !backgroundContext.isEmpty()) {
+//            prompt.append("Background: ").append(backgroundContext).append("\n");
+//        }
+//        prompt.append("Primary Statement: ").append(primaryStatement).append("\n");
+//        if (objectives != null && !objectives.isEmpty()) {
+//            prompt.append("Objectives: ").append(objectives).append("\n");
+//        }
+//        if (constraints != null && !constraints.isEmpty()) {
+//            prompt.append("Constraints: ").append(constraints).append("\n");
+//        }
+//        prompt.append("Required Academic Course: ").append(requiredCourse).append("\n\n");
+//
+//        prompt.append("Generate 3-5 sub-tasks that break this problem down by department focus areas ");
+//        prompt.append("(e.g., Backend Development, Frontend Development, Database Design, UI/UX Design, DevOps, etc.).\n\n");
+//        prompt.append("Format your response as JSON array with this exact structure:\n");
+//        prompt.append("[{\"title\": \"Task Title\", \"departmentFocus\": \"Department Name\", \"description\": \"Detailed description\"}]\n");
+//        prompt.append("Only return the JSON array, nothing else.");
+//
+//        return prompt.toString();
+//    }
+private String buildPrompt(String title, String backgroundContext, String primaryStatement,
+                           String objectives, String constraints, String requiredCourse) {
+    StringBuilder prompt = new StringBuilder();
+
+    prompt.append("You are an expert at breaking down ").append(requiredCourse).append(" projects into manageable tasks for students.\n\n");
+    prompt.append("Project Title: ").append(title).append("\n");
+
+    if (backgroundContext != null && !backgroundContext.isEmpty()) {
+        prompt.append("Background: ").append(backgroundContext).append("\n");
     }
 
+    prompt.append("Primary Statement: ").append(primaryStatement).append("\n");
+
+    if (objectives != null && !objectives.isEmpty()) {
+        prompt.append("Objectives: ").append(objectives).append("\n");
+    }
+
+    if (constraints != null && !constraints.isEmpty()) {
+        prompt.append("Constraints: ").append(constraints).append("\n");
+    }
+
+    prompt.append("Required Course: ").append(requiredCourse).append("\n\n");
+
+    prompt.append("Create 3-5 specific high-level tasks using ONLY terminology from ").append(requiredCourse).append(" domain.\n");
+    prompt.append("DO NOT use generic or technical terms from other fields.\n\n");
+
+    prompt.append("Return ONLY JSON array:\n");
+    prompt.append("[{\"title\":\"Task name\",\"departmentFocus\":\"Department/area within ").append(requiredCourse).append("\",\"description\":\"What needs to be done\"}]");
+
+    return prompt.toString();
+}
     private String callGeminiAPI(String prompt) {
         String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + geminiApiKey;
         
