@@ -258,7 +258,7 @@ export default function SubmitProblemPage() {
                     htmlFor="requiredCourse"
                     className="block text-sm font-medium text-foreground mb-2"
                   >
-                    Required Academic Program *
+                    Preferred Academic Program *
                   </label>
                   <select
                     id="requiredCourse"

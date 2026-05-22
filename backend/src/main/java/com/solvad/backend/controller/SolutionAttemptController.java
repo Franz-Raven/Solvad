@@ -1,10 +1,7 @@
 package com.solvad.backend.controller;
 
-import com.solvad.backend.dto.ProblemResponse;
-import com.solvad.backend.dto.SolutionAttemptResponse;
-import com.solvad.backend.dto.SubtaskSubmissionResponse;
+import com.solvad.backend.dto.*;
 import com.solvad.backend.security.JwtService;
-import com.solvad.backend.dto.DiscoveryDashboardResponse;
 import com.solvad.backend.service.MatchmakingService;
 import com.solvad.backend.service.SolutionAttemptService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -209,6 +207,63 @@ public class SolutionAttemptController {
         try {
             UUID seekerUserId = extractUserId(authHeader);
             SolutionAttemptResponse response = attemptService.markAsSolved(seekerUserId, problemId);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // APPEAL WORKFLOW
+    // -------------------------------------------------------------------------
+    @PostMapping("/api/problems/{problemId}/appeal")
+    @PreAuthorize("hasRole('SOLVER')")
+    public ResponseEntity<?> submitAppeal(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable UUID problemId,
+            @RequestBody AppealRequest request) { // <-- Changed to @RequestBody
+        try {
+            UUID solverUserId = extractUserId(authHeader);
+            AppealResponse response = attemptService.submitAppeal(solverUserId, problemId, request.message());
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/api/problems/{problemId}/appeals")
+    @PreAuthorize("hasAnyRole('SEEKER', 'SOLVER', 'ADMIN')")
+    public ResponseEntity<?> getAllAppealsByProblem(@PathVariable UUID problemId) {
+        try {
+            Map<String, List<AppealResponse>> response = attemptService.getAllAppealsByProblem(problemId);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/api/appeals/{appealId}/approve")
+    @PreAuthorize("hasRole('SEEKER')")
+    public ResponseEntity<?> approveAppeal(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable UUID appealId) {
+        try {
+            UUID seekerUserId = extractUserId(authHeader);
+            AppealResponse response = attemptService.approveAppeal(seekerUserId, appealId);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/api/appeals/{appealId}/reject")
+    @PreAuthorize("hasRole('SEEKER')")
+    public ResponseEntity<?> rejectAppeal(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable UUID appealId) {
+        try {
+            UUID seekerUserId = extractUserId(authHeader);
+            AppealResponse response = attemptService.rejectAppeal(seekerUserId, appealId);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());

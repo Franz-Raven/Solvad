@@ -1,5 +1,6 @@
 package com.solvad.backend.service;
 
+import com.solvad.backend.dto.AppealResponse;
 import com.solvad.backend.dto.SolutionAttemptResponse;
 import com.solvad.backend.dto.SubtaskSubmissionResponse;
 import com.solvad.backend.entity.*;
@@ -33,6 +34,9 @@ public class SolutionAttemptService {
 
     @Autowired
     private SeekerProfileRepository seekerProfileRepository;
+
+    @Autowired
+    private AppealRepository appealRepository;
 
     @Autowired
     private SupabaseStorageService storageService;
@@ -527,6 +531,162 @@ public class SolutionAttemptService {
     }
 
     // -------------------------------------------------------------------------
+    // APPEAL WORKFLOW
+    // -------------------------------------------------------------------------
+
+    @Transactional
+    public AppealResponse submitAppeal(UUID solverUserId, UUID problemId, String message) {
+        Problem problem = problemRepository.findById(problemId)
+                .orElseThrow(() -> new RuntimeException("Problem not found"));
+
+        if (problem.getStatus() != ProblemStatus.OPEN) {
+            throw new RuntimeException("Only OPEN problems can have appeals");
+        }
+
+        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
+                .orElseThrow(() -> new RuntimeException("Solver profile not found"));
+
+        if (attemptRepository.existsByProblemAndSolverAndStatus(problem, solver, SolutionAttemptStatus.ACTIVE)) {
+            throw new RuntimeException("You have already claimed this problem");
+        }
+
+        Optional<Appeal> existingAppeal = appealRepository.findByProblemAndSolverAndStatus(
+                problem, solver, AppealStatus.PENDING);
+        if (existingAppeal.isPresent()) {
+            throw new RuntimeException("You have already submitted an appeal for this problem");
+        }
+
+        Appeal appeal = new Appeal(problem, solver, message);
+        Appeal savedAppeal = appealRepository.save(appeal);
+
+        String solverFullName = solver.getFirstName() + " " + solver.getLastName();
+        auditService.log(
+                problemId,
+                solverUserId,
+                solverFullName,
+                "SOLVER",
+                AuditEventType.APPEAL_SUBMITTED,
+                solverFullName + " submitted an appeal to work on this problem."
+        );
+
+        return mapAppealToResponse(savedAppeal);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AppealResponse> getAppealsByStatus(UUID problemId, AppealStatus status) {
+        Problem problem = problemRepository.findById(problemId)
+                .orElseThrow(() -> new RuntimeException("Problem not found"));
+
+        List<Appeal> appeals = appealRepository.findByProblemAndStatusOrderByCreatedAtDesc(problem, status);
+        return appeals.stream().map(this::mapAppealToResponse).collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, List<AppealResponse>> getAllAppealsByProblem(UUID problemId) {
+        Problem problem = problemRepository.findById(problemId)
+                .orElseThrow(() -> new RuntimeException("Problem not found"));
+
+        Map<String, List<AppealResponse>> result = new HashMap<>();
+        result.put("pending", getAppealsByStatus(problemId, AppealStatus.PENDING));
+        result.put("approved", getAppealsByStatus(problemId, AppealStatus.APPROVED));
+        result.put("rejected", getAppealsByStatus(problemId, AppealStatus.REJECTED));
+        return result;
+    }
+
+    @Transactional
+    public AppealResponse approveAppeal(UUID seekerUserId, UUID appealId) {
+        Appeal appeal = appealRepository.findById(appealId)
+                .orElseThrow(() -> new RuntimeException("Appeal not found"));
+
+        Problem problem = appeal.getProblem();
+        SeekerProfile seeker = seekerProfileRepository.findByUserId(seekerUserId)
+                .orElseThrow(() -> new RuntimeException("Seeker profile not found"));
+
+        if (!problem.getSeeker().getId().equals(seeker.getId())) {
+            throw new RuntimeException("You do not own this problem");
+        }
+
+        if (appeal.getStatus() != AppealStatus.PENDING) {
+            throw new RuntimeException("Only PENDING appeals can be approved");
+        }
+
+        long approvedCount = appealRepository.countByProblemAndStatus(problem, AppealStatus.APPROVED);
+        if (approvedCount >= 3) {
+            throw new RuntimeException("Maximum 3 approved appeals per problem");
+        }
+
+        SolutionAttempt attempt = new SolutionAttempt(problem, appeal.getSolver());
+        SolutionAttempt savedAttempt = attemptRepository.save(attempt);
+
+        appeal.setStatus(AppealStatus.APPROVED);
+        appeal.setReviewedAt(LocalDateTime.now());
+        appeal.setReviewedBy(seeker);
+        appeal.setSolutionAttempt(savedAttempt);
+        Appeal savedAppeal = appealRepository.save(appeal);
+
+        if (problem.getStatus() == ProblemStatus.OPEN) {
+            problem.setStatus(ProblemStatus.CLAIMED);
+            problemRepository.save(problem);
+
+            auditService.log(
+                    problem.getId(),
+                    null,
+                    "SYSTEM",
+                    "SYSTEM",
+                    AuditEventType.STATUS_CHANGED,
+                    "Status automatically changed from OPEN → CLAIMED after seeker approved an appeal."
+            );
+        }
+
+        String solverName = appeal.getSolver().getFirstName() + " " + appeal.getSolver().getLastName();
+        auditService.log(
+                problem.getId(),
+                seekerUserId,
+                seeker.getOrganizationName(),
+                "SEEKER",
+                AuditEventType.APPEAL_APPROVED,
+                seeker.getOrganizationName() + " approved " + solverName + "'s appeal."
+        );
+
+        return mapAppealToResponse(savedAppeal);
+    }
+
+    @Transactional
+    public AppealResponse rejectAppeal(UUID seekerUserId, UUID appealId) {
+        Appeal appeal = appealRepository.findById(appealId)
+                .orElseThrow(() -> new RuntimeException("Appeal not found"));
+
+        Problem problem = appeal.getProblem();
+        SeekerProfile seeker = seekerProfileRepository.findByUserId(seekerUserId)
+                .orElseThrow(() -> new RuntimeException("Seeker profile not found"));
+
+        if (!problem.getSeeker().getId().equals(seeker.getId())) {
+            throw new RuntimeException("You do not own this problem");
+        }
+
+        if (appeal.getStatus() != AppealStatus.PENDING) {
+            throw new RuntimeException("Only PENDING appeals can be rejected");
+        }
+
+        appeal.setStatus(AppealStatus.REJECTED);
+        appeal.setReviewedAt(LocalDateTime.now());
+        appeal.setReviewedBy(seeker);
+        Appeal savedAppeal = appealRepository.save(appeal);
+
+        String solverName = appeal.getSolver().getFirstName() + " " + appeal.getSolver().getLastName();
+        auditService.log(
+                problem.getId(),
+                seekerUserId,
+                seeker.getOrganizationName(),
+                "SEEKER",
+                AuditEventType.APPEAL_REJECTED,
+                seeker.getOrganizationName() + " rejected " + solverName + "'s appeal."
+        );
+
+        return mapAppealToResponse(savedAppeal);
+    }
+
+    // -------------------------------------------------------------------------
     // MAPPERS
     // -------------------------------------------------------------------------
 
@@ -607,6 +767,25 @@ public class SolutionAttemptService {
                 problem.getCreatedAt(),
                 subtaskResponses,
                 tags
+        );
+    }
+
+    private AppealResponse mapAppealToResponse(Appeal appeal) {
+        SolverProfile solver = appeal.getSolver();
+        UUID attemptId = appeal.getSolutionAttempt() != null ? appeal.getSolutionAttempt().getId() : null;
+
+        return new AppealResponse(
+                appeal.getId(),
+                appeal.getProblem().getId(),
+                solver.getId(),
+                solver.getFirstName(),
+                solver.getLastName(),
+                solver.getInstitution(),
+                appeal.getMessage(),
+                appeal.getStatus().name(),
+                appeal.getCreatedAt(),
+                appeal.getReviewedAt(),
+                attemptId
         );
     }
 }
