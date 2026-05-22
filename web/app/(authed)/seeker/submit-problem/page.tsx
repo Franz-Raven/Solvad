@@ -38,7 +38,9 @@ export default function SubmitProblemPage() {
   const [subProblems, setSubProblems] = useState<SubProblem[]>([]);
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
   ) => {
     setFormData({
       ...formData,
@@ -56,7 +58,11 @@ export default function SubmitProblemPage() {
       setSubProblems(response.generatedSubtasks);
       setCurrentView("PREVIEW_VIEW");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to generate scope. Please try again.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to generate scope. Please try again.",
+      );
       setCurrentView("FORM_VIEW");
     }
   };
@@ -64,12 +70,10 @@ export default function SubmitProblemPage() {
   const handleSubProblemChange = (
     id: string,
     field: keyof SubProblem,
-    value: string
+    value: string,
   ) => {
     setSubProblems(
-      subProblems.map((sp) =>
-        sp.id === id ? { ...sp, [field]: value } : sp
-      )
+      subProblems.map((sp) => (sp.id === id ? { ...sp, [field]: value } : sp)),
     );
   };
 
@@ -104,7 +108,11 @@ export default function SubmitProblemPage() {
       setProblemId(response.id);
       setCurrentView("SUCCESS_VIEW");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to publish problem. Please try again.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to publish problem. Please try again.",
+      );
       setCurrentView("PREVIEW_VIEW");
     }
   };
@@ -140,7 +148,8 @@ export default function SubmitProblemPage() {
                 Submit an Industry Problem
               </h1>
               <p className="text-muted-foreground">
-                Describe your challenge and let AI help structure it into student-ready tasks
+                Describe your challenge and let AI help structure it into
+                student-ready tasks
               </p>
             </div>
 
@@ -153,7 +162,10 @@ export default function SubmitProblemPage() {
 
               <form onSubmit={handleGenerateScope} className="space-y-6">
                 <div>
-                  <label htmlFor="title" className="block text-sm font-medium text-foreground mb-2">
+                  <label
+                    htmlFor="title"
+                    className="block text-sm font-medium text-foreground mb-2"
+                  >
                     Problem Title *
                   </label>
                   <input
@@ -169,7 +181,10 @@ export default function SubmitProblemPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="backgroundContext" className="block text-sm font-medium text-foreground mb-2">
+                  <label
+                    htmlFor="backgroundContext"
+                    className="block text-sm font-medium text-foreground mb-2"
+                  >
                     Background Context
                   </label>
                   <textarea
@@ -184,7 +199,10 @@ export default function SubmitProblemPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="primaryStatement" className="block text-sm font-medium text-foreground mb-2">
+                  <label
+                    htmlFor="primaryStatement"
+                    className="block text-sm font-medium text-foreground mb-2"
+                  >
                     Primary Problem Statement *
                   </label>
                   <textarea
@@ -200,7 +218,10 @@ export default function SubmitProblemPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="objectives" className="block text-sm font-medium text-foreground mb-2">
+                  <label
+                    htmlFor="objectives"
+                    className="block text-sm font-medium text-foreground mb-2"
+                  >
                     Objectives
                   </label>
                   <textarea
@@ -215,7 +236,10 @@ export default function SubmitProblemPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="constraints" className="block text-sm font-medium text-foreground mb-2">
+                  <label
+                    htmlFor="constraints"
+                    className="block text-sm font-medium text-foreground mb-2"
+                  >
                     Constraints
                   </label>
                   <textarea
@@ -230,8 +254,11 @@ export default function SubmitProblemPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="requiredCourse" className="block text-sm font-medium text-foreground mb-2">
-                    Required Academic Course *
+                  <label
+                    htmlFor="requiredCourse"
+                    className="block text-sm font-medium text-foreground mb-2"
+                  >
+                    Required Academic Program *
                   </label>
                   <select
                     id="requiredCourse"
@@ -241,7 +268,7 @@ export default function SubmitProblemPage() {
                     className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all text-foreground"
                     required
                   >
-                    <option value="">Select a course</option>
+                    <option value="">Select a program </option>
                     {COURSE_OPTIONS.map((course) => (
                       <option key={course} value={course}>
                         {course}
@@ -277,7 +304,8 @@ export default function SubmitProblemPage() {
               Analyzing Your Problem...
             </h2>
             <p className="text-muted-foreground text-center max-w-md">
-              Gemini AI is breaking down your problem into departmental sub-tasks and generating a structured scope
+              Gemini AI is breaking down your problem into departmental
+              sub-tasks and generating a structured scope
             </p>
           </div>
         )}
@@ -312,7 +340,11 @@ export default function SubmitProblemPage() {
                         type="text"
                         value={subProblem.title}
                         onChange={(e) =>
-                          handleSubProblemChange(subProblem.id, "title", e.target.value)
+                          handleSubProblemChange(
+                            subProblem.id,
+                            "title",
+                            e.target.value,
+                          )
                         }
                         className="flex-1 text-lg font-semibold bg-transparent border-b border-border focus:border-secondary focus:outline-none text-foreground pb-1"
                         placeholder="Sub-task Title"
@@ -345,7 +377,7 @@ export default function SubmitProblemPage() {
                           handleSubProblemChange(
                             subProblem.id,
                             "departmentFocus",
-                            e.target.value
+                            e.target.value,
                           )
                         }
                         className="w-full px-3 py-2 bg-background border border-border rounded focus:outline-none focus:ring-2 focus:ring-secondary text-foreground text-sm"
@@ -358,7 +390,7 @@ export default function SubmitProblemPage() {
                           handleSubProblemChange(
                             subProblem.id,
                             "description",
-                            e.target.value
+                            e.target.value,
                           )
                         }
                         rows={3}
@@ -419,7 +451,8 @@ export default function SubmitProblemPage() {
               Problem Published Successfully!
             </h1>
             <p className="text-muted-foreground text-center max-w-md mb-8">
-              Your problem has been published and is now available for students to work on
+              Your problem has been published and is now available for students
+              to work on
             </p>
 
             <div className="flex gap-4">
