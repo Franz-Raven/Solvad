@@ -24,7 +24,16 @@ export interface GenerateScopeRequest {
   attachments?: File[]; // Optional file attachments
 }
 
+export interface EnhancedProblem {
+  title: string;
+  backgroundContext: string;
+  primaryStatement: string;
+  objectives: string[];
+  constraints: string[];
+}
+
 export interface GenerateScopeResponse {
+  enhancedProblem: EnhancedProblem;
   generatedSubtasks: SubProblem[];
 }
 
