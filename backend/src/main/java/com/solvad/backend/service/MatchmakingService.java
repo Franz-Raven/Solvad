@@ -164,7 +164,7 @@ public class MatchmakingService {
 
     private ProblemResponse mapProblem(Problem problem, List<ProblemSubtask> subtasks, Set<String> tagSet) {
         List<SubtaskResponse> subtaskResponses = subtasks.stream()
-                .map(s -> new SubtaskResponse(s.getId(), s.getTitle(), s.getDepartmentFocus(), s.getDescription()))
+                .map(s -> new SubtaskResponse(s.getId(), s.getTitle(), s.getDepartmentFocus(), s.getSdgFocus(), s.getDescription()))
                 .collect(Collectors.toList());
 
         List<String> tags = new ArrayList<>(tagSet);
@@ -177,6 +177,7 @@ public class MatchmakingService {
                 problem.getObjectives(),
                 problem.getConstraints(),
                 problem.getPreferredProgram(),
+                problem.getSdgFocus(),
                 problem.getStatus().name(),
                 problem.getSeeker().getId(),
                 problem.getSeeker().getOrganizationName(),

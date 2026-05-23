@@ -20,6 +20,8 @@ public class ProblemRequest {
     
     private String preferredProgram;
     
+    private String sdgFocus;
+    
     @NotNull(message = "Subtasks are required")
     private List<SubtaskRequest> subtasks;
 
@@ -28,13 +30,14 @@ public class ProblemRequest {
 
     public ProblemRequest(String title, String backgroundContext, String primaryStatement, 
                          String objectives, String constraints, String preferredProgram, 
-                         List<SubtaskRequest> subtasks) {
+                         String sdgFocus, List<SubtaskRequest> subtasks) {
         this.title = title;
         this.backgroundContext = backgroundContext;
         this.primaryStatement = primaryStatement;
         this.objectives = objectives;
         this.constraints = constraints;
         this.preferredProgram = preferredProgram;
+        this.sdgFocus = sdgFocus;
         this.subtasks = subtasks;
     }
 
@@ -84,6 +87,14 @@ public class ProblemRequest {
 
     public void setPreferredProgram(String preferredProgram) {
         this.preferredProgram = preferredProgram;
+    }
+
+    public String getSdgFocus() {
+        return sdgFocus;
+    }
+
+    public void setSdgFocus(String sdgFocus) {
+        this.sdgFocus = sdgFocus;
     }
 
     public List<SubtaskRequest> getSubtasks() {

@@ -15,6 +15,7 @@ public class ProblemResponse {
     private String objectives;
     private String constraints;
     private String preferredProgram;
+    private String sdgFocus;
     private String problemDocumentUrl; // URL of comprehensive problem PDF document
     private String status;
     private UUID seekerId;
@@ -30,7 +31,7 @@ public class ProblemResponse {
     }
 
     public ProblemResponse(UUID id, String title, String backgroundContext, String primaryStatement,
-                          String objectives, String constraints, String preferredProgram, String status,
+                          String objectives, String constraints, String preferredProgram, String sdgFocus, String status,
                           UUID seekerId, String seekerOrganization, LocalDateTime createdAt,
                           List<SubtaskResponse> subtasks, List<String> tags, String problemDocumentUrl) {
         this.id = id;
@@ -40,6 +41,7 @@ public class ProblemResponse {
         this.objectives = objectives;
         this.constraints = constraints;
         this.preferredProgram = preferredProgram;
+        this.sdgFocus = sdgFocus;
         this.status = status;
         this.seekerId = seekerId;
         this.seekerOrganization = seekerOrganization;
@@ -103,6 +105,14 @@ public class ProblemResponse {
 
     public void setPreferredProgram(String preferredProgram) {
         this.preferredProgram = preferredProgram;
+    }
+
+    public String getSdgFocus() {
+        return sdgFocus;
+    }
+
+    public void setSdgFocus(String sdgFocus) {
+        this.sdgFocus = sdgFocus;
     }
 
     public String getProblemDocumentUrl() {

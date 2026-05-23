@@ -38,6 +38,9 @@ public class Problem {
     @Column(name = "preferred_program")
     private String preferredProgram;
 
+    @Column(name = "sdg_focus")
+    private String sdgFocus;
+
     // URL of the comprehensive problem document (PDF) stored in Cloudinary
     @Column(name = "problem_document_url", columnDefinition = "TEXT")
     private String problemDocumentUrl;
@@ -59,7 +62,7 @@ public class Problem {
     }
 
     public Problem(SeekerProfile seeker, String title, String backgroundContext, String primaryStatement,
-                   String objectives, String constraints, String preferredProgram) {
+                   String objectives, String constraints, String preferredProgram, String sdgFocus) {
         this.seeker = seeker;
         this.title = title;
         this.backgroundContext = backgroundContext;
@@ -67,6 +70,7 @@ public class Problem {
         this.objectives = objectives;
         this.constraints = constraints;
         this.preferredProgram = preferredProgram;
+        this.sdgFocus = sdgFocus;
     }
 
     public UUID getId() {
@@ -131,6 +135,14 @@ public class Problem {
 
     public void setPreferredProgram(String preferredProgram) {
         this.preferredProgram = preferredProgram;
+    }
+
+    public String getSdgFocus() {
+        return sdgFocus;
+    }
+
+    public void setSdgFocus(String sdgFocus) {
+        this.sdgFocus = sdgFocus;
     }
 
     public String getProblemDocumentUrl() {

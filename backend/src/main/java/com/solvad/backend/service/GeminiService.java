@@ -121,13 +121,34 @@ public class GeminiService {
         prompt.append("Criminology & Public Safety: BS Criminology, BS Forensic Science\n");
         prompt.append("Other Programs: BS Aviation, BS Aeronautical Engineering, BS Library and Information Science, BS Customs Administration, AB Legal Management, Bachelor of Laws (LLB)\n\n");
         
+        prompt.append("SUSTAINABLE DEVELOPMENT GOALS (SDG) - Use EXACT names for sdgFocus:\n");
+        prompt.append("1. No Poverty\n");
+        prompt.append("2. Zero Hunger\n");
+        prompt.append("3. Good Health and Well-being\n");
+        prompt.append("4. Quality Education\n");
+        prompt.append("5. Gender Equality\n");
+        prompt.append("6. Clean Water and Sanitation\n");
+        prompt.append("7. Affordable and Clean Energy\n");
+        prompt.append("8. Decent Work and Economic Growth\n");
+        prompt.append("9. Industry, Innovation and Infrastructure\n");
+        prompt.append("10. Reduced Inequalities\n");
+        prompt.append("11. Sustainable Cities and Communities\n");
+        prompt.append("12. Responsible Consumption and Production\n");
+        prompt.append("13. Climate Action\n");
+        prompt.append("14. Life Below Water\n");
+        prompt.append("15. Life on Land\n");
+        prompt.append("16. Peace, Justice and Strong Institutions\n");
+        prompt.append("17. Partnerships for the Goals\n\n");
+        
         prompt.append("ADDITIONAL TASK: ENHANCE AND FINALIZE PROBLEM INFORMATION\n");
         prompt.append("In addition to generating subtasks, you must also review and enhance the problem information provided above.\n");
         prompt.append("- Analyze the problem title, background context, primary statement, objectives, and constraints\n");
         prompt.append("- If files are attached, extract additional context, objectives, or constraints mentioned in the documents\n");
         prompt.append("- Refine and improve the problem description to make it clearer and more comprehensive\n");
         prompt.append("- Break down objectives and constraints into clear, separate bullet points (as array items)\n");
-        prompt.append("- Ensure each objective and constraint is a single, actionable statement\n\n");
+        prompt.append("- Ensure each objective and constraint is a single, actionable statement\n");
+        prompt.append("- Assign the MOST APPROPRIATE Sustainable Development Goal (SDG) for the main problem based on its primary focus\n");
+        prompt.append("- For each subtask, assign the MOST APPROPRIATE SDG based on its specific focus (subtasks may have different SDGs from the main problem)\n\n");
         
         prompt.append("Format your response as a JSON object with this EXACT structure:\n");
         prompt.append("{\n");
@@ -136,10 +157,11 @@ public class GeminiService {
         prompt.append("    \"backgroundContext\": \"Enhanced background context (incorporating any additional info from uploaded files)\",\n");
         prompt.append("    \"primaryStatement\": \"Enhanced primary problem statement\",\n");
         prompt.append("    \"objectives\": [\"Objective 1\", \"Objective 2\", \"Objective 3\"],\n");
-        prompt.append("    \"constraints\": [\"Constraint 1\", \"Constraint 2\", \"Constraint 3\"]\n");
+        prompt.append("    \"constraints\": [\"Constraint 1\", \"Constraint 2\", \"Constraint 3\"],\n");
+        prompt.append("    \"sdgFocus\": \"Most Appropriate SDG Name\"\n");
         prompt.append("  },\n");
         prompt.append("  \"generatedSubproblems\": [\n");
-        prompt.append("    {\"title\": \"Subtask Title\", \"departmentFocus\": \"Exact Program Name\", \"description\": \"Detailed description\"},\n");
+        prompt.append("    {\"title\": \"Subtask Title\", \"departmentFocus\": \"Exact Program Name\", \"sdgFocus\": \"Most Appropriate SDG Name\", \"description\": \"Detailed description\"},\n");
         prompt.append("    ...\n");
         prompt.append("  ]\n");
         prompt.append("}\n");
@@ -260,7 +282,8 @@ public class GeminiService {
             backgroundContext,
             primaryStatement,
             objectives != null ? Arrays.asList(objectives.split("\\n")) : new ArrayList<>(),
-            constraints != null ? Arrays.asList(constraints.split("\\n")) : new ArrayList<>()
+            constraints != null ? Arrays.asList(constraints.split("\\n")) : new ArrayList<>(),
+            null  // sdgFocus - not available in fallback response
         );
         
         return new GenerateScopeResponse(enhancedProblem, new ArrayList<>());

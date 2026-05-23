@@ -25,14 +25,18 @@ public class ProblemSubtask {
     @Column(name = "department_focus")
     private String departmentFocus;
 
+    @Column(name = "sdg_focus")
+    private String sdgFocus;
+
     public ProblemSubtask() {
     }
 
-    public ProblemSubtask(Problem problem, String title, String description, String departmentFocus) {
+    public ProblemSubtask(Problem problem, String title, String description, String departmentFocus, String sdgFocus) {
         this.problem = problem;
         this.title = title;
         this.description = description;
         this.departmentFocus = departmentFocus;
+        this.sdgFocus = sdgFocus;
     }
 
     public UUID getId() {
@@ -65,6 +69,14 @@ public class ProblemSubtask {
 
     public void setDepartmentFocus(String departmentFocus) {
         this.departmentFocus = departmentFocus;
+    }
+
+    public String getSdgFocus() {
+        return sdgFocus;
+    }
+
+    public void setSdgFocus(String sdgFocus) {
+        this.sdgFocus = sdgFocus;
     }
 
     public String getTitle() {

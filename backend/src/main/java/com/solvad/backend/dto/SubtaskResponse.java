@@ -6,15 +6,17 @@ public class SubtaskResponse {
     private UUID id;
     private String title;
     private String departmentFocus;
+    private String sdgFocus;
     private String description;
 
     public SubtaskResponse() {
     }
 
-    public SubtaskResponse(UUID id, String title, String departmentFocus, String description) {
+    public SubtaskResponse(UUID id, String title, String departmentFocus, String sdgFocus, String description) {
         this.id = id;
         this.title = title;
         this.departmentFocus = departmentFocus;
+        this.sdgFocus = sdgFocus;
         this.description = description;
     }
 
@@ -40,6 +42,14 @@ public class SubtaskResponse {
 
     public void setDepartmentFocus(String departmentFocus) {
         this.departmentFocus = departmentFocus;
+    }
+
+    public String getSdgFocus() {
+        return sdgFocus;
+    }
+
+    public void setSdgFocus(String sdgFocus) {
+        this.sdgFocus = sdgFocus;
     }
 
     public String getDescription() {

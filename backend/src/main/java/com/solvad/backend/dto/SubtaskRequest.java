@@ -9,15 +9,18 @@ public class SubtaskRequest {
     @NotBlank(message = "Department focus is required")
     private String departmentFocus;
     
+    private String sdgFocus;
+    
     @NotBlank(message = "Description is required")
     private String description;
 
     public SubtaskRequest() {
     }
 
-    public SubtaskRequest(String title, String departmentFocus, String description) {
+    public SubtaskRequest(String title, String departmentFocus, String sdgFocus, String description) {
         this.title = title;
         this.departmentFocus = departmentFocus;
+        this.sdgFocus = sdgFocus;
         this.description = description;
     }
 
@@ -35,6 +38,14 @@ public class SubtaskRequest {
 
     public void setDepartmentFocus(String departmentFocus) {
         this.departmentFocus = departmentFocus;
+    }
+
+    public String getSdgFocus() {
+        return sdgFocus;
+    }
+
+    public void setSdgFocus(String sdgFocus) {
+        this.sdgFocus = sdgFocus;
     }
 
     public String getDescription() {

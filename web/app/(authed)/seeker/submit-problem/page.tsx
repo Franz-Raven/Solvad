@@ -157,9 +157,11 @@ export default function SubmitProblemPage() {
         objectives: JSON.stringify(enhancedProblem.objectives),
         constraints: JSON.stringify(enhancedProblem.constraints),
         preferredProgram: formData.preferredProgram,
+        sdgFocus: enhancedProblem.sdgFocus,
         subtasks: subProblems.map((sp) => ({
           title: sp.title,
           departmentFocus: sp.departmentFocus,
+          sdgFocus: sp.sdgFocus,
           description: sp.description,
         })),
       });

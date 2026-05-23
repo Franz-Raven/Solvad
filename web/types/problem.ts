@@ -2,6 +2,7 @@ export interface SubProblem {
   id: string;
   title: string;
   departmentFocus: string;
+  sdgFocus?: string;
   description: string;
 }
 
@@ -30,6 +31,7 @@ export interface EnhancedProblem {
   primaryStatement: string;
   objectives: string[];
   constraints: string[];
+  sdgFocus?: string;
 }
 
 export interface GenerateScopeResponse {
@@ -44,9 +46,11 @@ export interface ProblemRequest {
   objectives: string;
   constraints: string;
   preferredProgram: string;
+  sdgFocus?: string;
   subtasks: {
     title: string;
     departmentFocus: string;
+    sdgFocus?: string;
     description: string;
   }[];
 }
@@ -59,6 +63,7 @@ export interface ProblemResponse {
   objectives: string;
   constraints: string;
   preferredProgram: string;
+  sdgFocus?: string;
   status: string;
   seekerId: string;
   organizationName: string;

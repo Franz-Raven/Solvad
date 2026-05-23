@@ -17,6 +17,7 @@ interface EnhancedProblemPreviewProps {
     primaryStatement: string;
     objectives: string[];
     constraints: string[];
+    sdgFocus?: string;
   };
   preferredProgram: string;
   attachments: File[];
@@ -173,28 +174,44 @@ export default function EnhancedProblemPreview({
           </button>
         </div>
 
-        {/* Preferred Program */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-foreground mb-2">
-            Preferred Academic Program
-          </label>
-          <Select value={preferredProgram} onValueChange={onProgramChange}>
-            <SelectTrigger className="w-full px-4 py-3 !h-auto rounded-lg border border-border bg-background text-foreground">
-              <SelectValue placeholder="Select a program" />
-            </SelectTrigger>
-            <SelectContent>
-              {programCategories.map((category) => (
-                <SelectGroup key={category.name}>
-                  <SelectLabel>{category.name}</SelectLabel>
-                  {category.programs.map((program) => (
-                    <SelectItem key={program} value={program}>
-                      {program}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              ))}
-            </SelectContent>
-          </Select>
+        {/* Preferred Program and SDG Focus (side by side) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              Preferred Academic Program
+            </label>
+            <Select value={preferredProgram} onValueChange={onProgramChange}>
+              <SelectTrigger className="w-full px-4 py-3 !h-auto rounded-lg border border-border bg-background text-foreground">
+                <SelectValue placeholder="Select a program" />
+              </SelectTrigger>
+              <SelectContent>
+                {programCategories.map((category) => (
+                  <SelectGroup key={category.name}>
+                    <SelectLabel>{category.name}</SelectLabel>
+                    {category.programs.map((program) => (
+                      <SelectItem key={program} value={program}>
+                        {program}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {problem.sdgFocus && (
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Sustainable Development Goal (AI-Generated)
+              </label>
+              <div className="w-full px-4 py-3 bg-secondary/5 border border-secondary/20 rounded-lg text-foreground flex items-center">
+                <svg className="w-5 h-5 text-secondary mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-sm">{problem.sdgFocus}</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Show attached files if present */}

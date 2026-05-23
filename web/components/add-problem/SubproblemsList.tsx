@@ -88,6 +88,18 @@ export default function SubproblemsList({
                 </SelectContent>
               </Select>
 
+              {subProblem.sdgFocus && (
+                <div className="px-4 py-3 bg-secondary/5 border border-secondary/20 rounded flex items-start gap-2">
+                  <svg className="w-5 h-5 text-secondary mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div className="flex-1">
+                    <div className="text-xs font-medium text-muted-foreground mb-1">SDG Focus (AI-Generated)</div>
+                    <div className="text-sm text-foreground">{subProblem.sdgFocus}</div>
+                  </div>
+                </div>
+              )}
+
               <AutoResizeTextarea
                 value={subProblem.description}
                 onChange={(e) =>
