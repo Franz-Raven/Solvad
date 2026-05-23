@@ -35,8 +35,8 @@ public class Problem {
     @Column(columnDefinition = "TEXT")
     private String constraints;
 
-    @Column(name = "required_program")
-    private String requiredProgram;
+    @Column(name = "preferred_program")
+    private String preferredProgram;
 
     // URL of the comprehensive problem document (PDF) stored in Cloudinary
     @Column(name = "problem_document_url", columnDefinition = "TEXT")
@@ -59,14 +59,14 @@ public class Problem {
     }
 
     public Problem(SeekerProfile seeker, String title, String backgroundContext, String primaryStatement,
-                   String objectives, String constraints, String requiredCourse) {
+                   String objectives, String constraints, String preferredProgram) {
         this.seeker = seeker;
         this.title = title;
         this.backgroundContext = backgroundContext;
         this.primaryStatement = primaryStatement;
         this.objectives = objectives;
         this.constraints = constraints;
-        this.requiredProgram = requiredCourse;
+        this.preferredProgram = preferredProgram;
     }
 
     public UUID getId() {
@@ -125,12 +125,12 @@ public class Problem {
         this.constraints = constraints;
     }
 
-    public String getRequiredProgram() {
-        return requiredProgram;
+    public String getPreferredProgram() {
+        return preferredProgram;
     }
 
-    public void setRequiredProgram(String requiredCourse) {
-        this.requiredProgram = requiredCourse;
+    public void setPreferredProgram(String preferredProgram) {
+        this.preferredProgram = preferredProgram;
     }
 
     public String getProblemDocumentUrl() {

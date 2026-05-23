@@ -14,7 +14,7 @@ public class ProblemResponse {
     private String primaryStatement;
     private String objectives;
     private String constraints;
-    private String requiredCourse;
+    private String preferredProgram;
     private String problemDocumentUrl; // URL of comprehensive problem PDF document
     private String status;
     private UUID seekerId;
@@ -30,7 +30,7 @@ public class ProblemResponse {
     }
 
     public ProblemResponse(UUID id, String title, String backgroundContext, String primaryStatement,
-                          String objectives, String constraints, String requiredCourse, String status,
+                          String objectives, String constraints, String preferredProgram, String status,
                           UUID seekerId, String seekerOrganization, LocalDateTime createdAt,
                           List<SubtaskResponse> subtasks, List<String> tags, String problemDocumentUrl) {
         this.id = id;
@@ -39,7 +39,7 @@ public class ProblemResponse {
         this.primaryStatement = primaryStatement;
         this.objectives = objectives;
         this.constraints = constraints;
-        this.requiredCourse = requiredCourse;
+        this.preferredProgram = preferredProgram;
         this.status = status;
         this.seekerId = seekerId;
         this.seekerOrganization = seekerOrganization;
@@ -97,12 +97,12 @@ public class ProblemResponse {
         this.constraints = constraints;
     }
 
-    public String getRequiredCourse() {
-        return requiredCourse;
+    public String getPreferredProgram() {
+        return preferredProgram;
     }
 
-    public void setRequiredCourse(String requiredCourse) {
-        this.requiredCourse = requiredCourse;
+    public void setPreferredProgram(String preferredProgram) {
+        this.preferredProgram = preferredProgram;
     }
 
     public String getProblemDocumentUrl() {

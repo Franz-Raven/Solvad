@@ -1,4 +1,4 @@
-import { courseCategories } from "@/lib/data/courses";
+import { programCategories } from "@/lib/data/programs";
 import AutoResizeTextarea from "./AutoResizeTextarea";
 import {
   Select,
@@ -18,7 +18,7 @@ interface EnhancedProblemPreviewProps {
     objectives: string[];
     constraints: string[];
   };
-  requiredProgram: string;
+  preferredProgram: string;
   attachments: File[];
   onProblemChange: (field: string, value: string | string[]) => void;
   onProgramChange: (value: string) => void;
@@ -26,7 +26,7 @@ interface EnhancedProblemPreviewProps {
 
 export default function EnhancedProblemPreview({
   problem,
-  requiredProgram,
+  preferredProgram,
   attachments,
   onProblemChange,
   onProgramChange,
@@ -173,22 +173,22 @@ export default function EnhancedProblemPreview({
           </button>
         </div>
 
-        {/* Required Program */}
+        {/* Preferred Program */}
         <div className="mb-4">
           <label className="block text-sm font-medium text-foreground mb-2">
-            Required Academic Program
+            Preferred Academic Program
           </label>
-          <Select value={requiredProgram} onValueChange={onProgramChange}>
+          <Select value={preferredProgram} onValueChange={onProgramChange}>
             <SelectTrigger className="w-full px-4 py-3 !h-auto rounded-lg border border-border bg-background text-foreground">
               <SelectValue placeholder="Select a program" />
             </SelectTrigger>
             <SelectContent>
-              {courseCategories.map((category) => (
+              {programCategories.map((category) => (
                 <SelectGroup key={category.name}>
                   <SelectLabel>{category.name}</SelectLabel>
-                  {category.courses.map((course) => (
-                    <SelectItem key={course} value={course}>
-                      {course}
+                  {category.programs.map((program) => (
+                    <SelectItem key={program} value={program}>
+                      {program}
                     </SelectItem>
                   ))}
                 </SelectGroup>

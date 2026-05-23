@@ -600,7 +600,7 @@ public class SolutionAttemptService {
                 problem.getPrimaryStatement(),
                 problem.getObjectives(),
                 problem.getConstraints(),
-                problem.getRequiredProgram(),
+                problem.getPreferredProgram(),
                 problem.getStatus().name(),
                 problem.getSeeker().getId(),
                 problem.getSeeker().getOrganizationName(),

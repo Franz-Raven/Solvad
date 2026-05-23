@@ -24,7 +24,7 @@ export default function SubmitProblemPage() {
     primaryStatement: "",
     objectives: "",
     constraints: "",
-    requiredProgram: "",
+    preferredProgram: "",
   });
 
   const [attachments, setAttachments] = useState<File[]>([]);
@@ -128,8 +128,8 @@ export default function SubmitProblemPage() {
     }
   };
 
-  const handleRequiredProgramChange = (value: string) => {
-    setFormData({ ...formData, requiredProgram: value });
+  const handlePreferredProgramChange = (value: string) => {
+    setFormData({ ...formData, preferredProgram: value });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -156,7 +156,7 @@ export default function SubmitProblemPage() {
         primaryStatement: enhancedProblem.primaryStatement,
         objectives: JSON.stringify(enhancedProblem.objectives),
         constraints: JSON.stringify(enhancedProblem.constraints),
-        requiredProgram: formData.requiredProgram,
+        preferredProgram: formData.preferredProgram,
         subtasks: subProblems.map((sp) => ({
           title: sp.title,
           departmentFocus: sp.departmentFocus,
@@ -219,7 +219,7 @@ export default function SubmitProblemPage() {
                   formData={formData}
                   validationErrors={validationErrors}
                   onInputChange={handleInputChange}
-                  onProgramChange={handleRequiredProgramChange}
+                  onProgramChange={handlePreferredProgramChange}
                 />
 
                 <FileAttachmentUploader
@@ -281,10 +281,10 @@ export default function SubmitProblemPage() {
 
               <EnhancedProblemPreview
                 problem={enhancedProblem}
-                requiredProgram={formData.requiredProgram}
+                preferredProgram={formData.preferredProgram}
                 attachments={attachments}
                 onProblemChange={handleEnhancedProblemChange}
-                onProgramChange={handleRequiredProgramChange}
+                onProgramChange={handlePreferredProgramChange}
               />
 
               <SubproblemsList

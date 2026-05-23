@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { courseCategories } from "@/lib/data/courses";
+import { programCategories } from "@/lib/data/programs";
 import { cebuUniversities } from "@/lib/data/universities";
 
 interface Step2Props {
@@ -101,12 +101,12 @@ export default function Step2({ data, onChange, onSubmit, onBack, isLoading, onU
             <SelectValue placeholder="Select your course" />
           </SelectTrigger>
           <SelectContent>
-            {courseCategories.map((category) => (
+            {programCategories.map((category) => (
               <SelectGroup key={category.name}>
                 <SelectLabel>{category.name}</SelectLabel>
-                {category.courses.map((course) => (
-                  <SelectItem key={course} value={course}>
-                    {course}
+                {category.programs.map((program) => (
+                  <SelectItem key={program} value={program}>
+                    {program}
                   </SelectItem>
                 ))}
               </SelectGroup>

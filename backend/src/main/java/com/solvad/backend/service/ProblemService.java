@@ -44,7 +44,7 @@ public class ProblemService {
                 request.getPrimaryStatement(),
                 request.getObjectives(),
                 request.getConstraints(),
-                request.getRequiredProgram(),
+                request.getPreferredProgram(),
                 attachments
         );
 
@@ -65,7 +65,7 @@ public class ProblemService {
                 request.getPrimaryStatement(),
                 request.getObjectives(),
                 request.getConstraints(),
-                request.getRequiredCourse()
+                request.getPreferredProgram()
         );
         
         Problem savedProblem = problemRepository.save(problem);
@@ -224,7 +224,7 @@ public class ProblemService {
                 problem.getPrimaryStatement(),
                 problem.getObjectives(),
                 problem.getConstraints(),
-                problem.getRequiredProgram(),
+                problem.getPreferredProgram(),
                 problem.getStatus().name(),
                 seeker.getId(),
                 seeker.getOrganizationName(),

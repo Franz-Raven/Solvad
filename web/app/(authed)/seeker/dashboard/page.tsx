@@ -221,7 +221,7 @@ export default function SeekerDashboardPage() {
                     </div>
                     <p className="text-xs text-gray-600">
                       Posted {formatDate(problem.createdAt)} • {problem.subtasks.length}{" "}
-                      sub-tasks • {problem.requiredCourse}
+                      sub-tasks • {problem.preferredProgram}
                     </p>
                   </div>
                   <div className="flex gap-2">

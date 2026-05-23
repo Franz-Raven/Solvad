@@ -1,12 +1,12 @@
-export interface CourseCategory {
+export interface ProgramCategory {
   name: string;
-  courses: string[];
+  programs: string[];
 }
 
-export const courseCategories: CourseCategory[] = [
+export const programCategories: ProgramCategory[] = [
   {
     name: "Information Technology & Computer Science",
-    courses: [
+    programs: [
       "BS Information Technology",
       "BS Computer Science",
       "BS Computer Engineering",
@@ -17,7 +17,7 @@ export const courseCategories: CourseCategory[] = [
   },
   {
     name: "Engineering",
-    courses: [
+    programs: [
       "BS Civil Engineering",
       "BS Electrical Engineering",
       "BS Electronics Engineering",
@@ -34,7 +34,7 @@ export const courseCategories: CourseCategory[] = [
   },
   {
     name: "Business & Management",
-    courses: [
+    programs: [
       "BS Business Administration",
       "BS Accountancy",
       "BS Management Accounting",
@@ -49,7 +49,7 @@ export const courseCategories: CourseCategory[] = [
   },
   {
     name: "Education",
-    courses: [
+    programs: [
       "Bachelor of Elementary Education",
       "Bachelor of Secondary Education",
       "Bachelor of Physical Education",
@@ -60,7 +60,7 @@ export const courseCategories: CourseCategory[] = [
   },
   {
     name: "Health Sciences",
-    courses: [
+    programs: [
       "BS Nursing",
       "BS Pharmacy",
       "BS Physical Therapy",
@@ -75,7 +75,7 @@ export const courseCategories: CourseCategory[] = [
   },
   {
     name: "Architecture & Design",
-    courses: [
+    programs: [
       "BS Architecture",
       "BS Interior Design",
       "BS Landscape Architecture",
@@ -85,7 +85,7 @@ export const courseCategories: CourseCategory[] = [
   },
   {
     name: "Social Sciences & Humanities",
-    courses: [
+    programs: [
       "AB Psychology",
       "AB Political Science",
       "AB Communication",
@@ -104,7 +104,7 @@ export const courseCategories: CourseCategory[] = [
   },
   {
     name: "Hospitality & Tourism",
-    courses: [
+    programs: [
       "BS Hotel and Restaurant Management",
       "BS Tourism Management",
       "BS Hospitality Management",
@@ -114,7 +114,7 @@ export const courseCategories: CourseCategory[] = [
   },
   {
     name: "Agriculture & Fisheries",
-    courses: [
+    programs: [
       "BS Agriculture",
       "BS Agricultural Technology",
       "BS Agribusiness",
@@ -126,7 +126,7 @@ export const courseCategories: CourseCategory[] = [
   },
   {
     name: "Science & Mathematics",
-    courses: [
+    programs: [
       "BS Biology",
       "BS Chemistry",
       "BS Physics",
@@ -139,7 +139,7 @@ export const courseCategories: CourseCategory[] = [
   },
   {
     name: "Maritime Studies",
-    courses: [
+    programs: [
       "BS Marine Transportation",
       "BS Marine Engineering",
       "BS Naval Architecture and Marine Engineering",
@@ -147,14 +147,14 @@ export const courseCategories: CourseCategory[] = [
   },
   {
     name: "Criminology & Public Safety",
-    courses: [
+    programs: [
       "BS Criminology",
       "BS Forensic Science",
     ],
   },
   {
     name: "Other Programs",
-    courses: [
+    programs: [
       "BS Aviation",
       "BS Aeronautical Engineering",
       "BS Library and Information Science",
@@ -165,13 +165,13 @@ export const courseCategories: CourseCategory[] = [
   },
 ];
 
-export const getAllCourses = (): string[] => {
-  return courseCategories.flatMap((category) => category.courses);
+export const getAllPrograms = (): string[] => {
+  return programCategories.flatMap((category) => category.programs);
 };
 
-export const searchCourses = (query: string): string[] => {
+export const searchPrograms = (query: string): string[] => {
   const lowercaseQuery = query.toLowerCase();
-  return getAllCourses().filter((course) =>
-    course.toLowerCase().includes(lowercaseQuery)
+  return getAllPrograms().filter((program) =>
+    program.toLowerCase().includes(lowercaseQuery)
   );
 };

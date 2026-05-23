@@ -31,9 +31,9 @@ public class GeminiService {
 
     public GenerateScopeResponse generateSubtasks(String title, String backgroundContext, 
                                                   String primaryStatement, String objectives, 
-                                                  String constraints, String requiredProgram,
+                                                  String constraints, String preferredProgram,
                                                   List<MultipartFile> attachments) {
-        String prompt = buildPrompt(title, backgroundContext, primaryStatement, objectives, constraints, requiredProgram);
+        String prompt = buildPrompt(title, backgroundContext, primaryStatement, objectives, constraints, preferredProgram);
         
         System.out.println("[GeminiService] Sending prompt to Gemini API...");
 
@@ -48,12 +48,12 @@ public class GeminiService {
             System.err.println("[GeminiService] API Connection or Execution failed!");
             System.err.println("Error Message: " + e.getMessage());
             e.printStackTrace();
-            return generateFallbackResponse(title, backgroundContext, primaryStatement, objectives, constraints, requiredProgram);
+            return generateFallbackResponse(title, backgroundContext, primaryStatement, objectives, constraints, preferredProgram);
         }
     }
 
     private String buildPrompt(String title, String backgroundContext, String primaryStatement, 
-                              String objectives, String constraints, String requiredProgram) {
+                              String objectives, String constraints, String preferredProgram) {
         StringBuilder prompt = new StringBuilder();
         prompt.append("You are an expert at analyzing complex industry problems and determining if they can be broken down into collaborative sub-tasks.\n\n");
         prompt.append("Problem Title: ").append(title).append("\n");
@@ -67,7 +67,7 @@ public class GeminiService {
         if (constraints != null && !constraints.isEmpty()) {
             prompt.append("Constraints: ").append(constraints).append("\n");
         }
-        prompt.append("Target Academic Program: ").append(requiredProgram).append("\n\n");
+        prompt.append("Target Academic Program: ").append(preferredProgram).append("\n\n");
         
         prompt.append("If files are attached, analyze their content to better understand the problem context.\n\n");
         
@@ -253,7 +253,7 @@ public class GeminiService {
 
     private GenerateScopeResponse generateFallbackResponse(String title, String backgroundContext, 
                                                            String primaryStatement, String objectives, 
-                                                           String constraints, String requiredProgram) {
+                                                           String constraints, String preferredProgram) {
         // Return original problem info with empty subtasks list
         EnhancedProblemResponse enhancedProblem = new EnhancedProblemResponse(
             title,

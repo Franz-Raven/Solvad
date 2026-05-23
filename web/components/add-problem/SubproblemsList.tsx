@@ -1,4 +1,4 @@
-import { courseCategories } from "@/lib/data/courses";
+import { programCategories } from "@/lib/data/programs";
 import type { SubProblem } from "@/types/problem";
 import AutoResizeTextarea from "./AutoResizeTextarea";
 import {
@@ -75,12 +75,12 @@ export default function SubproblemsList({
                   <SelectValue placeholder="Select academic program focus" />
                 </SelectTrigger>
                 <SelectContent>
-                  {courseCategories.map((category) => (
+                  {programCategories.map((category) => (
                     <SelectGroup key={category.name}>
                       <SelectLabel>{category.name}</SelectLabel>
-                      {category.courses.map((course) => (
-                        <SelectItem key={course} value={course}>
-                          {course}
+                      {category.programs.map((program) => (
+                        <SelectItem key={program} value={program}>
+                          {program}
                         </SelectItem>
                       ))}
                     </SelectGroup>
