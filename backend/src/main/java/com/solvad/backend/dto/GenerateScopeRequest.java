@@ -15,20 +15,19 @@ public class GenerateScopeRequest {
     
     private String constraints;
     
-    @NotBlank(message = "Required course is required")
-    private String requiredCourse;
+    private String requiredProgram;
 
     public GenerateScopeRequest() {
     }
 
     public GenerateScopeRequest(String title, String backgroundContext, String primaryStatement, 
-                               String objectives, String constraints, String requiredCourse) {
+                               String objectives, String constraints, String requiredProgram) {
         this.title = title;
         this.backgroundContext = backgroundContext;
         this.primaryStatement = primaryStatement;
         this.objectives = objectives;
         this.constraints = constraints;
-        this.requiredCourse = requiredCourse;
+        this.requiredProgram = requiredProgram;
     }
 
     public String getTitle() {
@@ -71,11 +70,11 @@ public class GenerateScopeRequest {
         this.constraints = constraints;
     }
 
-    public String getRequiredCourse() {
-        return requiredCourse;
+    public String getRequiredProgram() {
+        return requiredProgram;
     }
 
-    public void setRequiredCourse(String requiredCourse) {
-        this.requiredCourse = requiredCourse;
+    public void setRequiredProgram(String requiredProgram) {
+        this.requiredProgram = requiredProgram;
     }
 }

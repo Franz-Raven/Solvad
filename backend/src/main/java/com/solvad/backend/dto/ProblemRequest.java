@@ -18,7 +18,6 @@ public class ProblemRequest {
     
     private String constraints;
     
-    @NotBlank(message = "Required course is required")
     private String requiredCourse;
     
     @NotNull(message = "Subtasks are required")

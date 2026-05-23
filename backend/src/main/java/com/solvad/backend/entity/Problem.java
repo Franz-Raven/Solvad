@@ -35,8 +35,12 @@ public class Problem {
     @Column(columnDefinition = "TEXT")
     private String constraints;
 
-    @Column(name = "required_course", nullable = false)
-    private String requiredCourse;
+    @Column(name = "required_program")
+    private String requiredProgram;
+
+    // URL of the comprehensive problem document (PDF) stored in Cloudinary
+    @Column(name = "problem_document_url", columnDefinition = "TEXT")
+    private String problemDocumentUrl;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -62,7 +66,7 @@ public class Problem {
         this.primaryStatement = primaryStatement;
         this.objectives = objectives;
         this.constraints = constraints;
-        this.requiredCourse = requiredCourse;
+        this.requiredProgram = requiredCourse;
     }
 
     public UUID getId() {
@@ -121,12 +125,20 @@ public class Problem {
         this.constraints = constraints;
     }
 
-    public String getRequiredCourse() {
-        return requiredCourse;
+    public String getRequiredProgram() {
+        return requiredProgram;
     }
 
-    public void setRequiredCourse(String requiredCourse) {
-        this.requiredCourse = requiredCourse;
+    public void setRequiredProgram(String requiredCourse) {
+        this.requiredProgram = requiredCourse;
+    }
+
+    public String getProblemDocumentUrl() {
+        return problemDocumentUrl;
+    }
+
+    public void setProblemDocumentUrl(String problemDocumentUrl) {
+        this.problemDocumentUrl = problemDocumentUrl;
     }
 
     public ProblemStatus getStatus() {

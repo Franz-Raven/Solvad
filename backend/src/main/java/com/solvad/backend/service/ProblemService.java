@@ -9,6 +9,7 @@ import com.solvad.backend.repository.SolutionAttemptRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -28,7 +29,7 @@ public class ProblemService {
     private SeekerProfileRepository seekerProfileRepository;
 
     @Autowired
-    private SolutionAttemptRepository attemptRepository; // <-- Added this
+    private SolutionAttemptRepository attemptRepository;
 
     @Autowired
     private GeminiService geminiService;
@@ -36,15 +37,15 @@ public class ProblemService {
     @Autowired
     private AuditService auditService;
 
-    public GenerateScopeResponse generateScope(GenerateScopeRequest request) {
-        // Call Gemini AI to generate subtasks
+    public GenerateScopeResponse generateScope(GenerateScopeRequest request, List<MultipartFile> attachments) {
         List<SubtaskResponse> generatedSubtasks = geminiService.generateSubtasks(
                 request.getTitle(),
                 request.getBackgroundContext(),
                 request.getPrimaryStatement(),
                 request.getObjectives(),
                 request.getConstraints(),
-                request.getRequiredCourse()
+                request.getRequiredProgram(),
+                attachments
         );
 
         return new GenerateScopeResponse(generatedSubtasks);
@@ -66,6 +67,7 @@ public class ProblemService {
                 request.getConstraints(),
                 request.getRequiredCourse()
         );
+        
         Problem savedProblem = problemRepository.save(problem);
 
         // Create and save ProblemSubtask entities
@@ -222,13 +224,14 @@ public class ProblemService {
                 problem.getPrimaryStatement(),
                 problem.getObjectives(),
                 problem.getConstraints(),
-                problem.getRequiredCourse(),
+                problem.getRequiredProgram(),
                 problem.getStatus().name(),
                 seeker.getId(),
                 seeker.getOrganizationName(),
                 problem.getCreatedAt(),
                 subtaskResponses,
-                tags
+                tags,
+                problem.getProblemDocumentUrl()
         );
     }
 

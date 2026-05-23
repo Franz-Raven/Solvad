@@ -600,13 +600,14 @@ public class SolutionAttemptService {
                 problem.getPrimaryStatement(),
                 problem.getObjectives(),
                 problem.getConstraints(),
-                problem.getRequiredCourse(),
+                problem.getRequiredProgram(),
                 problem.getStatus().name(),
                 problem.getSeeker().getId(),
                 problem.getSeeker().getOrganizationName(),
                 problem.getCreatedAt(),
                 subtaskResponses,
-                tags
+                tags,
+                problem.getProblemDocumentUrl()
         );
     }
 }
