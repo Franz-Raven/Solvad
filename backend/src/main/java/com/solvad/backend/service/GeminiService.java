@@ -2,6 +2,8 @@ package com.solvad.backend.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.solvad.backend.dto.EnhancedProblemResponse;
+import com.solvad.backend.dto.GenerateScopeResponse;
 import com.solvad.backend.dto.SubtaskResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -27,7 +29,7 @@ public class GeminiService {
         this.objectMapper = objectMapper;
     }
 
-    public List<SubtaskResponse> generateSubtasks(String title, String backgroundContext, 
+    public GenerateScopeResponse generateSubtasks(String title, String backgroundContext, 
                                                   String primaryStatement, String objectives, 
                                                   String constraints, String requiredProgram,
                                                   List<MultipartFile> attachments) {
@@ -38,15 +40,15 @@ public class GeminiService {
         try {
             String geminiResponse = callGeminiAPI(prompt, attachments);
             System.out.println("[GeminiService] Raw API Response: " + geminiResponse);
-            List<SubtaskResponse> parsed = parseGeminiResponse(geminiResponse);
-            System.out.println("[GeminiService] Successfully parsed " + parsed.size() + " subtasks.");
+            GenerateScopeResponse parsed = parseGeminiResponse(geminiResponse);
+            System.out.println("[GeminiService] Successfully parsed " + parsed.getGeneratedSubtasks().size() + " subtasks.");
             return parsed;
         } catch (Exception e) {
-            // Fallback to default subtasks if API fails
+            // Fallback to default response if API fails
             System.err.println("[GeminiService] API Connection or Execution failed!");
             System.err.println("Error Message: " + e.getMessage());
             e.printStackTrace();
-            return generateFallbackSubtasks(title, requiredProgram);
+            return generateFallbackResponse(title, backgroundContext, primaryStatement, objectives, constraints, requiredProgram);
         }
     }
 
@@ -119,10 +121,30 @@ public class GeminiService {
         prompt.append("Criminology & Public Safety: BS Criminology, BS Forensic Science\n");
         prompt.append("Other Programs: BS Aviation, BS Aeronautical Engineering, BS Library and Information Science, BS Customs Administration, AB Legal Management, Bachelor of Laws (LLB)\n\n");
         
-        prompt.append("Format your response as a JSON array with this exact structure:\n");
-        prompt.append("[{\"title\": \"Task Title\", \"departmentFocus\": \"Department Name\", \"description\": \"Detailed description\"}]\n");
-        //prompt.append("If no subtasks are needed, return an empty array: []\n");
-        prompt.append("Only return the JSON array, nothing else.");
+        prompt.append("ADDITIONAL TASK: ENHANCE AND FINALIZE PROBLEM INFORMATION\n");
+        prompt.append("In addition to generating subtasks, you must also review and enhance the problem information provided above.\n");
+        prompt.append("- Analyze the problem title, background context, primary statement, objectives, and constraints\n");
+        prompt.append("- If files are attached, extract additional context, objectives, or constraints mentioned in the documents\n");
+        prompt.append("- Refine and improve the problem description to make it clearer and more comprehensive\n");
+        prompt.append("- Break down objectives and constraints into clear, separate bullet points (as array items)\n");
+        prompt.append("- Ensure each objective and constraint is a single, actionable statement\n\n");
+        
+        prompt.append("Format your response as a JSON object with this EXACT structure:\n");
+        prompt.append("{\n");
+        prompt.append("  \"enhancedProblem\": {\n");
+        prompt.append("    \"title\": \"Enhanced/refined problem title\",\n");
+        prompt.append("    \"backgroundContext\": \"Enhanced background context (incorporating any additional info from uploaded files)\",\n");
+        prompt.append("    \"primaryStatement\": \"Enhanced primary problem statement\",\n");
+        prompt.append("    \"objectives\": [\"Objective 1\", \"Objective 2\", \"Objective 3\"],\n");
+        prompt.append("    \"constraints\": [\"Constraint 1\", \"Constraint 2\", \"Constraint 3\"]\n");
+        prompt.append("  },\n");
+        prompt.append("  \"generatedSubproblems\": [\n");
+        prompt.append("    {\"title\": \"Subtask Title\", \"departmentFocus\": \"Exact Program Name\", \"description\": \"Detailed description\"},\n");
+        prompt.append("    ...\n");
+        prompt.append("  ]\n");
+        prompt.append("}\n");
+        prompt.append("If no subtasks are needed, the generatedSubproblems array should be empty: [].\n");
+        prompt.append("Only return the JSON object, nothing else.");
         
         return prompt.toString();
     }
@@ -188,32 +210,59 @@ public class GeminiService {
         throw new RuntimeException("Failed to get response from Gemini API");
     }
 
-    private List<SubtaskResponse> parseGeminiResponse(String response) {
+    private GenerateScopeResponse parseGeminiResponse(String response) {
         try {
             // Clean markdown formatting if Gemini includes it
-            String jsonArray = response.trim();
-            jsonArray = jsonArray.replaceAll("(?s)^```(?:json)?|```$", "").trim();
+            String jsonString = response.trim();
+            jsonString = jsonString.replaceAll("(?s)^```(?:json)?|```$", "").trim();
 
-            // Let Jackson map the JSON directly to your DTO
-            List<SubtaskResponse> subtasks = objectMapper.readValue(
-                jsonArray, 
+            // Parse the complete response with enhanced problem and subtasks
+            Map<String, Object> responseMap = objectMapper.readValue(
+                jsonString, 
+                new TypeReference<Map<String, Object>>(){}
+            );
+            
+            // Extract enhanced problem
+            EnhancedProblemResponse enhancedProblem = objectMapper.convertValue(
+                responseMap.get("enhancedProblem"), 
+                EnhancedProblemResponse.class
+            );
+            
+            // Extract generated subproblems
+            List<SubtaskResponse> subtasks = objectMapper.convertValue(
+                responseMap.get("generatedSubproblems"), 
                 new TypeReference<List<SubtaskResponse>>(){}
             );
             
             // Ensure temporary UUIDs are set since Gemini doesn't generate them
-            subtasks.forEach(task -> {
-                if (task.getId() == null) task.setId(UUID.randomUUID());
-            });
+            if (subtasks != null) {
+                subtasks.forEach(task -> {
+                    if (task.getId() == null) task.setId(UUID.randomUUID());
+                });
+            } else {
+                subtasks = new ArrayList<>();
+            }
             
-            return subtasks;
+            return new GenerateScopeResponse(enhancedProblem, subtasks);
         } catch (Exception e) {
             System.err.println("Failed to parse JSON: " + e.getMessage());
-            return generateFallbackSubtasks("Problem", "General");
+            e.printStackTrace();
+            throw new RuntimeException("Failed to parse Gemini response", e);
         }
     }
 
-    private List<SubtaskResponse> generateFallbackSubtasks(String title, String requiredProgram) {
-        // Return empty list for fallback - let the problem stand alone
-        return new ArrayList<>();
+    private GenerateScopeResponse generateFallbackResponse(String title, String backgroundContext, 
+                                                           String primaryStatement, String objectives, 
+                                                           String constraints, String requiredProgram) {
+        // Return original problem info with empty subtasks list
+        EnhancedProblemResponse enhancedProblem = new EnhancedProblemResponse(
+            title,
+            backgroundContext,
+            primaryStatement,
+            objectives != null ? Arrays.asList(objectives.split("\\n")) : new ArrayList<>(),
+            constraints != null ? Arrays.asList(constraints.split("\\n")) : new ArrayList<>()
+        );
+        
+        return new GenerateScopeResponse(enhancedProblem, new ArrayList<>());
     }
 }

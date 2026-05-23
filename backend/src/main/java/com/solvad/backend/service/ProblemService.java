@@ -38,7 +38,7 @@ public class ProblemService {
     private AuditService auditService;
 
     public GenerateScopeResponse generateScope(GenerateScopeRequest request, List<MultipartFile> attachments) {
-        List<SubtaskResponse> generatedSubtasks = geminiService.generateSubtasks(
+        GenerateScopeResponse response = geminiService.generateSubtasks(
                 request.getTitle(),
                 request.getBackgroundContext(),
                 request.getPrimaryStatement(),
@@ -48,7 +48,7 @@ public class ProblemService {
                 attachments
         );
 
-        return new GenerateScopeResponse(generatedSubtasks);
+        return response;
     }
 
     @Transactional
