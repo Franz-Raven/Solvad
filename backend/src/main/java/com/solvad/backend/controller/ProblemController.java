@@ -1,14 +1,15 @@
 package com.solvad.backend.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.solvad.backend.dto.*;
 import com.solvad.backend.security.JwtService;
 import com.solvad.backend.service.AuditService;
 import com.solvad.backend.service.ProblemService;
-import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -29,19 +30,28 @@ public class ProblemController {
 
     @PostMapping("/generate-scope")
     @PreAuthorize("hasRole('SEEKER')")
-    public ResponseEntity<?> generateScope(@Valid @RequestBody GenerateScopeRequest request) {
+    public ResponseEntity<?> generateScope(
+            @RequestParam("data") String requestData,
+            @RequestParam(value = "attachments", required = false) List<MultipartFile> attachments) {
         try {
-            GenerateScopeResponse response = problemService.generateScope(request);
+            // Parse JSON data to GenerateScopeRequest
+            ObjectMapper objectMapper = new ObjectMapper();
+            GenerateScopeRequest request = objectMapper.readValue(requestData, GenerateScopeRequest.class);
+            
+            GenerateScopeResponse response = problemService.generateScope(request, attachments);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Failed to process request: " + e.getMessage());
         }
     }
 
     @PostMapping
     @PreAuthorize("hasRole('SEEKER')")
-    public ResponseEntity<?> createProblem(@RequestHeader("Authorization") String authHeader,
-                                          @Valid @RequestBody ProblemRequest request) {
+    public ResponseEntity<?> createProblem(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody ProblemRequest request) {
         try {
             String token = authHeader.substring(7); // Remove "Bearer " prefix
             UUID seekerUserId = jwtService.extractUserId(token);

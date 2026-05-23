@@ -47,12 +47,12 @@ public final class KeywordUtils {
         return (double) intersection / union.size();
     }
 
-    public static boolean courseMatches(String solverCourse, String requiredCourse) {
-        if (solverCourse == null || requiredCourse == null) {
+    public static boolean courseMatches(String solverCourse, String requiredProgram) {
+        if (solverCourse == null || requiredProgram == null) {
             return false;
         }
         String a = solverCourse.trim().toLowerCase(Locale.ROOT);
-        String b = requiredCourse.trim().toLowerCase(Locale.ROOT);
+        String b = requiredProgram.trim().toLowerCase(Locale.ROOT);
         return a.equals(b) || a.contains(b) || b.contains(a);
     }
 }

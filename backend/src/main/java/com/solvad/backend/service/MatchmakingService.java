@@ -66,7 +66,7 @@ public class MatchmakingService {
             }
 
             double jaccard = KeywordUtils.jaccard(solverSkills, problemTags);
-            boolean courseMatch = KeywordUtils.courseMatches(solverCourse, problem.getRequiredCourse());
+            boolean courseMatch = KeywordUtils.courseMatches(solverCourse, problem.getRequiredProgram());
             double score = jaccard + (courseMatch ? 0.25 : 0.0);
 
             ProblemResponse response = mapProblem(problem, subtasks, problemTags);
@@ -105,7 +105,7 @@ public class MatchmakingService {
 
     public static List<String> buildTagsForProblem(Problem problem, List<ProblemSubtask> subtasks) {
         LinkedHashSet<String> tags = new LinkedHashSet<>();
-        tags.addAll(KeywordUtils.tokenize(problem.getRequiredCourse()));
+        tags.addAll(KeywordUtils.tokenize(problem.getRequiredProgram()));
         tags.addAll(KeywordUtils.tokenize(problem.getTitle()));
         tags.addAll(KeywordUtils.tokenize(problem.getObjectives()));
         tags.addAll(KeywordUtils.tokenize(problem.getConstraints()));
@@ -143,7 +143,7 @@ public class MatchmakingService {
         if (problem.getTitle().toLowerCase(Locale.ROOT).contains(searchLower)) {
             return true;
         }
-        if (problem.getRequiredCourse().toLowerCase(Locale.ROOT).contains(searchLower)) {
+        if (problem.getRequiredProgram().toLowerCase(Locale.ROOT).contains(searchLower)) {
             return true;
         }
         if (problem.getSeeker().getOrganizationName().toLowerCase(Locale.ROOT).contains(searchLower)) {
@@ -176,13 +176,14 @@ public class MatchmakingService {
                 problem.getPrimaryStatement(),
                 problem.getObjectives(),
                 problem.getConstraints(),
-                problem.getRequiredCourse(),
+                problem.getRequiredProgram(),
                 problem.getStatus().name(),
                 problem.getSeeker().getId(),
                 problem.getSeeker().getOrganizationName(),
                 problem.getCreatedAt(),
                 subtaskResponses,
-                tags
+                tags,
+                problem.getProblemDocumentUrl()
         );
     }
 

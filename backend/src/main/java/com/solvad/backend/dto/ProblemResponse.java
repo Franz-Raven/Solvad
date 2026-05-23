@@ -15,6 +15,7 @@ public class ProblemResponse {
     private String objectives;
     private String constraints;
     private String requiredCourse;
+    private String problemDocumentUrl; // URL of comprehensive problem PDF document
     private String status;
     private UUID seekerId;
     @JsonProperty("organizationName")
@@ -31,7 +32,7 @@ public class ProblemResponse {
     public ProblemResponse(UUID id, String title, String backgroundContext, String primaryStatement,
                           String objectives, String constraints, String requiredCourse, String status,
                           UUID seekerId, String seekerOrganization, LocalDateTime createdAt,
-                          List<SubtaskResponse> subtasks, List<String> tags) {
+                          List<SubtaskResponse> subtasks, List<String> tags, String problemDocumentUrl) {
         this.id = id;
         this.title = title;
         this.backgroundContext = backgroundContext;
@@ -45,6 +46,7 @@ public class ProblemResponse {
         this.createdAt = createdAt;
         this.subtasks = subtasks;
         this.tags = tags != null ? tags : new ArrayList<>();
+        this.problemDocumentUrl = problemDocumentUrl;
     }
 
     public UUID getId() {
@@ -101,6 +103,14 @@ public class ProblemResponse {
 
     public void setRequiredCourse(String requiredCourse) {
         this.requiredCourse = requiredCourse;
+    }
+
+    public String getProblemDocumentUrl() {
+        return problemDocumentUrl;
+    }
+
+    public void setProblemDocumentUrl(String problemDocumentUrl) {
+        this.problemDocumentUrl = problemDocumentUrl;
     }
 
     public String getStatus() {

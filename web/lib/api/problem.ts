@@ -11,10 +11,36 @@ import type {
 export async function generateScope(
   data: GenerateScopeRequest
 ): Promise<GenerateScopeResponse> {
-  return apiRequest<GenerateScopeResponse>("/problems/generate-scope", {
+  console.log("=== GENERATE SCOPE REQUEST ===");
+  console.log("Request Data:", data);
+  console.log("Attachments count:", data.attachments?.length || 0);
+  
+  const formData = new FormData();
+  
+  // Add the JSON data as a string
+  const { attachments, ...requestData } = data;
+  formData.append('data', JSON.stringify(requestData));
+  
+  // Add file attachments if present
+  if (attachments && attachments.length > 0) {
+    attachments.forEach((file) => {
+      console.log(`Attaching file: ${file.name} (${file.type}, ${file.size} bytes)`);
+      formData.append('attachments', file);
+    });
+  }
+  
+  // Use FormData instead of JSON
+  const response = await apiRequest<GenerateScopeResponse>("/problems/generate-scope", {
     method: "POST",
-    body: JSON.stringify(data),
+    body: formData,
+    // Don't set Content-Type header - FormData will set it with boundary
   });
+  
+  console.log("=== GENERATE SCOPE RESPONSE ===");
+  console.log("Generated Subtasks:", response.generatedSubtasks);
+  console.log("Subtasks count:", response.generatedSubtasks?.length || 0);
+  
+  return response;
 }
 
 export async function createProblem(
