@@ -44,7 +44,7 @@ public class ProblemService {
                 request.getPrimaryStatement(),
                 request.getObjectives(),
                 request.getConstraints(),
-                request.getRequiredProgram(),
+                request.getPreferredProgram(),
                 attachments
         );
 
@@ -65,7 +65,8 @@ public class ProblemService {
                 request.getPrimaryStatement(),
                 request.getObjectives(),
                 request.getConstraints(),
-                request.getRequiredCourse()
+                request.getPreferredProgram(),
+                request.getSdgFocus()
         );
         
         Problem savedProblem = problemRepository.save(problem);
@@ -76,7 +77,8 @@ public class ProblemService {
                         savedProblem,
                         subtaskReq.getTitle(),
                         subtaskReq.getDescription(),
-                        subtaskReq.getDepartmentFocus()
+                        subtaskReq.getDepartmentFocus(),
+                        subtaskReq.getSdgFocus()
                 ))
                 .collect(Collectors.toList());
 
@@ -211,6 +213,7 @@ public class ProblemService {
                         subtask.getId(),
                         subtask.getTitle(),
                         subtask.getDepartmentFocus(),
+                        subtask.getSdgFocus(),
                         subtask.getDescription()
                 ))
                 .collect(Collectors.toList());
@@ -224,7 +227,8 @@ public class ProblemService {
                 problem.getPrimaryStatement(),
                 problem.getObjectives(),
                 problem.getConstraints(),
-                problem.getRequiredProgram(),
+                problem.getPreferredProgram(),
+                problem.getSdgFocus(),
                 problem.getStatus().name(),
                 seeker.getId(),
                 seeker.getOrganizationName(),

@@ -760,7 +760,7 @@ export default function SolverProblemDetailPage() {
               {problem.status.replace("_", " ")}
             </span>
             <span className="inline-flex items-center px-3 py-1.5 bg-accent/10 text-accent rounded-full text-sm font-medium border border-accent/20">
-              {problem.requiredCourse}
+              {problem.preferredProgram}
             </span>
             <span className="inline-flex items-center text-sm text-gray-600 font-medium">
               {problem.subtasks.length} Sub-tasks

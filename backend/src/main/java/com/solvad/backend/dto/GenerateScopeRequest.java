@@ -15,19 +15,19 @@ public class GenerateScopeRequest {
     
     private String constraints;
     
-    private String requiredProgram;
+    private String preferredProgram;
 
     public GenerateScopeRequest() {
     }
 
     public GenerateScopeRequest(String title, String backgroundContext, String primaryStatement, 
-                               String objectives, String constraints, String requiredProgram) {
+                               String objectives, String constraints, String preferredProgram) {
         this.title = title;
         this.backgroundContext = backgroundContext;
         this.primaryStatement = primaryStatement;
         this.objectives = objectives;
         this.constraints = constraints;
-        this.requiredProgram = requiredProgram;
+        this.preferredProgram = preferredProgram;
     }
 
     public String getTitle() {
@@ -70,11 +70,11 @@ public class GenerateScopeRequest {
         this.constraints = constraints;
     }
 
-    public String getRequiredProgram() {
-        return requiredProgram;
+    public String getPreferredProgram() {
+        return preferredProgram;
     }
 
-    public void setRequiredProgram(String requiredProgram) {
-        this.requiredProgram = requiredProgram;
+    public void setPreferredProgram(String preferredProgram) {
+        this.preferredProgram = preferredProgram;
     }
 }

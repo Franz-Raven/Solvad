@@ -66,7 +66,7 @@ public class MatchmakingService {
             }
 
             double jaccard = KeywordUtils.jaccard(solverSkills, problemTags);
-            boolean courseMatch = KeywordUtils.courseMatches(solverCourse, problem.getRequiredProgram());
+            boolean courseMatch = KeywordUtils.courseMatches(solverCourse, problem.getPreferredProgram());
             double score = jaccard + (courseMatch ? 0.25 : 0.0);
 
             ProblemResponse response = mapProblem(problem, subtasks, problemTags);
@@ -105,7 +105,7 @@ public class MatchmakingService {
 
     public static List<String> buildTagsForProblem(Problem problem, List<ProblemSubtask> subtasks) {
         LinkedHashSet<String> tags = new LinkedHashSet<>();
-        tags.addAll(KeywordUtils.tokenize(problem.getRequiredProgram()));
+        tags.addAll(KeywordUtils.tokenize(problem.getPreferredProgram()));
         tags.addAll(KeywordUtils.tokenize(problem.getTitle()));
         tags.addAll(KeywordUtils.tokenize(problem.getObjectives()));
         tags.addAll(KeywordUtils.tokenize(problem.getConstraints()));
@@ -143,7 +143,7 @@ public class MatchmakingService {
         if (problem.getTitle().toLowerCase(Locale.ROOT).contains(searchLower)) {
             return true;
         }
-        if (problem.getRequiredProgram().toLowerCase(Locale.ROOT).contains(searchLower)) {
+        if (problem.getPreferredProgram().toLowerCase(Locale.ROOT).contains(searchLower)) {
             return true;
         }
         if (problem.getSeeker().getOrganizationName().toLowerCase(Locale.ROOT).contains(searchLower)) {
@@ -164,7 +164,7 @@ public class MatchmakingService {
 
     private ProblemResponse mapProblem(Problem problem, List<ProblemSubtask> subtasks, Set<String> tagSet) {
         List<SubtaskResponse> subtaskResponses = subtasks.stream()
-                .map(s -> new SubtaskResponse(s.getId(), s.getTitle(), s.getDepartmentFocus(), s.getDescription()))
+                .map(s -> new SubtaskResponse(s.getId(), s.getTitle(), s.getDepartmentFocus(), s.getSdgFocus(), s.getDescription()))
                 .collect(Collectors.toList());
 
         List<String> tags = new ArrayList<>(tagSet);
@@ -176,7 +176,8 @@ public class MatchmakingService {
                 problem.getPrimaryStatement(),
                 problem.getObjectives(),
                 problem.getConstraints(),
-                problem.getRequiredProgram(),
+                problem.getPreferredProgram(),
+                problem.getSdgFocus(),
                 problem.getStatus().name(),
                 problem.getSeeker().getId(),
                 problem.getSeeker().getOrganizationName(),

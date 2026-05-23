@@ -1,4 +1,4 @@
-import { courseCategories } from "@/lib/data/courses";
+import { programCategories } from "@/lib/data/programs";
 import AutoResizeTextarea from "./AutoResizeTextarea";
 import {
   Select,
@@ -17,7 +17,7 @@ interface ProblemFormFieldsProps {
     primaryStatement: string;
     objectives: string;
     constraints: string;
-    requiredProgram: string;
+    preferredProgram: string;
   };
   validationErrors: {
     title?: boolean;
@@ -161,24 +161,24 @@ export default function ProblemFormFields({
       </div>
 
       <div>
-        <label htmlFor="requiredProgram" className="block text-sm font-medium text-foreground mb-2">
-          Required Academic Program *
+        <label htmlFor="preferredProgram" className="block text-sm font-medium text-foreground mb-2">
+          Preferred Academic Program *
         </label>
         <p className="text-xs text-muted-foreground mb-3">
           Select the academic program most suitable for solving this problem
         </p>
         
-        <Select value={formData.requiredProgram} onValueChange={onProgramChange}>
+        <Select value={formData.preferredProgram} onValueChange={onProgramChange}>
           <SelectTrigger className="w-full px-4 py-3 !h-auto rounded-lg border border-border bg-background text-foreground">
             <SelectValue placeholder="Select a program" />
           </SelectTrigger>
           <SelectContent>
-            {courseCategories.map((category) => (
+            {programCategories.map((category) => (
               <SelectGroup key={category.name}>
                 <SelectLabel>{category.name}</SelectLabel>
-                {category.courses.map((course) => (
-                  <SelectItem key={course} value={course}>
-                    {course}
+                {category.programs.map((program) => (
+                  <SelectItem key={program} value={program}>
+                    {program}
                   </SelectItem>
                 ))}
               </SelectGroup>

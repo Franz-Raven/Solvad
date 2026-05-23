@@ -8,17 +8,19 @@ public class EnhancedProblemResponse {
     private String primaryStatement;
     private List<String> objectives;
     private List<String> constraints;
+    private String sdgFocus;
 
     public EnhancedProblemResponse() {
     }
 
     public EnhancedProblemResponse(String title, String backgroundContext, String primaryStatement, 
-                                   List<String> objectives, List<String> constraints) {
+                                   List<String> objectives, List<String> constraints, String sdgFocus) {
         this.title = title;
         this.backgroundContext = backgroundContext;
         this.primaryStatement = primaryStatement;
         this.objectives = objectives;
         this.constraints = constraints;
+        this.sdgFocus = sdgFocus;
     }
 
     public String getTitle() {
@@ -59,5 +61,13 @@ public class EnhancedProblemResponse {
 
     public void setConstraints(List<String> constraints) {
         this.constraints = constraints;
+    }
+
+    public String getSdgFocus() {
+        return sdgFocus;
+    }
+
+    public void setSdgFocus(String sdgFocus) {
+        this.sdgFocus = sdgFocus;
     }
 }

@@ -18,7 +18,9 @@ public class ProblemRequest {
     
     private String constraints;
     
-    private String requiredCourse;
+    private String preferredProgram;
+    
+    private String sdgFocus;
     
     @NotNull(message = "Subtasks are required")
     private List<SubtaskRequest> subtasks;
@@ -27,14 +29,15 @@ public class ProblemRequest {
     }
 
     public ProblemRequest(String title, String backgroundContext, String primaryStatement, 
-                         String objectives, String constraints, String requiredCourse, 
-                         List<SubtaskRequest> subtasks) {
+                         String objectives, String constraints, String preferredProgram, 
+                         String sdgFocus, List<SubtaskRequest> subtasks) {
         this.title = title;
         this.backgroundContext = backgroundContext;
         this.primaryStatement = primaryStatement;
         this.objectives = objectives;
         this.constraints = constraints;
-        this.requiredCourse = requiredCourse;
+        this.preferredProgram = preferredProgram;
+        this.sdgFocus = sdgFocus;
         this.subtasks = subtasks;
     }
 
@@ -78,12 +81,20 @@ public class ProblemRequest {
         this.constraints = constraints;
     }
 
-    public String getRequiredCourse() {
-        return requiredCourse;
+    public String getPreferredProgram() {
+        return preferredProgram;
     }
 
-    public void setRequiredCourse(String requiredCourse) {
-        this.requiredCourse = requiredCourse;
+    public void setPreferredProgram(String preferredProgram) {
+        this.preferredProgram = preferredProgram;
+    }
+
+    public String getSdgFocus() {
+        return sdgFocus;
+    }
+
+    public void setSdgFocus(String sdgFocus) {
+        this.sdgFocus = sdgFocus;
     }
 
     public List<SubtaskRequest> getSubtasks() {

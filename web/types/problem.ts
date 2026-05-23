@@ -2,6 +2,7 @@ export interface SubProblem {
   id: string;
   title: string;
   departmentFocus: string;
+  sdgFocus?: string;
   description: string;
 }
 
@@ -11,7 +12,7 @@ export interface ProblemPayload {
   primaryStatement: string;
   objectives: string;
   constraints: string;
-  requiredProgram: string;
+  preferredProgram: string;
 }
 
 export interface GenerateScopeRequest {
@@ -20,7 +21,7 @@ export interface GenerateScopeRequest {
   primaryStatement: string;
   objectives: string;
   constraints: string;
-  requiredProgram: string;
+  preferredProgram: string;
   attachments?: File[]; // Optional file attachments
 }
 
@@ -30,6 +31,7 @@ export interface EnhancedProblem {
   primaryStatement: string;
   objectives: string[];
   constraints: string[];
+  sdgFocus?: string;
 }
 
 export interface GenerateScopeResponse {
@@ -43,10 +45,12 @@ export interface ProblemRequest {
   primaryStatement: string;
   objectives: string;
   constraints: string;
-  requiredProgram: string;
+  preferredProgram: string;
+  sdgFocus?: string;
   subtasks: {
     title: string;
     departmentFocus: string;
+    sdgFocus?: string;
     description: string;
   }[];
 }
@@ -58,7 +62,8 @@ export interface ProblemResponse {
   primaryStatement: string;
   objectives: string;
   constraints: string;
-  requiredProgram: string;
+  preferredProgram: string;
+  sdgFocus?: string;
   status: string;
   seekerId: string;
   organizationName: string;

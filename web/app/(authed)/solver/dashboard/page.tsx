@@ -163,7 +163,7 @@ export default function SolverDashboardPage() {
                     )}
                   </div>
                   <p className="text-xs text-gray-600 line-clamp-2">
-                    {problem.organizationName} • {problem.requiredCourse}
+                    {problem.organizationName} • {problem.preferredProgram}
                   </p>
                   {problem.courseMatch && (
                     <span className="inline-block mt-2 text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">
@@ -255,7 +255,7 @@ export default function SolverDashboardPage() {
                       )}
                     </div>
                     <p className="text-xs text-gray-600 mt-0.5">
-                      {problem.organizationName} • {problem.requiredCourse} • {problem.subtasks.length} sub-tasks
+                      {problem.organizationName} • {problem.preferredProgram} • {problem.subtasks.length} sub-tasks
                       {problem.createdAt ? ` • ${formatDate(problem.createdAt)}` : ""}
                     </p>
                     {problem.tags && problem.tags.length > 0 && (

@@ -586,7 +586,7 @@ public class SolutionAttemptService {
 
         List<com.solvad.backend.dto.SubtaskResponse> subtaskResponses = subtasks.stream()
                 .map(s -> new com.solvad.backend.dto.SubtaskResponse(
-                        s.getId(), s.getTitle(), s.getDepartmentFocus(), s.getDescription()))
+                        s.getId(), s.getTitle(), s.getDepartmentFocus(), s.getSdgFocus(),s.getDescription()))
                 .collect(Collectors.toList());
 
         List<String> tags = problem.getTags() != null
@@ -600,7 +600,8 @@ public class SolutionAttemptService {
                 problem.getPrimaryStatement(),
                 problem.getObjectives(),
                 problem.getConstraints(),
-                problem.getRequiredProgram(),
+                problem.getPreferredProgram(),
+                problem.getSdgFocus(),
                 problem.getStatus().name(),
                 problem.getSeeker().getId(),
                 problem.getSeeker().getOrganizationName(),
