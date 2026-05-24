@@ -265,14 +265,20 @@ function AttemptDetailModal({
 function AttemptCard({
   node,
   onViewClick,
+  isHighlighted
 }: {
   node: TreeAttemptNode;
   onViewClick: () => void;
+  isHighlighted?: boolean;
 }) {
   const attemptDate = new Date(node.claimedAt);
   return (
     <div
-      className="attempt-card bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:border-accent/40 hover:shadow-md transition-all w-56 select-none"
+      className={`attempt-card bg-white border rounded-xl p-4 transition-all w-56 select-none ${
+        isHighlighted 
+         ? "border-4 border-secondary ring-8 ring-secondary/30 scale-110 bg-secondary/10 shadow-[0_10px_40px_-10px] shadow-secondary/60 z-50 relative -translate-y-2"
+          : "border-gray-200 shadow-sm hover:border-accent/40 hover:shadow-md"
+      }`}
       style={{ minWidth: "224px", maxWidth: "224px" }}
     >
       <div className="flex items-start justify-between gap-1 mb-1">
@@ -315,7 +321,11 @@ function AttemptCard({
       <div className="flex items-center justify-end mt-3">
         <button
           onClick={(e) => { e.stopPropagation(); onViewClick(); }}
-          className="px-3 py-1 text-[11px] font-medium text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-100 transition-all w-full"
+          className={`px-3 py-1 text-[11px] font-medium rounded-lg transition-all w-full ${
+            isHighlighted 
+              ? "bg-accent text-white hover:bg-secondary shadow-sm"
+              : "text-gray-600 hover:text-gray-900 border border-gray-200 bg-gray-50 hover:bg-gray-100"
+          }`}
         >
           View Solution ↗
         </button>
@@ -329,10 +339,12 @@ function SolutionFamilyTree({
   roots,
   onViewAttempt,
   isAnimating,
+  highlightedAttemptId
 }: {
   roots: TreeAttemptNode[];
   onViewAttempt: (node: TreeAttemptNode) => void;
   isAnimating: boolean;
+  highlightedAttemptId?: string | null;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [, setTick] = useState(0);
@@ -341,6 +353,18 @@ function SolutionFamilyTree({
     const t = setTimeout(() => setTick((n) => n + 1), 80);
     return () => clearTimeout(t);
   }, [roots]);
+
+  // NEW: Scroll to the highlighted attempt
+  useEffect(() => {
+    if (highlightedAttemptId && containerRef.current) {
+      setTimeout(() => {
+        const el = document.getElementById(`tnode-${highlightedAttemptId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+        }
+      }, 100);
+    }
+  }, [highlightedAttemptId, roots]);
 
   function renderLevel(nodes: TreeAttemptNode[]): React.ReactNode {
     return (
@@ -351,7 +375,11 @@ function SolutionFamilyTree({
             id={`tnode-${node.id}`}
             style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "0 16px" }}
           >
-            <AttemptCard node={node} onViewClick={() => onViewAttempt(node)} />
+            <AttemptCard 
+              node={node} 
+              onViewClick={() => onViewAttempt(node)} 
+              isHighlighted={node.id === highlightedAttemptId} 
+            />
             {node.children.length > 0 && (
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                 <div style={{ width: 2, height: 28, background: "#d1d5db" }} />
@@ -457,7 +485,13 @@ function SolutionFamilyTree({
 }
 
 // ─── Solution Tree Tab ────────────────────────────────────────────────────────
-export function SolutionTreeTab({ problemId }: { problemId: string }) {
+
+interface SolutionTreeTabProps {
+  problemId: string;
+  highlightedAttemptId?: string | null;
+}
+
+export function SolutionTreeTab({ problemId, highlightedAttemptId }: SolutionTreeTabProps) {
   const [attempts, setAttempts] = useState<SolutionAttemptResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalNode, setModalNode] = useState<TreeAttemptNode | null>(null);
@@ -474,7 +508,7 @@ export function SolutionTreeTab({ problemId }: { problemId: string }) {
       .finally(() => setLoading(false));
   }, [problemId]);
 
-  // Extract unique subtasks for the dropdown filter (only if your API returns targetSubtaskId)
+  // Extract unique subtasks for the dropdown filter
   const uniqueSubtasks = useMemo(() => {
     const map = new Map<string, string>();
     attempts.forEach((a) => {
@@ -537,6 +571,7 @@ export function SolutionTreeTab({ problemId }: { problemId: string }) {
           overflow: auto;
           position: relative;
           border-radius: 12px;
+          scroll-behavior: smooth; /* Enables smooth scrolling when locating a node */
           background: 
             radial-gradient(ellipse at 20% 50%, rgba(99,102,241,0.04) 0%, transparent 60%),
             radial-gradient(ellipse at 80% 20%, rgba(124,58,237,0.04) 0%, transparent 60%),
@@ -608,7 +643,10 @@ export function SolutionTreeTab({ problemId }: { problemId: string }) {
           <div style={{ flex: 1 }}>
             <h2 className="text-xl font-bold text-gray-900">Solution Evolution Tree</h2>
             <p className="text-xs text-gray-500 mt-1">
-              Monitor how solvers are building upon each other's solutions. Click <strong className="text-gray-700">View Solution</strong> to inspect their code and documentation.
+              {highlightedAttemptId 
+                ? "Showing located proposal source. " 
+                : "Monitor how solvers are building upon each other's solutions. "}
+              Click <strong className="text-gray-700">View Solution</strong> to inspect their code and documentation.
             </p>
           </div>
 
@@ -674,6 +712,7 @@ export function SolutionTreeTab({ problemId }: { problemId: string }) {
           roots={roots} 
           onViewAttempt={(node) => setModalNode(node)} 
           isAnimating={isAnimating}
+          highlightedAttemptId={highlightedAttemptId}
         />
       </div>
     </>

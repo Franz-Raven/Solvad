@@ -14,4 +14,5 @@ public enum AuditEventType {
     PROPOSAL_APPROVED,
     PROPOSAL_REJECTED,
     CAPACITY_REACHED,
+    PROBLEM_UPDATED
 }

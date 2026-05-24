@@ -73,7 +73,8 @@ export interface ProblemResponse {
   tags?: string[];
   matchScore?: number;
   courseMatch?: boolean;
-  maxConcurrentSolvers?: number;  // ADD
+  maxConcurrentSolvers?: number; 
+  
 }
 
 export interface DiscoveryDashboardResponse {
@@ -109,3 +110,4 @@ export interface SubtaskResponse {
   sdgFocus?: string;
   description: string;
 }
+
