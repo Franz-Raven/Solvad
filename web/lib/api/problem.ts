@@ -8,6 +8,7 @@ import type {
   SeekerNotification,
   PaginatedProblemsResponse,
 } from "@/types/problem";
+import type { ClaimRequestResponse } from "@/types/attempt";
 
 export async function generateScope(
   data: GenerateScopeRequest
@@ -141,5 +142,18 @@ export async function getDiscoveryDashboard(
 export async function getSeekerNotifications(): Promise<SeekerNotification[]> {
   return apiRequest<SeekerNotification[]>("/problems/notifications", {
     method: "GET",
+  });
+}
+
+export async function getPendingProposals(problemId: string): Promise<ClaimRequestResponse[]> {
+  return apiRequest(`/problems/${problemId}/proposals/pending`);
+}
+
+/**
+ * Evaluates a proposal. If approved, the backend generates the active workspace.
+ */
+export async function evaluateProposal(proposalId: string, isApproved: boolean): Promise<string> {
+  return apiRequest(`/proposals/${proposalId}/evaluate?isApproved=${isApproved}`, {
+    method: "POST",
   });
 }

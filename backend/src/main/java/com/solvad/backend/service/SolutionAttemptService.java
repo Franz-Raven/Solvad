@@ -35,45 +35,25 @@ public class SolutionAttemptService {
     private SeekerProfileRepository seekerProfileRepository;
 
     @Autowired
-    private SupabaseStorageService storageService;
+    private CloudinaryService storageService; // Changed from SupabaseStorageService
 
     @Autowired
     private AuditService auditService;
 
     // -------------------------------------------------------------------------
-    // CLAIM
+    // WORKSPACE INITIALIZATION (Triggered via ClaimRequestService Approval)
     // -------------------------------------------------------------------------
 
     @Transactional
-    public SolutionAttemptResponse claimProblem(UUID solverUserId, UUID problemId, UUID parentAttemptId) {
-        Problem problem = problemRepository.findById(problemId)
-                .orElseThrow(() -> new RuntimeException("Problem not found"));
-
-        boolean isFork = parentAttemptId != null;
-        if (isFork) {
-            if (problem.getStatus() != ProblemStatus.OPEN
-                    && problem.getStatus() != ProblemStatus.SOLVED_OPEN_FOR_IMPROVEMENT) {
-                throw new RuntimeException("Problem is not available for forking");
-            }
-        } else if (problem.getStatus() != ProblemStatus.OPEN) {
-            throw new RuntimeException("Only OPEN problems can be claimed");
-        }
-
-        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
-                .orElseThrow(() -> new RuntimeException("Solver profile not found"));
-
-        if (attemptRepository.existsByProblemAndSolverAndStatus(problem, solver, SolutionAttemptStatus.ACTIVE)) {
-            throw new RuntimeException("You have already claimed this problem");
-        }
-
-        String solverFullName = solver.getFirstName() + " " + solver.getLastName();
+    public SolutionAttemptResponse initializeApprovedAttempt(ClaimRequest request) {
+        Problem problem = request.getProblem();
+        SolverProfile solver = request.getSolver();
 
         SolutionAttempt attempt = new SolutionAttempt(problem, solver);
+        String solverFullName = solver.getFirstName() + " " + solver.getLastName();
 
-        if (parentAttemptId != null) {
-            SolutionAttempt parent = attemptRepository.findById(parentAttemptId)
-                    .orElseThrow(() -> new RuntimeException("Parent attempt not found"));
-
+        if (request.getParentAttempt() != null) {
+            SolutionAttempt parent = request.getParentAttempt();
             attempt.setParentAttempt(parent);
             SolutionAttempt savedAttempt = attemptRepository.save(attempt);
 
@@ -90,212 +70,44 @@ public class SolutionAttemptService {
             String parentName = parent.getSolver().getFirstName() + " " + parent.getSolver().getLastName();
 
             auditService.log(
-                    problemId,
-                    solverUserId,
+                    problem.getId(),
+                    solver.getUser().getId(),
                     solverFullName,
                     "SOLVER",
                     AuditEventType.ATTEMPT_FORKED,
-                    solverFullName + " forked this attempt, building on " + parentName + "'s previous work."
+                    solverFullName + "'s approved proposal generated a forked attempt from " + parentName + "."
             );
 
         } else {
             attemptRepository.save(attempt);
 
             auditService.log(
-                    problemId,
-                    solverUserId,
+                    problem.getId(),
+                    solver.getUser().getId(),
                     solverFullName,
                     "SOLVER",
                     AuditEventType.ATTEMPT_CLAIMED,
-                    solverFullName + " claimed this problem. The seeker has been notified."
+                    solverFullName + "'s proposal was approved. Active workspace generated."
             );
         }
 
-        // Only transition to CLAIMED if it was OPEN. If it's already SOLVED_OPEN_FOR_IMPROVEMENT, leave it.
         if (problem.getStatus() == ProblemStatus.OPEN) {
             problem.setStatus(ProblemStatus.CLAIMED);
             problemRepository.save(problem);
 
             auditService.log(
-                    problemId,
+                    problem.getId(),
                     null,
                     "SYSTEM",
                     "SYSTEM",
                     AuditEventType.STATUS_CHANGED,
-                    "Status automatically changed from OPEN → CLAIMED after solver claimed the problem."
+                    "Status automatically changed from OPEN → CLAIMED after a proposal was approved."
             );
         }
 
         return mapToResponse(attempt, submissionRepository.findByAttempt(attempt));
     }
 
-    // -------------------------------------------------------------------------
-    // ABANDON
-    // -------------------------------------------------------------------------
-
-    @Transactional
-    public void abandonClaim(UUID solverUserId, UUID problemId) {
-        Problem problem = problemRepository.findById(problemId)
-                .orElseThrow(() -> new RuntimeException("Problem not found"));
-
-        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
-                .orElseThrow(() -> new RuntimeException("Solver profile not found"));
-
-        SolutionAttempt attempt = attemptRepository.findByProblemAndSolverAndStatus(
-                        problem, solver, SolutionAttemptStatus.ACTIVE)
-                .orElseThrow(() -> new RuntimeException("No active claim found for this problem"));
-
-        String solverFullName = solver.getFirstName() + " " + solver.getLastName();
-
-        attempt.setStatus(SolutionAttemptStatus.ABANDONED);
-        attemptRepository.save(attempt);
-
-        auditService.log(
-                problem.getId(),
-                solverUserId,
-                solverFullName,
-                "SOLVER",
-                AuditEventType.ATTEMPT_ABANDONED,
-                solverFullName + " abandoned their attempt."
-        );
-
-        // Only revert to OPEN if it's not already in an open-for-improvement state
-        if (problem.getStatus() != ProblemStatus.SOLVED_OPEN_FOR_IMPROVEMENT) {
-            problem.setStatus(ProblemStatus.OPEN);
-            problemRepository.save(problem);
-
-            auditService.log(
-                    problem.getId(),
-                    null,
-                    "SYSTEM",
-                    "SYSTEM",
-                    AuditEventType.STATUS_CHANGED,
-                    "Status automatically changed to OPEN after solver abandoned."
-            );
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // SAVE DRAFT / SUBMIT subtask submission
-    // -------------------------------------------------------------------------
-
-    @Transactional
-    public SubtaskSubmissionResponse saveOrSubmitSubtask(UUID solverUserId, UUID attemptId,
-                                                         UUID subtaskId, String description,
-                                                         String action,
-                                                         List<MultipartFile> files,
-                                                         String deltaDescription) {
-        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
-                .orElseThrow(() -> new RuntimeException("Solver profile not found"));
-
-        SolutionAttempt attempt = attemptRepository.findById(attemptId)
-                .orElseThrow(() -> new RuntimeException("Solution attempt not found"));
-
-        if (!attempt.getSolver().getId().equals(solver.getId())) {
-            throw new RuntimeException("You do not own this solution attempt");
-        }
-
-        if (attempt.getStatus() != SolutionAttemptStatus.ACTIVE) {
-            throw new RuntimeException("This attempt is no longer active");
-        }
-
-        ProblemSubtask subtask = subtaskRepository.findById(subtaskId)
-                .orElseThrow(() -> new RuntimeException("Subtask not found"));
-
-        if (!subtask.getProblem().getId().equals(attempt.getProblem().getId())) {
-            throw new RuntimeException("Subtask does not belong to this problem");
-        }
-
-        SubtaskSubmission submission = submissionRepository
-                .findByAttemptAndSubtask(attempt, subtask)
-                .orElseGet(() -> new SubtaskSubmission(attempt, subtask));
-
-        if (submission.getStatus() == SubtaskSubmissionStatus.SUBMITTED) {
-            throw new RuntimeException("This subtask has already been submitted and cannot be edited");
-        }
-
-        int newFileCount = 0;
-
-        if (files != null && !files.isEmpty()) {
-            List<String> existingUrls = submission.getFileUrlsAsList();
-            List<String> newUrls = new ArrayList<>(existingUrls);
-
-            for (MultipartFile file : files) {
-                if (file != null && !file.isEmpty()) {
-                    String url = storageService.uploadFile(file, attemptId, subtaskId);
-                    newUrls.add(url);
-                    newFileCount++;
-                }
-            }
-            submission.setFileUrls(String.join(",", newUrls));
-        }
-
-        submission.setDescription(description);
-        submission.setDeltaDescription(deltaDescription);
-
-        String solverFullName = solver.getFirstName() + " " + solver.getLastName();
-        boolean isSubmitting = "SUBMIT".equalsIgnoreCase(action);
-
-        if (isSubmitting) {
-            submission.setStatus(SubtaskSubmissionStatus.SUBMITTED);
-            submission.setSubmittedAt(LocalDateTime.now());
-
-            Problem problem = attempt.getProblem();
-            String deltaMsg = "Subtask \"" + subtask.getTitle() + "\" submitted by " + solverFullName;
-
-            if (deltaDescription != null && !deltaDescription.isBlank()) {
-                deltaMsg += " — Delta: " + deltaDescription;
-            }
-            if (newFileCount > 0) {
-                deltaMsg += " (" + newFileCount + " file(s) attached)";
-            }
-
-            auditService.log(
-                    problem.getId(),
-                    solverUserId,
-                    solverFullName,
-                    "SOLVER",
-                    AuditEventType.SUBTASK_SUBMITTED,
-                    deltaMsg
-            );
-
-            if (problem.getStatus() == ProblemStatus.CLAIMED) {
-                problem.setStatus(ProblemStatus.IN_PROGRESS);
-                problemRepository.save(problem);
-
-                auditService.log(
-                        problem.getId(),
-                        null,
-                        "SYSTEM",
-                        "SYSTEM",
-                        AuditEventType.STATUS_CHANGED,
-                        "Status automatically changed from CLAIMED → IN_PROGRESS after first subtask submission."
-                );
-            }
-
-        } else {
-            submission.setStatus(SubtaskSubmissionStatus.DRAFT);
-
-            if (newFileCount > 0) {
-                auditService.log(
-                        attempt.getProblem().getId(),
-                        solverUserId,
-                        solverFullName,
-                        "SOLVER",
-                        AuditEventType.FILE_UPLOADED,
-                        solverFullName + " uploaded " + newFileCount + " file(s) to subtask \""
-                                + subtask.getTitle() + "\"."
-                );
-            }
-        }
-
-        SubtaskSubmission saved = submissionRepository.save(submission);
-        return mapSubmissionToResponse(saved);
-    }
-
-    // -------------------------------------------------------------------------
-    // DELETE FILE from a draft submission
-    // -------------------------------------------------------------------------
 
     @Transactional
     public SubtaskSubmissionResponse deleteFileFromSubmission(UUID solverUserId, UUID submissionId,
@@ -417,7 +229,6 @@ public class SolutionAttemptService {
     // -------------------------------------------------------------------------
     // MARK problem as SOLVED (seeker action)
     // -------------------------------------------------------------------------
-
     @Transactional
     public SolutionAttemptResponse markAsSolved(UUID seekerUserId, UUID problemId) {
         Problem problem = problemRepository.findById(problemId)
@@ -443,7 +254,6 @@ public class SolutionAttemptService {
         attemptRepository.save(attempt);
 
         // We mark it as SOLVED_OPEN_FOR_IMPROVEMENT by default so others can keep working on it.
-        // The seeker can manually change it to COMPLETED if they want to hide it completely.
         problem.setStatus(ProblemStatus.SOLVED_OPEN_FOR_IMPROVEMENT);
         problemRepository.save(problem);
 
@@ -470,11 +280,189 @@ public class SolutionAttemptService {
     }
 
     // -------------------------------------------------------------------------
-    // SUBMIT FULL ATTEMPT (solver finishes, problem reopens)
+    // SAVE DRAFT / SUBMIT (Split into distinct methods per SDD 3.6)
     // -------------------------------------------------------------------------
+    @Transactional
+    public SubtaskSubmissionResponse saveSubtaskDraft(UUID solverUserId, UUID attemptId,
+                                                      UUID subtaskId, String description,
+                                                      List<MultipartFile> files,
+                                                      String deltaDescription) {
+        return processSubtask(solverUserId, attemptId, subtaskId, description, files, deltaDescription, false);
+    }
 
     @Transactional
-    public SolutionAttemptResponse submitFullAttempt(UUID solverUserId, UUID attemptId) {
+    public SubtaskSubmissionResponse lockAndSubmitSubtask(UUID solverUserId, UUID attemptId,
+                                                          UUID subtaskId, String description,
+                                                          List<MultipartFile> files,
+                                                          String deltaDescription) {
+        return processSubtask(solverUserId, attemptId, subtaskId, description, files, deltaDescription, true);
+    }
+
+    private SubtaskSubmissionResponse processSubtask(UUID solverUserId, UUID attemptId,
+                                                     UUID subtaskId, String description,
+                                                     List<MultipartFile> files,
+                                                     String deltaDescription, boolean isSubmitting) {
+        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
+                .orElseThrow(() -> new RuntimeException("Solver profile not found"));
+
+        SolutionAttempt attempt = attemptRepository.findById(attemptId)
+                .orElseThrow(() -> new RuntimeException("Solution attempt not found"));
+
+        if (!attempt.getSolver().getId().equals(solver.getId())) {
+            throw new RuntimeException("You do not own this solution attempt");
+        }
+
+        if (attempt.getStatus() != SolutionAttemptStatus.ACTIVE) {
+            throw new RuntimeException("This attempt is no longer active");
+        }
+
+        ProblemSubtask subtask = subtaskRepository.findById(subtaskId)
+                .orElseThrow(() -> new RuntimeException("Subtask not found"));
+
+        if (!subtask.getProblem().getId().equals(attempt.getProblem().getId())) {
+            throw new RuntimeException("Subtask does not belong to this problem");
+        }
+
+        SubtaskSubmission submission = submissionRepository
+                .findByAttemptAndSubtask(attempt, subtask)
+                .orElseGet(() -> new SubtaskSubmission(attempt, subtask));
+
+        if (submission.getStatus() == SubtaskSubmissionStatus.SUBMITTED) {
+            throw new RuntimeException("This subtask has already been submitted and cannot be edited");
+        }
+
+        int newFileCount = 0;
+
+        if (files != null && !files.isEmpty()) {
+            List<String> existingUrls = submission.getFileUrlsAsList();
+            List<String> newUrls = new ArrayList<>(existingUrls);
+
+            for (MultipartFile file : files) {
+                if (file != null && !file.isEmpty()) {
+                    String url = storageService.uploadFile(file, attemptId + "/" + subtaskId);
+                    newUrls.add(url);
+                    newFileCount++;
+                }
+            }
+            submission.setFileUrls(String.join(",", newUrls));
+        }
+
+        submission.setDescription(description);
+        submission.setDeltaDescription(deltaDescription);
+
+        String solverFullName = solver.getFirstName() + " " + solver.getLastName();
+
+        if (isSubmitting) {
+            submission.setStatus(SubtaskSubmissionStatus.SUBMITTED);
+            submission.setSubmittedAt(LocalDateTime.now());
+
+            Problem problem = attempt.getProblem();
+            String deltaMsg = "Subtask \"" + subtask.getTitle() + "\" submitted by " + solverFullName;
+
+            if (deltaDescription != null && !deltaDescription.isBlank()) {
+                deltaMsg += " — Delta: " + deltaDescription;
+            }
+            if (newFileCount > 0) {
+                deltaMsg += " (" + newFileCount + " file(s) attached)";
+            }
+
+            auditService.log(
+                    problem.getId(),
+                    solverUserId,
+                    solverFullName,
+                    "SOLVER",
+                    AuditEventType.SUBTASK_SUBMITTED,
+                    deltaMsg
+            );
+
+            if (problem.getStatus() == ProblemStatus.CLAIMED) {
+                problem.setStatus(ProblemStatus.IN_PROGRESS);
+                problemRepository.save(problem);
+
+                auditService.log(
+                        problem.getId(),
+                        null,
+                        "SYSTEM",
+                        "SYSTEM",
+                        AuditEventType.STATUS_CHANGED,
+                        "Status automatically changed from CLAIMED → IN_PROGRESS after first subtask submission."
+                );
+            }
+
+        } else {
+            submission.setStatus(SubtaskSubmissionStatus.DRAFT);
+
+            if (newFileCount > 0) {
+                auditService.log(
+                        attempt.getProblem().getId(),
+                        solverUserId,
+                        solverFullName,
+                        "SOLVER",
+                        AuditEventType.FILE_UPLOADED,
+                        solverFullName + " uploaded " + newFileCount + " file(s) to subtask \""
+                                + subtask.getTitle() + "\"."
+                );
+            }
+        }
+
+        SubtaskSubmission saved = submissionRepository.save(submission);
+        return mapSubmissionToResponse(saved);
+    }
+
+    // -------------------------------------------------------------------------
+    // ABANDON ATTEMPT (Updated to use attemptId per SDD)
+    // -------------------------------------------------------------------------
+    @Transactional
+    public void abandonAttempt(UUID solverUserId, UUID attemptId) {
+        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
+                .orElseThrow(() -> new RuntimeException("Solver profile not found"));
+
+        SolutionAttempt attempt = attemptRepository.findById(attemptId)
+                .orElseThrow(() -> new RuntimeException("Solution attempt not found"));
+
+        if (!attempt.getSolver().getId().equals(solver.getId())) {
+            throw new RuntimeException("You do not own this attempt");
+        }
+
+        if (attempt.getStatus() != SolutionAttemptStatus.ACTIVE) {
+            throw new RuntimeException("Attempt is not active");
+        }
+
+        Problem problem = attempt.getProblem();
+        String solverFullName = solver.getFirstName() + " " + solver.getLastName();
+
+        attempt.setStatus(SolutionAttemptStatus.ABANDONED);
+        attemptRepository.save(attempt);
+
+        auditService.log(
+                problem.getId(),
+                solverUserId,
+                solverFullName,
+                "SOLVER",
+                AuditEventType.ATTEMPT_ABANDONED,
+                solverFullName + " abandoned their attempt."
+        );
+
+        if (problem.getStatus() != ProblemStatus.SOLVED_OPEN_FOR_IMPROVEMENT) {
+            problem.setStatus(ProblemStatus.OPEN);
+            problemRepository.save(problem);
+
+            auditService.log(
+                    problem.getId(),
+                    null,
+                    "SYSTEM",
+                    "SYSTEM",
+                    AuditEventType.STATUS_CHANGED,
+                    "Status automatically changed to OPEN after solver abandoned."
+            );
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // FINALIZE ATTEMPT (Includes Alternative Flow A2 Validation)
+    // -------------------------------------------------------------------------
+    @Transactional
+    public SolutionAttemptResponse finalizeAttempt(UUID solverUserId, UUID attemptId) {
         SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
                 .orElseThrow(() -> new RuntimeException("Solver profile not found"));
 
@@ -487,6 +475,15 @@ public class SolutionAttemptService {
 
         if (attempt.getStatus() != SolutionAttemptStatus.ACTIVE) {
             throw new RuntimeException("Attempt is not active");
+        }
+
+        // Validate at least one subtask is submitted (SRS 3.6 - Alternative Flow A2)
+        List<SubtaskSubmission> submissions = submissionRepository.findByAttempt(attempt);
+        boolean hasSubmittedSubtask = submissions.stream()
+                .anyMatch(sub -> sub.getStatus() == SubtaskSubmissionStatus.SUBMITTED);
+
+        if (!hasSubmittedSubtask) {
+            throw new RuntimeException("You must submit at least one subtask solution before finalizing the attempt.");
         }
 
         String solverFullName = solver.getFirstName() + " " + solver.getLastName();
@@ -507,7 +504,6 @@ public class SolutionAttemptService {
 
         Problem problem = attempt.getProblem();
 
-        // Only transition to OPEN if it isn't already marked open for improvement
         if (problem.getStatus() != ProblemStatus.SOLVED_OPEN_FOR_IMPROVEMENT) {
             problem.setStatus(ProblemStatus.OPEN);
             problemRepository.save(problem);
@@ -522,13 +518,10 @@ public class SolutionAttemptService {
             );
         }
 
-        List<SubtaskSubmission> submissions = submissionRepository.findByAttempt(savedAttempt);
         return mapToResponse(savedAttempt, submissions);
     }
 
-    // -------------------------------------------------------------------------
-    // MAPPERS
-    // -------------------------------------------------------------------------
+
 
     private SolutionAttemptResponse mapToResponse(SolutionAttempt attempt,
                                                   List<SubtaskSubmission> submissions) {

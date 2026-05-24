@@ -28,6 +28,7 @@ public class ProblemController {
     @Autowired
     private AuditService auditService;
 
+
     @PostMapping("/generate-scope")
     @PreAuthorize("hasRole('SEEKER')")
     public ResponseEntity<?> generateScope(
@@ -170,6 +171,23 @@ public class ProblemController {
 
         List<AuditLogResponse> logs = auditService.getLogsForProblem(problemId);
         return ResponseEntity.ok(logs);
+    }
+
+
+
+    // -------------------------------------------------------------------------
+    // GET ACTIVITY FEED - SDD Section 3.2 & 3.7
+    // GET /api/problems/{problemId}/audit-log
+    // -------------------------------------------------------------------------
+    @GetMapping("/api/problems/{problemId}/audit-log")
+    @PreAuthorize("hasAnyRole('SEEKER', 'SOLVER', 'ADMIN')")
+    public ResponseEntity<?> getProblemActivityFeed(@PathVariable UUID problemId) {
+        try {
+            List<AuditLogResponse> timeline = auditService.getAuditLogsForProblem(problemId);
+            return ResponseEntity.ok(timeline);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
 }

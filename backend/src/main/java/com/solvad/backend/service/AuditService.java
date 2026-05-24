@@ -5,8 +5,10 @@ import com.solvad.backend.dto.SeekerNotificationResponse;
 import com.solvad.backend.entity.AuditEventType;
 import com.solvad.backend.entity.AuditLog;
 import com.solvad.backend.repository.AuditLogRepository;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
 
 import java.util.Arrays;
 import java.util.List;
@@ -78,5 +80,22 @@ public class AuditService {
                 log.getDelta(),
                 log.getTimestamp()
         );
+    }
+
+    @Transactional(readOnly = true)
+    public List<AuditLogResponse> getAuditLogsForProblem(UUID problemId) {
+        // Using your existing ASC sorting method based on your frontend preference
+        List<AuditLog> logs = auditLogRepository.findByProblemIdOrderByTimestampAsc(problemId);
+
+        return logs.stream().map(log -> new AuditLogResponse(
+                log.getId(),
+                log.getProblemId(),
+                log.getActorId(),
+                log.getActorName(),
+                log.getActorRole(),
+                log.getEventType(),
+                log.getDelta(),
+                log.getTimestamp()
+        )).collect(Collectors.toList());
     }
 }
