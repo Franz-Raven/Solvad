@@ -9,12 +9,14 @@ import type { ProblemResponse } from "@/types/problem";
 import type { SolutionAttemptResponse } from "@/types/attempt";
 import { SubtaskForm } from "@/components/solver-workspace/SubtaskForm";
 
+
 type ModalType = "abandon" | "submit" | null;
 
 export default function SolverWorkspacePage() {
   const params = useParams();
   const router = useRouter();
   const problemId = params.id as string;
+  
 
   const [problem, setProblem] = useState<ProblemResponse | null>(null);
   const [attempt, setAttempt] = useState<SolutionAttemptResponse | null>(null);
@@ -25,6 +27,7 @@ export default function SolverWorkspacePage() {
   const [isAbandoning, setIsAbandoning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeModal, setActiveModal] = useState<ModalType>(null);
+  
 
   const fetchWorkspace = useCallback(async (showLoading = true) => {
     try {
@@ -129,6 +132,7 @@ export default function SolverWorkspacePage() {
   const submittedCount = attempt.submissions.filter((s) => s.status === "SUBMITTED").length;
   const activeSubtask = problem.subtasks.find((s) => s.id === activeSubtaskId);
   const existingSubmission = activeSubtask ? attempt.submissions.find((s) => s.subtaskId === activeSubtask.id) : undefined;
+  const parentSubmission = activeSubtask ? attempt.parentSubmissions?.find((s) => s.subtaskId === activeSubtask.id) : undefined;
   const isForked = !!attempt.parentAttemptId; 
 
   return (
@@ -285,17 +289,21 @@ export default function SolverWorkspacePage() {
                 <h2 className="text-2xl font-bold text-gray-900 mb-3">{activeSubtask.title}</h2>
                 <p className="text-gray-600 leading-relaxed">{activeSubtask.description}</p>
               </div>
-
-              {/* ACTION FORM WITH NEW PROPS */}
+              
               <SubtaskForm
                 attemptId={attempt.id}
                 subtask={activeSubtask}
                 existingDescription={existingSubmission?.description ?? ""}
                 existingDelta={existingSubmission?.deltaDescription ?? ""}
-                existingFiles={existingSubmission?.fileUrls ?? []} 
+                existingFiles={existingSubmission?.fileUrls ?? []}
                 submissionId={existingSubmission?.id}
                 isSubmitted={existingSubmission?.status === "SUBMITTED"}
                 isForked={isForked}
+                
+                // ADD THESE TWO PROPS:
+                parentDescription={parentSubmission?.description} 
+                parentFiles={parentSubmission?.fileUrls}          
+                
                 onSuccess={() => fetchWorkspace(false)} 
               />
             </div>

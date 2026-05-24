@@ -20,6 +20,7 @@ export interface SolutionAttemptResponse {
   solverFirstName: string;
   solverLastName: string;
   institution: string;
+  parentSubmissions?: SubtaskSubmissionResponse[];
   degreeProgram: string;
   status: string;
   submissions: SubtaskSubmissionResponse[];

@@ -34,7 +34,7 @@ function buildHierarchyTree(flatList: SolutionAttemptResponse[]): TreeAttemptNod
 export function SolutionTreeTab({
   attempts,
   isAlreadyClaimed,
-  isCompleted,     
+  isCompleted,
   isUnavailable,
   myProposalStatus,
   onForkRequest,
@@ -43,11 +43,10 @@ export function SolutionTreeTab({
   const [modalNode, setModalNode] = useState<TreeAttemptNode | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [, setTick] = useState(0);
-
-  // 1. ADD STATE FOR FILTER
   const [selectedSubtaskId, setSelectedSubtaskId] = useState<string>("ALL");
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [displayedSubtaskId, setDisplayedSubtaskId] = useState<string>("ALL");
 
-  // 2. EXTRACT UNIQUE SUBTASKS FROM ATTEMPTS
   const uniqueSubtasks = useMemo(() => {
     const map = new Map<string, string>();
     attempts.forEach((a) => {
@@ -58,24 +57,33 @@ export function SolutionTreeTab({
     return Array.from(map.entries()).map(([id, title]) => ({ id, title }));
   }, [attempts]);
 
-  // 3. FILTER ATTEMPTS BEFORE BUILDING THE TREE
   const filteredAttempts = useMemo(() => {
-    if (selectedSubtaskId === "ALL") return attempts;
-    return attempts.filter((a) => a.targetSubtaskId === selectedSubtaskId);
-  }, [attempts, selectedSubtaskId]);
+    if (displayedSubtaskId === "ALL") return attempts;
+    return attempts.filter((a) => a.targetSubtaskId === displayedSubtaskId);
+  }, [attempts, displayedSubtaskId]);
 
   const structuredTreeRoots = buildHierarchyTree(filteredAttempts);
 
-  // A solver with a pending/approved proposal should not see fork/claim buttons
   const hasPendingOrApproved =
-  !isCompleted &&
-  (myProposalStatus === "PENDING" || myProposalStatus === "APPROVED");
+    !isCompleted &&
+    (myProposalStatus === "PENDING" || myProposalStatus === "APPROVED");
   const canInteract = !isAlreadyClaimed && !isUnavailable && !hasPendingOrApproved;
+
+  // Animate filter changes: fade out → swap → fade in
+  function handleFilterChange(id: string) {
+    if (id === selectedSubtaskId) return;
+    setSelectedSubtaskId(id);
+    setIsAnimating(true);
+    setTimeout(() => {
+      setDisplayedSubtaskId(id);
+      setIsAnimating(false);
+    }, 220);
+  }
 
   useEffect(() => {
     const t = setTimeout(() => setTick((n) => n + 1), 80);
     return () => clearTimeout(t);
-  }, [filteredAttempts]); // Re-trigger layout calculation when filtered list changes
+  }, [filteredAttempts]);
 
   function renderLevel(nodes: TreeAttemptNode[]): React.ReactNode {
     return (
@@ -101,7 +109,7 @@ export function SolutionTreeTab({
           >
             {/* Attempt Card */}
             <div
-              className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:border-accent/40 hover:shadow-md transition-all select-none"
+              className="attempt-card bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:border-accent/40 hover:shadow-md transition-all select-none"
               style={{ minWidth: "224px", maxWidth: "224px" }}
             >
               <div className="flex items-start justify-between gap-1 mb-1">
@@ -117,12 +125,12 @@ export function SolutionTreeTab({
                   </p>
                 </div>
                 <span
-                  className={`flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full border ml-1 mt-0.5 ${
+                  className={`status-badge flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full border ml-1 mt-0.5 ${
                     node.status === "COMPLETED"
-                      ? "bg-green-100 text-green-700 border-green-200"
+                      ? "bg-green-50 text-green-700 border-green-200"
                       : node.status === "ABANDONED"
-                      ? "bg-red-100 text-red-700 border-red-200"
-                      : "bg-yellow-100 text-yellow-700 border-yellow-200"
+                      ? "bg-red-50 text-red-700 border-red-200"
+                      : "bg-amber-50 text-amber-700 border-amber-200"
                   }`}
                 >
                   {node.status}
@@ -131,19 +139,9 @@ export function SolutionTreeTab({
 
               {node.parentAttemptId && (
                 <div className="flex items-center gap-1 mt-1 mb-1">
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 border border-blue-100 text-blue-700 text-[10px] font-semibold rounded-full">
-                    <svg
-                      className="w-2.5 h-2.5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M8 7v8a2 2 0 002 2h6M8 7l-2 2m2-2l2 2m4 4v-4a2 2 0 00-2-2h-6"
-                      />
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 border border-blue-100 text-blue-600 text-[10px] font-semibold rounded-full">
+                    <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7l-2 2m2-2l2 2m4 4v-4a2 2 0 00-2-2h-6" />
                     </svg>
                     Forked from {node.parentAttemptName}
                   </span>
@@ -163,10 +161,9 @@ export function SolutionTreeTab({
               </p>
 
               <div className="flex items-center gap-1.5 mt-3 flex-wrap">
-                {/* Only show fork button if solver can interact */}
                 {node.status === "COMPLETED" && canInteract && (
                   <button
-                  onClick={() => onForkRequest(node.id, node.targetSubtaskId!)}
+                    onClick={() => onForkRequest(node.id, node.targetSubtaskId!)}
                     className="px-2.5 py-1 bg-accent/10 hover:bg-accent text-accent hover:text-white text-[11px] font-semibold rounded-lg transition-all border border-accent/20 shadow-sm"
                   >
                     Build Upon ➔
@@ -182,13 +179,7 @@ export function SolutionTreeTab({
             </div>
 
             {node.children.length > 0 && (
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                }}
-              >
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                 <div style={{ width: 2, height: 28, background: "#d1d5db" }} />
                 {renderLevel(node.children)}
               </div>
@@ -209,34 +200,19 @@ export function SolutionTreeTab({
         if (node.children.length >= 2) {
           const childWrappers = node.children
             .map((c) => {
-              const el = containerRef.current!.querySelector(
-                `#tnode-${c.id}`
-              ) as HTMLElement;
+              const el = containerRef.current!.querySelector(`#tnode-${c.id}`) as HTMLElement;
               return el ? (el.children[0] as HTMLElement) : null;
             })
             .filter(Boolean) as HTMLElement[];
 
-          if (childWrappers.length < 2) {
-            walk(node.children);
-            return;
-          }
+          if (childWrappers.length < 2) { walk(node.children); return; }
 
           const childRects = childWrappers.map((el) => el.getBoundingClientRect());
-          const parentWrapper = containerRef.current!.querySelector(
-            `#tnode-${node.id}`
-          ) as HTMLElement;
-          const parentCard = parentWrapper
-            ? (parentWrapper.children[0] as HTMLElement)
-            : null;
-          if (!parentCard) {
-            walk(node.children);
-            return;
-          }
+          const parentWrapper = containerRef.current!.querySelector(`#tnode-${node.id}`) as HTMLElement;
+          const parentCard = parentWrapper ? (parentWrapper.children[0] as HTMLElement) : null;
+          if (!parentCard) { walk(node.children); return; }
 
-          const scroll = {
-            x: containerRef.current!.scrollLeft,
-            y: containerRef.current!.scrollTop,
-          };
+          const scroll = { x: containerRef.current!.scrollLeft, y: containerRef.current!.scrollTop };
           const pRect = parentCard.getBoundingClientRect();
           const toL = (r: DOMRect) => ({
             cx: r.left + r.width / 2 - containerRect.left + scroll.x,
@@ -249,23 +225,10 @@ export function SolutionTreeTab({
           const barY = p.bottom + 14;
 
           lines.push(
-            <g
-              key={`conn-${node.id}`}
-              stroke="#cbd5e1"
-              strokeWidth="1.5"
-              fill="none"
-              strokeLinecap="round"
-            >
+            <g key={`conn-${node.id}`} stroke="#cbd5e1" strokeWidth="1.5" fill="none" strokeLinecap="round">
               <line x1={p.cx} y1={p.bottom} x2={p.cx} y2={barY} />
-              <line
-                x1={Math.min(...cs.map((c) => c.cx))}
-                y1={barY}
-                x2={Math.max(...cs.map((c) => c.cx))}
-                y2={barY}
-              />
-              {cs.map((c, i) => (
-                <line key={i} x1={c.cx} y1={barY} x2={c.cx} y2={c.top} />
-              ))}
+              <line x1={Math.min(...cs.map((c) => c.cx))} y1={barY} x2={Math.max(...cs.map((c) => c.cx))} y2={barY} />
+              {cs.map((c, i) => <line key={i} x1={c.cx} y1={barY} x2={c.cx} y2={c.top} />)}
             </g>
           );
         }
@@ -279,6 +242,82 @@ export function SolutionTreeTab({
 
   return (
     <>
+      <style>{`
+        /* Tree viewport — fixed height, no resize */
+        .tree-viewport {
+          min-height: 420px;
+          max-height: 600px;
+          overflow: auto;
+          position: relative;
+          border-radius: 12px;
+          background: 
+            radial-gradient(ellipse at 20% 50%, rgba(99,102,241,0.04) 0%, transparent 60%),
+            radial-gradient(ellipse at 80% 20%, rgba(124,58,237,0.04) 0%, transparent 60%),
+            #fafafa;
+          border: 1px solid #e5e7eb;
+        }
+
+        /* Dot grid pattern */
+        .tree-viewport::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background-image: radial-gradient(circle, #d1d5db 1px, transparent 1px);
+          background-size: 24px 24px;
+          opacity: 0.5;
+          pointer-events: none;
+          border-radius: 12px;
+        }
+
+        /* Fade + lift animation for tree content */
+        .tree-content {
+          transition: opacity 0.22s ease, transform 0.22s ease;
+        }
+        .tree-content.exiting {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        .tree-content.entering {
+          opacity: 1;
+          transform: translateY(0);
+        }
+
+        /* Card hover lift */
+        .attempt-card {
+          transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.18s ease;
+        }
+        .attempt-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+        }
+
+        /* Status badge pulse for IN_PROGRESS */
+        .status-badge {
+          letter-spacing: 0.02em;
+        }
+
+        /* Section header */
+        .tree-section-header {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 16px;
+          flex-wrap: wrap;
+          margin-bottom: 16px;
+        }
+
+        /* Empty state inside viewport */
+        .tree-empty {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+        }
+      `}</style>
+
       {modalNode && (
         <AttemptDetailModal
           node={modalNode}
@@ -296,24 +335,12 @@ export function SolutionTreeTab({
       {attempts.length === 0 ? (
         <div className="bg-white rounded-xl shadow-md border border-gray-200 p-12 text-center">
           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg
-              className="w-8 h-8 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-              />
+            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
             </svg>
           </div>
           <h3 className="text-xl font-bold text-gray-900 mb-2">No attempts yet</h3>
-          <p className="text-gray-600 mb-6">
-            Be the first to claim and solve this problem.
-          </p>
+          <p className="text-gray-600 mb-6">Be the first to claim and solve this problem.</p>
           {canInteract && (
             <button
               onClick={onClaimNew}
@@ -325,56 +352,62 @@ export function SolutionTreeTab({
         </div>
       ) : (
         <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
-          <div className="mb-6">
-            <h2 className="text-xl font-bold text-gray-900">
-              Solution Evolution Tree
-            </h2>
-            <p className="text-xs text-gray-500 mt-1 mb-4">
-              Each node is a solution attempt. Forked nodes branch downward from
-              their parent — click <strong>View</strong> to see details and
-              before/after comparisons.
-            </p>
+          {/* Header row */}
+          <div className="tree-section-header">
+            <div style={{ flex: 1 }}>
+              <h2 className="text-xl font-bold text-gray-900">Solution Evolution Tree</h2>
+              <p className="text-xs text-gray-400 mt-1">
+                Each node is a solution attempt. Forked nodes branch downward — click{" "}
+                <strong className="text-gray-500">View</strong> to see details and comparisons.
+              </p>
+            </div>
 
-            {/* 4. RENDER FILTER BUTTONS IF THERE ARE MULTIPLE SUBTASKS */}
+            {/* Filter Dropdown for large subtask lists */}
             {uniqueSubtasks.length > 1 && (
-              <div className="flex items-center gap-2 flex-wrap border-t border-gray-100 pt-4">
-                <span className="text-sm font-semibold text-gray-700 mr-2">Filter Tree:</span>
-                <button
-                  onClick={() => setSelectedSubtaskId("ALL")}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
-                    selectedSubtaskId === "ALL"
-                      ? "bg-gray-800 text-white border-gray-800 shadow-sm"
-                      : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                  }`}
-                >
-                  All Sub-problems
-                </button>
-                {uniqueSubtasks.map((st) => (
-                  <button
-                    key={st.id}
-                    onClick={() => setSelectedSubtaskId(st.id)}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
-                      selectedSubtaskId === st.id
-                        ? "bg-gray-800 text-white border-gray-800 shadow-sm"
-                        : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                    }`}
+              <div className="flex items-center gap-2">
+                <label htmlFor="subtask-filter" className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                  Filter by Sub-problem:
+                </label>
+                <div className="relative">
+                  <select
+                    id="subtask-filter"
+                    value={selectedSubtaskId}
+                    onChange={(e) => handleFilterChange(e.target.value)}
+                    className="appearance-none bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-accent focus:border-accent block w-full pl-3 pr-10 py-2 outline-none transition-colors cursor-pointer"
+                    style={{ minWidth: "200px", maxWidth: "300px" }}
                   >
-                    {st.title}
-                  </button>
-                ))}
+                    <option value="ALL">All Sub-problems</option>
+                    {uniqueSubtasks.map((st) => (
+                      <option key={st.id} value={st.id}>
+                        {st.title}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
               </div>
             )}
           </div>
 
-          <div className="bg-gray-50/50 rounded-xl border border-gray-100 p-4">
+          {/* Fixed-height tree viewport */}
+          <div className="tree-viewport">
             <div
               ref={containerRef}
-              style={{ position: "relative", overflowX: "auto", paddingBottom: 24 }}
+              className={`tree-content ${isAnimating ? "exiting" : "entering"}`}
+              style={{ padding: "24px 16px 32px", position: "relative", zIndex: 1 }}
             >
-              {/* Show empty state if the current filter yields 0 results */}
               {filteredAttempts.length === 0 ? (
-                <div className="text-center py-12 text-sm text-gray-500">
-                  No attempts match this sub-problem yet.
+                <div className="tree-empty">
+                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <p className="text-sm text-gray-400 font-medium">No attempts for this sub-problem yet</p>
                 </div>
               ) : (
                 <>
@@ -412,14 +445,13 @@ export function SolutionTreeTab({
         </div>
       )}
 
-      {/* Claim from scratch CTA — only show if solver can interact */}
+      {/* Claim from scratch CTA */}
       {canInteract && attempts.length > 0 && (
         <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 flex items-center justify-between mt-6">
           <div>
             <h3 className="font-semibold text-gray-900">Start from scratch?</h3>
             <p className="text-sm text-gray-600 mt-1">
-              You can also submit a fresh proposal without building on an existing
-              solution.
+              Submit a fresh proposal without building on an existing solution.
             </p>
           </div>
           <button
@@ -431,7 +463,7 @@ export function SolutionTreeTab({
         </div>
       )}
 
-      {/* Pending banner inside the tree tab */}
+      {/* Pending banner */}
       {hasPendingOrApproved && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 flex items-start gap-3 mt-6">
           <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse mt-1 flex-shrink-0" />

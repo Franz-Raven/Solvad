@@ -55,7 +55,6 @@ public class SolutionAttemptService {
 
         SolutionAttempt attempt = new SolutionAttempt(problem, solver);
         attempt.setTargetSubtask(targetSubtask);
-
         String solverFullName = solver.getFirstName() + " " + solver.getLastName();
 
         if (request.getParentAttempt() != null) {
@@ -63,22 +62,19 @@ public class SolutionAttemptService {
             attempt.setParentAttempt(parent);
             SolutionAttempt savedAttempt = attemptRepository.save(attempt);
 
-            // For a fork: copy only the submission that belongs to this subtask
+            // FIX: DO NOT copy parent's description or files into the new draft.
             List<SubtaskSubmission> parentSubmissions = submissionRepository.findByAttempt(parent);
             for (SubtaskSubmission parentSub : parentSubmissions) {
                 if (parentSub.getStatus() == SubtaskSubmissionStatus.SUBMITTED
                         && parentSub.getSubtask().getId().equals(targetSubtask.getId())) {
                     SubtaskSubmission newDraft = new SubtaskSubmission(savedAttempt, parentSub.getSubtask());
-                    newDraft.setDescription(parentSub.getDescription());
-                    newDraft.setFileUrls(parentSub.getFileUrls());
+                    // Description and FileUrls are left completely blank here.
                     newDraft.setStatus(SubtaskSubmissionStatus.DRAFT);
                     submissionRepository.save(newDraft);
                 }
             }
 
-            String parentName = parent.getSolver().getFirstName() + " "
-                    + parent.getSolver().getLastName();
-
+            String parentName = parent.getSolver().getFirstName() + " " + parent.getSolver().getLastName();
             auditService.log(
                     problem.getId(),
                     solver.getUser().getId(),
@@ -88,13 +84,11 @@ public class SolutionAttemptService {
                     solverFullName + "'s proposal was approved. Forked workspace created for sub-problem \""
                             + targetSubtask.getTitle() + "\" based on " + parentName + "'s attempt."
             );
-
             List<SubtaskSubmission> submissions = submissionRepository.findByAttempt(savedAttempt);
             return mapToResponse(savedAttempt, submissions);
 
         } else {
             SolutionAttempt savedAttempt = attemptRepository.save(attempt);
-
             auditService.log(
                     problem.getId(),
                     solver.getUser().getId(),
@@ -104,18 +98,11 @@ public class SolutionAttemptService {
                     solverFullName + "'s proposal was approved. Active workspace created for sub-problem \""
                             + targetSubtask.getTitle() + "\"."
             );
-
-            // Update problem status if it is still OPEN
             if (problem.getStatus() == ProblemStatus.OPEN) {
                 problem.setStatus(ProblemStatus.CLAIMED);
                 problemRepository.save(problem);
-
                 auditService.log(
-                        problem.getId(),
-                        null,
-                        "SYSTEM",
-                        "SYSTEM",
-                        AuditEventType.STATUS_CHANGED,
+                        problem.getId(), null, "SYSTEM", "SYSTEM", AuditEventType.STATUS_CHANGED,
                         "Status automatically changed from OPEN → CLAIMED after first proposal was approved."
                 );
             }
@@ -125,22 +112,30 @@ public class SolutionAttemptService {
         }
     }
 
-    @Transactional(readOnly = true)
     public SolutionAttemptResponse getMyAttempt(UUID solverUserId, UUID problemId) {
+
         Problem problem = problemRepository.findById(problemId)
                 .orElseThrow(() -> new RuntimeException("Problem not found"));
 
         SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
                 .orElseThrow(() -> new RuntimeException("Solver profile not found"));
 
-        // Return most recent attempt regardless of status
-        SolutionAttempt attempt = attemptRepository
-                .findFirstByProblemAndSolverOrderByClaimedAtDesc(problem, solver)
-                .orElseThrow(() -> new RuntimeException("No attempt found"));
 
+        List<SolutionAttempt> activeAttempts = attemptRepository.findByProblemAndSolverAndStatus(
+                problem, solver, SolutionAttemptStatus.ACTIVE
+        );
+
+        if (activeAttempts.isEmpty()) {
+            throw new RuntimeException("No active attempt found");
+        }
+
+        SolutionAttempt attempt = activeAttempts.get(0);
         List<SubtaskSubmission> submissions = submissionRepository.findByAttempt(attempt);
+
+
         return mapToResponse(attempt, submissions);
     }
+
     // -------------------------------------------------------------------------
     // GET all active attempts for a solver on a problem (may have multiple
     // if they are working on different subtasks simultaneously — future use)
@@ -209,10 +204,6 @@ public class SolutionAttemptService {
             return mapToResponse(attempt, submissions);
         }).collect(Collectors.toList());
     }
-
-    // -------------------------------------------------------------------------
-    // GET single attempt by ID
-    // -------------------------------------------------------------------------
     @Transactional(readOnly = true)
     public SolutionAttemptResponse getAttemptById(UUID attemptId) {
         SolutionAttempt attempt = attemptRepository.findById(attemptId)
@@ -222,9 +213,6 @@ public class SolutionAttemptService {
         return mapToResponse(attempt, submissions);
     }
 
-    // -------------------------------------------------------------------------
-    // GET all open problems (solver browse)
-    // -------------------------------------------------------------------------
     @Transactional(readOnly = true)
     public List<ProblemResponse> getOpenProblems() {
         List<ProblemStatus> visibleStatuses = Arrays.asList(
@@ -244,9 +232,7 @@ public class SolutionAttemptService {
                 .collect(Collectors.toList());
     }
 
-    // -------------------------------------------------------------------------
-    // DELETE FILE from a draft submission
-    // -------------------------------------------------------------------------
+
     @Transactional
     public SubtaskSubmissionResponse deleteFileFromSubmission(UUID solverUserId, UUID submissionId,
                                                               String fileUrl) {
@@ -274,9 +260,6 @@ public class SolutionAttemptService {
         return mapSubmissionToResponse(submission);
     }
 
-    // -------------------------------------------------------------------------
-    // MARK problem as SOLVED (seeker action)
-    // -------------------------------------------------------------------------
     @Transactional
     public void markAsSolved(UUID seekerUserId, UUID problemId) {
         Problem problem = problemRepository.findById(problemId)
@@ -598,9 +581,6 @@ public class SolutionAttemptService {
         return mapToResponse(savedAttempt, submissions);
     }
 
-    // -------------------------------------------------------------------------
-    // MAPPERS
-    // -------------------------------------------------------------------------
     private SolutionAttemptResponse mapToResponse(SolutionAttempt attempt,
                                                   List<SubtaskSubmission> submissions) {
         List<SubtaskSubmissionResponse> submissionResponses = submissions.stream()
@@ -609,17 +589,23 @@ public class SolutionAttemptService {
 
         SolverProfile solver = attempt.getSolver();
 
-        UUID parentId = attempt.getParentAttempt() != null
-                ? attempt.getParentAttempt().getId() : null;
-        String parentName = attempt.getParentAttempt() != null
-                ? attempt.getParentAttempt().getSolver().getFirstName() + " "
-                + attempt.getParentAttempt().getSolver().getLastName()
-                : null;
+        UUID parentId = attempt.getParentAttempt() != null ? attempt.getParentAttempt().getId() : null;
+        String parentName = attempt.getParentAttempt() != null ? attempt.getParentAttempt().getSolver().getFirstName() + " " + attempt.getParentAttempt().getSolver().getLastName() : null;
+        UUID targetSubtaskId = attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getId() : null;
+        String targetSubtaskTitle = attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : null;
 
-        UUID targetSubtaskId = attempt.getTargetSubtask() != null
-                ? attempt.getTargetSubtask().getId() : null;
-        String targetSubtaskTitle = attempt.getTargetSubtask() != null
-                ? attempt.getTargetSubtask().getTitle() : null;
+        // FIX: Fetch the parent's actual narrative and files to pass to the frontend
+        String parentDesc = null;
+        List<String> parentFiles = new java.util.ArrayList<>();
+
+        if (attempt.getParentAttempt() != null && attempt.getTargetSubtask() != null) {
+            java.util.Optional<SubtaskSubmission> parentSub = submissionRepository
+                    .findByAttemptAndSubtask(attempt.getParentAttempt(), attempt.getTargetSubtask());
+            if (parentSub.isPresent()) {
+                parentDesc = parentSub.get().getDescription();
+                parentFiles = parentSub.get().getFileUrlsAsList();
+            }
+        }
 
         return new SolutionAttemptResponse(
                 attempt.getId(),
@@ -638,7 +624,9 @@ public class SolutionAttemptService {
                 parentId,
                 parentName,
                 targetSubtaskId,
-                targetSubtaskTitle
+                targetSubtaskTitle,
+                parentDesc,     // newly added
+                parentFiles     // newly added
         );
     }
 
