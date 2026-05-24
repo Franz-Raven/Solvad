@@ -77,6 +77,26 @@ public class ProblemController {
         }
     }
 
+    @GetMapping("/my-problems/search")
+    @PreAuthorize("hasRole('SEEKER')")
+    public ResponseEntity<?> searchMyProblems(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String sdgFilter,
+            @RequestParam(required = false) String dateSort,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        try {
+            String token = authHeader.substring(7);
+            UUID seekerUserId = jwtService.extractUserId(token);
+            
+            PaginatedProblemsResponse response = problemService.searchMyProblems(seekerUserId, query, sdgFilter, dateSort, page, size);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     @GetMapping("/notifications")
     @PreAuthorize("hasRole('SEEKER')")
     public ResponseEntity<?> getSeekerNotifications(@RequestHeader("Authorization") String authHeader) {

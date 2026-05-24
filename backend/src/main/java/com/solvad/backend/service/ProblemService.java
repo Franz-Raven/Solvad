@@ -255,4 +255,126 @@ public class ProblemService {
 
         return auditService.getRecentNotificationsForProblems(problemIds, titles);
     }
+
+    @Transactional(readOnly = true)
+    public PaginatedProblemsResponse searchMyProblems(UUID seekerUserId, String searchQuery, String sdgFilter, String dateSort, int page, int size) {
+        SeekerProfile seeker = seekerProfileRepository.findByUserId(seekerUserId)
+                .orElseThrow(() -> new RuntimeException("Seeker profile not found"));
+
+        List<Problem> allProblems = problemRepository.findBySeeker(seeker);
+        
+        if (sdgFilter != null && !sdgFilter.trim().isEmpty()) {
+            allProblems = allProblems.stream()
+                    .filter(problem -> sdgFilter.equals(problem.getSdgFocus()))
+                    .collect(Collectors.toList());
+        }
+
+        List<ProblemSearchResult> searchResults;
+
+        if (searchQuery == null || searchQuery.trim().isEmpty()) {
+            searchResults = allProblems.stream()
+                    .map(problem -> {
+                        List<ProblemSubtask> subtasks = subtaskRepository.findByProblem(problem);
+                        ProblemResponse response = mapToResponse(problem, subtasks, seeker);
+                        return new ProblemSearchResult(response, 0.0);
+                    })
+                    .collect(Collectors.toList());
+        } else {
+            String normalizedQuery = searchQuery.toLowerCase().trim();
+            String[] queryTerms = normalizedQuery.split("\\s+");
+
+            searchResults = allProblems.stream()
+                    .map(problem -> {
+                        List<ProblemSubtask> subtasks = subtaskRepository.findByProblem(problem);
+                        ProblemResponse response = mapToResponse(problem, subtasks, seeker);
+                        double score = calculateSearchScore(problem, queryTerms);
+                        return new ProblemSearchResult(response, score);
+                    })
+                    .filter(result -> result.getScore() > 0)
+                    .sorted((a, b) -> Double.compare(b.getScore(), a.getScore()))
+                    .collect(Collectors.toList());
+        }
+        
+        if (dateSort != null) {
+            java.time.LocalDateTime now = java.time.LocalDateTime.now();
+            java.time.LocalDateTime filterDate = null;
+            
+            switch (dateSort.toLowerCase()) {
+                case "1day":
+                    filterDate = now.minusDays(1);
+                    break;
+                case "1week":
+                    filterDate = now.minusWeeks(1);
+                    break;
+                case "1month":
+                    filterDate = now.minusMonths(1);
+                    break;
+                case "1year":
+                    filterDate = now.minusYears(1);
+                    break;
+            }
+            
+            if (filterDate != null) {
+                final java.time.LocalDateTime finalFilterDate = filterDate;
+                searchResults = searchResults.stream()
+                        .filter(result -> {
+                            java.time.LocalDateTime createdAt = result.getProblem().getCreatedAt();
+                            return createdAt.isAfter(finalFilterDate);
+                        })
+                        .collect(Collectors.toList());
+            } else if (dateSort.equalsIgnoreCase("oldest")) {
+                searchResults.sort((a, b) -> a.getProblem().getCreatedAt().compareTo(b.getProblem().getCreatedAt()));
+            } else if (dateSort.equalsIgnoreCase("newest")) {
+                searchResults.sort((a, b) -> b.getProblem().getCreatedAt().compareTo(a.getProblem().getCreatedAt()));
+            }
+        }
+
+        long totalElements = searchResults.size();
+        int totalPages = (int) Math.ceil((double) totalElements / size);
+        int fromIndex = page * size;
+
+        List<ProblemResponse> paginatedProblems = searchResults.stream()
+                .skip(fromIndex)
+                .limit(size)
+                .map(ProblemSearchResult::getProblem)
+                .collect(Collectors.toList());
+
+        return new PaginatedProblemsResponse(paginatedProblems, page, totalPages, totalElements, size);
+    }
+
+    private double calculateSearchScore(Problem problem, String[] queryTerms) {
+        double score = 0.0;
+        
+        String title = problem.getTitle() != null ? problem.getTitle().toLowerCase() : "";
+        String primaryStatement = problem.getPrimaryStatement() != null ? problem.getPrimaryStatement().toLowerCase() : "";
+        String backgroundContext = problem.getBackgroundContext() != null ? problem.getBackgroundContext().toLowerCase() : "";
+
+        for (String term : queryTerms) {
+            int titleMatches = countOccurrences(title, term);
+            int primaryMatches = countOccurrences(primaryStatement, term);
+            int backgroundMatches = countOccurrences(backgroundContext, term);
+
+            score += titleMatches * 10.0;
+            score += primaryMatches * 5.0;
+            score += backgroundMatches * 2.0;
+        }
+
+        return score;
+    }
+
+    private int countOccurrences(String text, String term) {
+        if (text.isEmpty() || term.isEmpty()) {
+            return 0;
+        }
+        
+        int count = 0;
+        int index = 0;
+        
+        while ((index = text.indexOf(term, index)) != -1) {
+            count++;
+            index += term.length();
+        }
+        
+        return count;
+    }
 }

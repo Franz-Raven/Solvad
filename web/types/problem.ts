@@ -91,3 +91,11 @@ export interface SeekerNotification {
   actorName: string;
   timestamp: string;
 }
+
+export interface PaginatedProblemsResponse {
+  problems: ProblemResponse[];
+  currentPage: number;
+  totalPages: number;
+  totalElements: number;
+  pageSize: number;
+}
