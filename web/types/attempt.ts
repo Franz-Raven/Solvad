@@ -11,6 +11,7 @@ export interface SubtaskSubmissionResponse {
   submittedAt: string | null;
   deltaDescription?: string;
 }
+
 export interface SolutionAttemptResponse {
   id: string;
   problemId: string;
@@ -21,14 +22,14 @@ export interface SolutionAttemptResponse {
   institution: string;
   degreeProgram: string;
   status: string;
-  submissions: any[]; // (or SubtaskSubmissionResponse[])
+  submissions: SubtaskSubmissionResponse[];
   claimedAt: string;
   updatedAt: string;
   completedAt?: string;
-  
-  // Add these two lines for the forking logic!
   parentAttemptId?: string | null;
   parentAttemptName?: string | null;
+  targetSubtaskId?: string | null;      // ADD
+  targetSubtaskTitle?: string | null;   // ADD
 }
 
 export interface TreeAttemptNode extends SolutionAttemptResponse {
@@ -68,10 +69,12 @@ export interface ProposalRequest {
 export interface ClaimRequestResponse {
   id: string;
   problem: { id: string };
-  solver: { id: string; firstName: string; lastName: string;  institution?: string;};
+  solver: { id: string; firstName: string; lastName: string; institution?: string; };
   proposedApproach: string;
   supportingDocuments?: string;
   status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
   createdAt: string;
- 
+  targetSubtaskId?: string;    // ADD
+  targetSubtaskTitle?: string; // ADD
+  parentAttemptId?: string;
 }

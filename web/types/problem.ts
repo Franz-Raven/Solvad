@@ -72,8 +72,7 @@ export interface ProblemResponse {
   tags?: string[];
   matchScore?: number;
   courseMatch?: boolean;
-
-  
+  maxConcurrentSolvers?: number;  // ADD
 }
 
 export interface DiscoveryDashboardResponse {

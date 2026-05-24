@@ -9,7 +9,7 @@ interface AttemptDetailModalProps {
   flatAttemptsList: SolutionAttemptResponse[];
   isAlreadyClaimed: boolean;
   isUnavailable: boolean;
-  onForkRequest: (attemptId: string) => void;
+  onForkRequest: (attemptId: string, subtaskId: string) => void;
   onClose: () => void;
 }
 
@@ -72,7 +72,7 @@ export function AttemptDetailModal({
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               {node.status === "COMPLETED" && !isAlreadyClaimed && !isUnavailable && (
-                <button onClick={() => { onForkRequest(node.id); onClose(); }} className="px-3 py-1.5 bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white text-sm font-semibold rounded-lg transition-all border border-blue-200">
+                <button onClick={() => { onForkRequest(node.id, node.targetSubtaskId!); onClose(); }} className="px-3 py-1.5 bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white text-sm font-semibold rounded-lg transition-all border border-blue-200">
                   Submit Proposal to Fork ➔
                 </button>
               )}

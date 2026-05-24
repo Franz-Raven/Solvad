@@ -197,24 +197,29 @@ export async function getAuditLog(
 export async function submitProposal(
   problemId: string,
   proposedApproach: string,
+  subtaskId: string,           // ADD — now required
   parentAttemptId?: string,
   files?: File[]
 ): Promise<ClaimRequestResponse> {
   const formData = new FormData();
-  
-  // 1. Append the text fields
   formData.append("proposedApproach", proposedApproach);
+  formData.append("subtaskId", subtaskId);              // ADD
   if (parentAttemptId) formData.append("parentAttemptId", parentAttemptId);
-  
-  // 2. Append the files (if any)
   if (files && files.length > 0) {
     files.forEach((file) => formData.append("files", file));
   }
-
-  // 3. Delegate to your apiRequest utility! 
-  // It will automatically handle the token, error parsing, and leave the Content-Type blank for FormData
   return apiRequest<ClaimRequestResponse>(`/problems/${problemId}/proposals`, {
     method: "POST",
     body: formData,
   });
+}
+
+export async function getAttemptsForSubtask(
+  problemId: string,
+  subtaskId: string
+): Promise<SolutionAttemptResponse[]> {
+  return apiRequest<SolutionAttemptResponse[]>(
+    `/problems/${problemId}/subtasks/${subtaskId}/attempts`,
+    { method: "GET" }
+  );
 }

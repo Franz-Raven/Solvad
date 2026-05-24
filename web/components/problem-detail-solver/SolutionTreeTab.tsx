@@ -9,7 +9,7 @@ interface SolutionTreeTabProps {
   isAlreadyClaimed: boolean;
   isUnavailable: boolean;
   myProposalStatus: string | null;
-  onForkRequest: (parentId: string) => void;
+  onForkRequest: (attemptId: string, subtaskId: string) => void;
   onClaimNew: () => void;
 }
 
@@ -143,7 +143,7 @@ export function SolutionTreeTab({
                 {/* Only show fork button if solver can interact */}
                 {node.status === "COMPLETED" && canInteract && (
                   <button
-                    onClick={() => onForkRequest(node.id)}
+                  onClick={() => onForkRequest(node.id, node.targetSubtaskId!)}
                     className="px-2.5 py-1 bg-accent/10 hover:bg-accent text-accent hover:text-white text-[11px] font-semibold rounded-lg transition-all border border-accent/20 shadow-sm"
                   >
                     Submit Proposal ➔
@@ -262,9 +262,9 @@ export function SolutionTreeTab({
           flatAttemptsList={attempts}
           isAlreadyClaimed={isAlreadyClaimed}
           isUnavailable={isUnavailable || hasPendingOrApproved}
-          onForkRequest={(id) => {
+          onForkRequest={(id, subtaskId) => {
             setModalNode(null);
-            onForkRequest(id);
+            onForkRequest(id, subtaskId);
           }}
           onClose={() => setModalNode(null)}
         />

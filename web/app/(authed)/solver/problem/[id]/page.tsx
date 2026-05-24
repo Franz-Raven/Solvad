@@ -44,6 +44,7 @@ export default function SolverProblemDetailPage() {
   // Proposal Modal State
   const [showProposalModal, setShowProposalModal] = useState(false);
   const [forkParentId, setForkParentId] = useState<string | undefined>(undefined);
+  const [proposalSubtaskId, setProposalSubtaskId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     loadData();
@@ -85,10 +86,13 @@ export default function SolverProblemDetailPage() {
     }
   };
 
-  const openProposalModal = (parentId?: string) => {
-    setForkParentId(parentId);
-    setShowProposalModal(true);
-  };
+ const openProposalModal = (subtaskId: string, parentId?: string) => {
+  setProposalSubtaskId(subtaskId);
+  setForkParentId(parentId);
+  setShowProposalModal(true);
+};
+
+
 
   if (loading) {
     return (
@@ -123,6 +127,12 @@ export default function SolverProblemDetailPage() {
     !canClaimFresh &&
     problem.status !== "SOLVED_OPEN_FOR_IMPROVEMENT";
 
+    const canPropose =
+  !isAlreadyClaimed &&
+  !isUnavailable &&
+  myProposalStatus !== "PENDING" &&
+  myProposalStatus !== "APPROVED";
+  
   const tabs: { id: TabType; label: string }[] = [
     { id: "blueprint", label: "Problem Blueprint" },
     { id: "subtasks", label: "Sub-problems" },
@@ -201,14 +211,14 @@ export default function SolverProblemDetailPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-accent/20 via-background to-accent/10">
       {/* ── Proposal Flow Modal ── */}
-      {showProposalModal && (
+      {showProposalModal && proposalSubtaskId && (
         <SubmitProposalModal
           problemId={problemId}
+          subtaskId={proposalSubtaskId}
           parentAttemptId={forkParentId}
           onClose={() => setShowProposalModal(false)}
           onSuccess={() => {
             setShowProposalModal(false);
-            // Optimistic update so the UI reflects immediately without waiting for network
             setMyProposalStatus("PENDING");
             loadData();
           }}
@@ -317,18 +327,24 @@ export default function SolverProblemDetailPage() {
 
         {activeTab === "blueprint" && <BlueprintTab problem={problem} />}
 
-        {activeTab === "subtasks" && <SubtasksTab problem={problem} />}
-
-        {activeTab === "tree" && (
-          <SolutionTreeTab
-            attempts={attempts}
-            isAlreadyClaimed={isAlreadyClaimed}
-            isUnavailable={isUnavailable}
-            myProposalStatus={myProposalStatus}
-            onForkRequest={openProposalModal}
-            onClaimNew={() => openProposalModal()}
+        {activeTab === "subtasks" && (
+          <SubtasksTab
+            problem={problem}
+            canPropose={canPropose}
+            onPropose={(subtaskId) => openProposalModal(subtaskId)}
           />
         )}
+
+       {activeTab === "tree" && (
+            <SolutionTreeTab
+              attempts={attempts}
+              isAlreadyClaimed={isAlreadyClaimed}
+              isUnavailable={isUnavailable}
+              myProposalStatus={myProposalStatus}
+              onForkRequest={(parentId, subtaskId) => openProposalModal(subtaskId, parentId)}
+              onClaimNew={() => setActiveTab("subtasks")} // redirect to subtasks tab to pick one
+            />
+          )}
 
         {activeTab === "history" && <AuditTimelineTab problemId={problemId} />}
       </div>

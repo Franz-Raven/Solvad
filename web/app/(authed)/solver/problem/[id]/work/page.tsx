@@ -42,9 +42,12 @@ export default function SolverWorkspacePage() {
       setAttempt(attemptData);
 
       setActiveSubtaskId(prev => {
-        if (!prev && probData.subtasks.length > 0) {
-          return probData.subtasks[0].id;
-        }
+        const target = attemptData.targetSubtaskId
+            ? probData.subtasks.find((s) => s.id === attemptData.targetSubtaskId)
+            : probData.subtasks[0];
+          if (!prev && target) {
+            return target.id;
+          }
         return prev;
       });
       
@@ -102,6 +105,7 @@ export default function SolverWorkspacePage() {
   }
 
   if (error || !problem || !attempt) {
+    
     return (
       <div className="min-h-screen bg-slate-50 p-8 flex items-center justify-center">
         <div className="max-w-md w-full bg-white rounded-2xl shadow-sm border border-red-100 p-8 text-center">
@@ -117,6 +121,10 @@ export default function SolverWorkspacePage() {
       </div>
     );
   }
+
+  const workspaceSubtasks = attempt.targetSubtaskId
+    ? problem.subtasks.filter((s) => s.id === attempt.targetSubtaskId)
+    : problem.subtasks;
 
   const submittedCount = attempt.submissions.filter((s) => s.status === "SUBMITTED").length;
   const activeSubtask = problem.subtasks.find((s) => s.id === activeSubtaskId);
@@ -190,7 +198,7 @@ export default function SolverWorkspacePage() {
             <div className="hidden md:flex items-center gap-2 text-sm font-medium">
               <span className="text-gray-500">Progress:</span>
               <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${submittedCount === problem.subtasks.length ? 'bg-green-100 text-green-700' : 'bg-accent/10 text-accent'}`}>
-                {submittedCount} / {problem.subtasks.length}
+                {submittedCount} / {workspaceSubtasks.length}
               </span>
             </div>
             <button
@@ -220,7 +228,7 @@ export default function SolverWorkspacePage() {
               <p className="text-xs text-gray-500 mt-1">Complete at least one to finish.</p>
             </div>
             <div className="divide-y divide-gray-50 p-2">
-              {problem.subtasks.map((subtask, index) => {
+              {workspaceSubtasks.map((subtask, index) => {
                 const submission = attempt.submissions.find((s) => s.subtaskId === subtask.id);
                 const isActive = subtask.id === activeSubtaskId;
                 const isSubmitted = submission?.status === "SUBMITTED";
@@ -268,7 +276,7 @@ export default function SolverWorkspacePage() {
               <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
                 <div className="flex items-center gap-3 mb-4">
                   <span className="px-3 py-1 bg-gray-100 text-gray-700 text-xs font-bold uppercase tracking-wider rounded-md">
-                    Module {problem.subtasks.findIndex((s) => s.id === activeSubtask.id) + 1}
+                    Module {workspaceSubtasks.findIndex((s) => s.id === activeSubtask.id) + 1}
                   </span>
                   <span className="px-3 py-1 bg-secondary/10 text-secondary text-xs font-bold uppercase tracking-wider rounded-md">
                     {activeSubtask.departmentFocus}
