@@ -240,5 +240,23 @@ public class SolutionAttemptController {
         }
     }
 
+    // -------------------------------------------------------------------------
+// ABANDON ATTEMPT
+// DELETE /api/attempts/{attemptId}/abandon
+// -------------------------------------------------------------------------
+    @DeleteMapping("/api/attempts/{attemptId}/abandon")
+    @PreAuthorize("hasRole('SOLVER')")
+    public ResponseEntity<?> abandonAttempt(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable UUID attemptId) {
+        try {
+            UUID solverUserId = extractUserId(authHeader);
+            attemptService.abandonAttempt(solverUserId, attemptId);
+            return ResponseEntity.ok("Attempt abandoned successfully");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
 
 }

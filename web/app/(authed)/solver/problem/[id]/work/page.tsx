@@ -66,16 +66,16 @@ export default function SolverWorkspacePage() {
   }, [activeModal]);
 
   const executeAbandon = async () => {
-    setIsAbandoning(true);
-    try {
-      await abandonClaim(problemId);
-      router.push("/solver/dashboard");
-    } catch (err: any) {
-      setError(err.message || "Failed to abandon claim");
-      setIsAbandoning(false);
-      setActiveModal(null);
-    }
-  };
+  setIsAbandoning(true);
+  try {
+    await abandonClaim(attempt!.id); // pass attempt.id, not problemId
+    router.push("/solver/dashboard");
+  } catch (err: any) {
+    setError(err.message || "Failed to abandon claim");
+    setIsAbandoning(false);
+    setActiveModal(null);
+  }
+};
 
   const executeFinalSubmit = async () => {
     if (!attempt) return;

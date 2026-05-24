@@ -19,8 +19,8 @@ export async function claimProblem(problemId: string, parentAttemptId?: string):
 /**
  * Abandon an active claim (solver)
  */
-export async function abandonClaim(problemId: string): Promise<void> {
-  return apiRequest<void>(`/problems/${problemId}/claim`, {
+export async function abandonClaim(attemptId: string): Promise<void> {
+  await apiRequest(`/attempts/${attemptId}/abandon`, {
     method: "DELETE",
   });
 }
@@ -122,12 +122,6 @@ export async function completeAttempt(attemptId: string): Promise<SolutionAttemp
   return apiRequest(`/attempts/${attemptId}/complete`, { method: "POST" });
 }
 
-/**
- * Abandon the attempt (Solver Action)
- */
-export async function abandonAttempt(attemptId: string): Promise<void> {
-  return apiRequest(`/attempts/${attemptId}/abandon`, { method: "POST" });
-}
 
 export async function getAllAttempts(
   problemId: string
