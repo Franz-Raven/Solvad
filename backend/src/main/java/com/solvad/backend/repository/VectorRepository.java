@@ -22,8 +22,7 @@ public class VectorRepository {
         SELECT 
             p.id as problem_id,
             p.title,
-            p.preferred_program as department,
-            1 - (p.embedding <=> source.embedding) as similarity
+            (1 - (p.embedding <=> source.embedding))::REAL as similarity
         FROM problems p, source
         WHERE p.embedding IS NOT NULL
           AND p.id != CAST(? AS uuid)
@@ -37,9 +36,7 @@ public class VectorRepository {
                 (rs, rowNum) -> new SimilarityResultDTO(
                         UUID.fromString(rs.getString("problem_id")),
                         rs.getString("title"),
-                        rs.getString("department"),
-                        rs.getDouble("similarity") * 100,
-                        "Semantically similar problem detected"
+                        rs.getFloat("similarity") * 100
                 )
         );
     }
