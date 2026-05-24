@@ -67,9 +67,10 @@ export interface ProposalRequest {
 export interface ClaimRequestResponse {
   id: string;
   problem: { id: string };
-  solver: { id: string; firstName: string; lastName: string };
+  solver: { id: string; firstName: string; lastName: string;  institution?: string;};
   proposedApproach: string;
   supportingDocuments?: string;
   status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
   createdAt: string;
+ 
 }

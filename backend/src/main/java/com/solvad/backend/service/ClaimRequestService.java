@@ -6,7 +6,9 @@ import com.solvad.backend.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -36,11 +38,14 @@ public class ClaimRequestService {
     @Autowired
     private AuditService auditService;
 
+    @Autowired
+    private CloudinaryService cloudinaryService;
+
     // Concurrency limit defined in SRS 3.5
     private static final int MAX_CONCURRENT_SOLVERS = 3;
 
     @Transactional
-    public ClaimRequest submitProposal(UUID solverUserId, ProposalDTO proposalDTO) {
+    public ClaimRequest submitProposal(UUID solverUserId, ProposalDTO proposalDTO, List<MultipartFile> files) {
         Problem problem = problemRepository.findById(proposalDTO.getProblemId())
                 .orElseThrow(() -> new RuntimeException("Problem not found"));
 
@@ -72,8 +77,19 @@ public class ClaimRequestService {
                     .orElseThrow(() -> new RuntimeException("Parent attempt not found"));
         }
 
-        String docs = proposalDTO.getSupportingDocuments() != null && !proposalDTO.getSupportingDocuments().isEmpty() ?
-                String.join(",", proposalDTO.getSupportingDocuments()) : null;
+        // --- Upload files to Cloudinary ---
+        List<String> fileUrls = new ArrayList<>();
+        if (files != null && !files.isEmpty()) {
+            for (MultipartFile file : files) {
+                if (!file.isEmpty()) {
+                    // Uploads to solvad/proposals/{problemId}
+                    String url = cloudinaryService.uploadFile(file, "proposals/" + problem.getId());
+                    fileUrls.add(url);
+                }
+            }
+        }
+
+        String docs = fileUrls.isEmpty() ? null : String.join(",", fileUrls);
 
         ClaimRequest request = new ClaimRequest(problem, solver, proposalDTO.getProposedApproach(), docs, parentAttempt);
         ClaimRequest savedRequest = claimRequestRepository.save(request);
@@ -102,6 +118,7 @@ public class ClaimRequestService {
         }
 
         Problem problem = request.getProblem();
+
         SeekerProfile seeker = seekerProfileRepository.findByUserId(seekerUserId)
                 .orElseThrow(() -> new RuntimeException("Seeker profile not found"));
 
@@ -127,6 +144,7 @@ public class ClaimRequestService {
         }
 
         int currentActiveSolvers = attemptRepository.countActiveSolversByProblemId(problem.getId());
+
         if (currentActiveSolvers >= MAX_CONCURRENT_SOLVERS) {
             throw new RuntimeException("Maximum concurrent solvers limit (" + MAX_CONCURRENT_SOLVERS + ") reached for this problem.");
         }
@@ -164,9 +182,9 @@ public class ClaimRequestService {
     public List<ClaimRequest> getPendingProposalsForProblem(UUID problemId) {
         Problem problem = problemRepository.findById(problemId)
                 .orElseThrow(() -> new RuntimeException("Problem not found"));
+
         return claimRequestRepository.findByProblemAndStatus(problem, ClaimRequestStatus.PENDING);
     }
-
 
     @Transactional(readOnly = true)
     public Optional<ClaimRequestStatus> getMyProposalStatus(UUID solverUserId, UUID problemId) {
