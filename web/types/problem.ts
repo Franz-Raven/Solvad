@@ -72,6 +72,8 @@ export interface ProblemResponse {
   tags?: string[];
   matchScore?: number;
   courseMatch?: boolean;
+
+  
 }
 
 export interface DiscoveryDashboardResponse {
@@ -98,4 +100,12 @@ export interface PaginatedProblemsResponse {
   totalPages: number;
   totalElements: number;
   pageSize: number;
+}
+
+export interface SubtaskResponse {
+  id: string;
+  title: string;
+  departmentFocus: string;
+  sdgFocus?: string;
+  description: string;
 }

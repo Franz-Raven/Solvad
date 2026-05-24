@@ -1,150 +1,346 @@
 "use client";
 
-import { useState } from "react";
-import { saveSubtaskDraft, submitSubtaskFinal } from "@/lib/api/attempts";
+import { useState, useEffect } from "react";
+import { saveSubtaskDraft, submitSubtaskSolution } from "@/lib/api/attempts";
+import type { SubtaskResponse } from "@/types/problem";
 
-interface Subtask {
-  id: string;
-  title: string;
-  departmentFocus: string;
-  description: string;
-}
-
-interface WorkspaceProps {
+interface SubtaskFormProps {
   attemptId: string;
-  subtask: Subtask;
-  existingDescription?: string;
-  existingDelta?: string;
-  isSubmitted?: boolean;
+  subtask: SubtaskResponse;
+  existingDescription: string;
+  existingDelta: string;
+  existingFiles: string[];
+  submissionId?: string;
+  isSubmitted: boolean;
+  isForked: boolean;
+  onSuccess: () => void;
 }
 
-export function SubtaskForm({ 
-  attemptId, 
-  subtask, 
-  existingDescription = "", 
-  existingDelta = "",
-  isSubmitted = false 
-}: WorkspaceProps) {
+export function SubtaskForm({
+  attemptId,
+  subtask,
+  existingDescription,
+  existingDelta,
+  existingFiles,
+  submissionId,
+  isSubmitted,
+  isForked,
+  onSuccess
+}: SubtaskFormProps) {
   const [description, setDescription] = useState(existingDescription);
   const [deltaDescription, setDeltaDescription] = useState(existingDelta);
   const [files, setFiles] = useState<File[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [serverFiles, setServerFiles] = useState<string[]>(existingFiles);
+  
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [isDeletingFile, setIsDeletingFile] = useState<string | null>(null);
 
-  const handleAction = async (action: 'draft' | 'submit') => {
+  useEffect(() => {
+    setDescription(existingDescription);
+    setDeltaDescription(existingDelta);
+    setServerFiles(existingFiles);
+    setFiles([]);
+    setError(null);
+  }, [subtask.id, attemptId, existingDescription, existingDelta, existingFiles]);
+
+  useEffect(() => {
+    if (showConfirmModal) document.body.style.overflow = "hidden";
+    else document.body.style.overflow = "";
+    return () => { document.body.style.overflow = ""; };
+  }, [showConfirmModal]);
+
+  // Cleans up the huge cloudinary URL to just a readable filename
+  const getFilenameFromUrl = (url: string) => {
     try {
-      setLoading(true);
-      setStatusMsg(null);
-      
-      if (action === 'draft') {
-        await saveSubtaskDraft(attemptId, subtask.id, description, deltaDescription, files);
-        setStatusMsg({ type: 'success', text: "Draft saved successfully!" });
-      } else {
-        if (!confirm("Are you sure? Once submitted, this subtask cannot be edited.")) return;
-        await submitSubtaskFinal(attemptId, subtask.id, description, deltaDescription, files);
-        setStatusMsg({ type: 'success', text: "Subtask locked and submitted." });
-        // Optionally trigger a parent refresh here
-      }
-    } catch (err: any) {
-      setStatusMsg({ type: 'error', text: err.message || "An error occurred." });
-    } finally {
-      setLoading(false);
+      const decoded = decodeURIComponent(url);
+      const parts = decoded.split("/");
+      return parts[parts.length - 1] || "Attachment";
+    } catch {
+      return "Attachment";
     }
   };
 
-  return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-6">
-      <div className="flex items-start justify-between gap-4 mb-4">
-        <h3 className="text-xl font-bold text-gray-900">{subtask.title}</h3>
-        {isSubmitted && (
-          <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold uppercase rounded-full border border-green-200">
-            Submitted
-          </span>
-        )}
-      </div>
+  // Helper to delete an existing Cloudinary file
+  const handleDeleteServerFile = async (fileUrl: string) => {
+    if (!submissionId) return;
+    setIsDeletingFile(fileUrl);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`http://localhost:8080/api/submissions/${submissionId}/files?fileUrl=${encodeURIComponent(fileUrl)}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error("Failed to delete file");
+      
+      setServerFiles(prev => prev.filter(f => f !== fileUrl));
+      onSuccess(); // refresh parent silently
+    } catch (err: any) {
+      setError(err.message || "Failed to delete file");
+    } finally {
+      setIsDeletingFile(null);
+    }
+  };
 
-      <div className="bg-gradient-to-r from-accent/5 to-secondary/5 p-5 rounded-lg border border-gray-100 mb-8">
-        <span className="inline-block px-2.5 py-1 bg-white border border-secondary/20 text-secondary text-[11px] font-bold tracking-wide uppercase rounded-full shadow-sm mb-3">
-          {subtask.departmentFocus}
-        </span>
-        <p className="text-sm text-gray-700 leading-relaxed">{subtask.description}</p>
-      </div>
+  const executeAction = async (action: "SAVE_DRAFT" | "SUBMIT") => {
+    setShowConfirmModal(false);
+    setError(null);
+    
+    if (action === "SAVE_DRAFT") setIsSaving(true);
+    else setIsSubmitting(true);
 
-      <div className="space-y-6">
-        <div>
-          <label className="block text-sm font-bold text-gray-900 mb-2">Your Solution Approach</label>
-          <textarea
-            disabled={isSubmitted || loading}
-            rows={8}
-            className="w-full p-4 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent bg-gray-50 text-gray-900 disabled:opacity-60 transition-all text-sm resize-none"
-            placeholder="Document your findings, code structure, or methodology here..."
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
+    try {
+      if (action === "SAVE_DRAFT") {
+        await saveSubtaskDraft(attemptId, subtask.id, description, deltaDescription, files);
+      } else {
+        await submitSubtaskSolution(attemptId, subtask.id, description, deltaDescription, files);
+      }
+      setFiles([]); 
+      onSuccess();
+    } catch (err: any) {
+      setError(err.message || `Failed to ${action.toLowerCase()}`);
+    } finally {
+      setIsSaving(false);
+      setIsSubmitting(false);
+    }
+  };
+
+  const removeLocalFile = (idx: number) => {
+    setFiles(files.filter((_, i) => i !== idx));
+  };
+
+  // Mandatory Validation: Must have at least one file to submit
+  const hasFiles = files.length > 0 || serverFiles.length > 0;
+  const canSubmit = description.trim().length > 0 && hasFiles;
+
+  // ─── SUBMITTED VIEW ───
+  if (isSubmitted) {
+    return (
+      <div className="bg-white rounded-2xl shadow-sm border border-green-200 overflow-hidden">
+        <div className="bg-green-50 px-8 py-4 border-b border-green-100 flex items-center gap-3">
+          <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <h3 className="font-bold text-green-800">Module Submitted</h3>
         </div>
-
-        <div>
-          <label className="block text-sm font-bold text-gray-900 mb-2">
-            Delta Notes <span className="text-gray-400 font-normal">(Optional - only if building upon another solution)</span>
-          </label>
-          <input
-            type="text"
-            disabled={isSubmitted || loading}
-            placeholder="e.g., 'Optimized the database queries from the parent solution'"
-            className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary bg-gray-50 text-gray-900 disabled:opacity-60 text-sm transition-all"
-            value={deltaDescription}
-            onChange={(e) => setDeltaDescription(e.target.value)}
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-bold text-gray-900 mb-2">Supporting Documents</label>
-          <div className="flex items-center justify-center w-full">
-            <label className={`flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors ${isSubmitted || loading ? "opacity-60 pointer-events-none" : ""}`}>
-              <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                <svg className="w-8 h-8 mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-                <p className="mb-1 text-sm text-gray-500"><span className="font-semibold text-accent">Click to upload</span> or drag and drop</p>
-                <p className="text-xs text-gray-500">Cloudinary will process images, PDFs, or Docs</p>
-              </div>
-              <input 
-                type="file" 
-                multiple 
-                disabled={isSubmitted || loading}
-                className="hidden" 
-                onChange={(e) => e.target.files && setFiles(Array.from(e.target.files))}
-              />
-            </label>
+        <div className="p-8">
+          <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Your Solution</h4>
+          <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+            {description}
           </div>
-          {files.length > 0 && (
-            <p className="text-xs text-accent mt-2 font-medium">{files.length} file(s) selected.</p>
+          
+          {isForked && deltaDescription && (
+             <div className="mt-6">
+                <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-2">Change Log / Delta</h4>
+                <p className="text-sm text-gray-600 bg-gray-50 p-4 rounded-lg border border-gray-100">{deltaDescription}</p>
+             </div>
+          )}
+
+          {serverFiles.length > 0 && (
+            <div className="mt-6">
+              <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Attached Documents</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {serverFiles.map((url, idx) => (
+                  <a
+                    key={idx}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:text-secondary hover:border-secondary hover:shadow-md transition-all group"
+                  >
+                    <div className="bg-blue-50 text-blue-600 p-2 rounded-md group-hover:bg-secondary/10 group-hover:text-secondary transition-colors">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                    </div>
+                    <span className="truncate font-medium flex-1">
+                      {getFilenameFromUrl(url)}
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </div>
           )}
         </div>
-
-        {statusMsg && (
-          <div className={`p-3 rounded-lg text-sm font-medium ${statusMsg.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-            {statusMsg.text}
-          </div>
-        )}
-
-        {!isSubmitted && (
-          <div className="flex gap-4 pt-4 border-t border-gray-100">
-            <button
-              onClick={() => handleAction('draft')}
-              disabled={loading}
-              className="flex-1 px-4 py-3 border border-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              {loading ? "Saving..." : "Save Draft"}
-            </button>
-            <button
-              onClick={() => handleAction('submit')}
-              disabled={loading || !description.trim()}
-              className="flex-1 px-4 py-3 bg-secondary hover:bg-accent text-white font-bold rounded-lg transition-all shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {loading ? "Submitting..." : "Lock & Submit Subtask"}
-            </button>
-          </div>
-        )}
       </div>
-    </div>
+    );
+  }
+
+  // ─── DRAFT / ACTIVE EDITOR VIEW ───
+  return (
+    <>
+      {/* ── Subtask Submission Confirmation Modal ── */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6">
+              <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 text-center mb-2">Lock & Submit Module?</h2>
+              <p className="text-gray-600 text-center text-sm">
+                Are you sure you want to submit? Once locked, you will not be able to edit this specific module's narrative or attachments.
+              </p>
+            </div>
+            
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex gap-3">
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                className="flex-1 px-4 py-2.5 border border-gray-200 bg-white text-gray-700 font-medium rounded-lg hover:bg-gray-100 transition-colors text-sm"
+              >
+                Go Back
+              </button>
+              <button
+                onClick={() => executeAction("SUBMIT")}
+                className="flex-1 px-4 py-2.5 bg-secondary hover:bg-accent text-white font-semibold rounded-lg transition-colors text-sm flex items-center justify-center gap-2 shadow-sm"
+              >
+                Yes, Lock it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden relative">
+        <div className="px-8 py-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+          <h3 className="font-bold text-gray-900">Workspace Editor</h3>
+          <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200">
+            Draft Mode
+          </span>
+        </div>
+
+        <div className="p-8 space-y-6">
+          {error && (
+            <div className="p-4 rounded-lg bg-red-50 border border-red-100 text-red-600 text-sm font-medium">
+              {error}
+            </div>
+          )}
+
+          {/* Text Area */}
+          <div>
+            <label className="block text-sm font-bold text-gray-900 mb-2">Solution Narrative <span className="text-red-500">*</span></label>
+            <textarea
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all text-sm text-gray-900 placeholder:text-gray-400 min-h-[250px]"
+              placeholder="Document your findings, code architecture, or research here..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </div>
+
+          <div className={`grid grid-cols-1 ${isForked ? 'md:grid-cols-2' : ''} gap-6`}>
+            
+            {isForked && (
+              <div>
+                <label className="block text-sm font-bold text-gray-900 mb-2">Delta Log <span className="text-gray-400 font-normal">(Optional)</span></label>
+                <textarea
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all text-sm text-gray-900 placeholder:text-gray-400 min-h-[120px]"
+                  placeholder="If you are updating a previous draft or fork, what changed?"
+                  value={deltaDescription}
+                  onChange={(e) => setDeltaDescription(e.target.value)}
+                />
+              </div>
+            )}
+
+            {/* File Upload Field */}
+            <div>
+              <label className="block text-sm font-bold text-gray-900 mb-2">
+                Supporting Documents <span className="text-red-500">*</span>
+              </label>
+              
+              <div className="h-[120px] border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer relative">
+                 <input 
+                    type="file" 
+                    multiple 
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    onChange={(e) => {
+                      if (e.target.files) setFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+                    }} 
+                  />
+                  <svg className="w-8 h-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                  <p className="text-sm font-medium text-gray-600">Drag & drop files to attach</p>
+              </div>
+
+              {/* Viewable Attached Files List */}
+              {(files.length > 0 || serverFiles.length > 0) && (
+                <ul className="mt-4 space-y-2">
+                  
+                  {/* Cloudinary Files from previous saves */}
+                  {serverFiles.map((url, idx) => (
+                    <li key={`server-${idx}`} className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg text-sm shadow-sm">
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <svg className="w-5 h-5 text-secondary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                        <a href={url} target="_blank" rel="noopener noreferrer" className="truncate font-medium text-secondary hover:text-accent hover:underline transition-colors">
+                          {getFilenameFromUrl(url)}
+                        </a>
+                      </div>
+                      <button 
+                        type="button" 
+                        onClick={() => handleDeleteServerFile(url)}
+                        disabled={isDeletingFile === url}
+                        className="text-gray-400 hover:text-red-500 p-1.5 rounded-md hover:bg-red-50 transition-colors disabled:opacity-50"
+                      >
+                        {isDeletingFile === url ? (
+                           <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        )}
+                      </button>
+                    </li>
+                  ))}
+
+                  {/* Local Files selected right now */}
+                  {files.map((file, idx) => (
+                    <li key={`local-${idx}`} className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg text-sm shadow-sm">
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <svg className="w-5 h-5 text-secondary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                        <a href={URL.createObjectURL(file)} target="_blank" rel="noopener noreferrer" className="truncate font-medium text-secondary hover:text-accent hover:underline transition-colors">
+                          {file.name}
+                        </a>
+                        <span className="text-gray-400 text-xs flex-shrink-0">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+                      </div>
+                      <button 
+                        type="button" 
+                        onClick={() => removeLocalFile(idx)}
+                        className="text-gray-400 hover:text-red-500 p-1.5 rounded-md hover:bg-red-50 transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              
+            </div>
+          </div>
+        </div>
+
+        {/* Action Footer */}
+        <div className="px-8 py-5 border-t border-gray-100 flex items-center justify-between">
+          <p className="text-xs text-gray-500">
+            {!hasFiles ? (
+              <span className="text-red-500 font-medium">Please attach at least one document to unlock submission.</span>
+            ) : (
+              "Ensure your work is saved before switching modules."
+            )}
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => executeAction("SAVE_DRAFT")}
+              disabled={isSaving || isSubmitting || !description.trim()}
+              className="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors text-sm disabled:opacity-50 shadow-sm"
+            >
+              {isSaving ? "Saving..." : "Save Draft"}
+            </button>
+            <button
+              onClick={() => setShowConfirmModal(true)}
+              disabled={isSubmitting || isSaving || !canSubmit}
+              className="px-6 py-2.5 bg-secondary hover:bg-accent text-white font-semibold rounded-lg transition-all text-sm disabled:opacity-50 shadow-sm flex items-center gap-2"
+            >
+              {isSubmitting ? "Locking..." : "Lock & Submit"}
+              {!isSubmitting && <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>}
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }

@@ -44,38 +44,40 @@ export async function deleteFileFromSubmission(
   );
 }
 
-/**
- * Save draft of a subtask solution (Multipart/Supabase)
- */
 export async function saveSubtaskDraft(
   attemptId: string,
   subtaskId: string,
   description: string,
-  deltaDescription?: string,
-  files?: File[]
+  deltaDescription: string,
+  files: File[]
 ): Promise<SubtaskSubmissionResponse> {
   const formData = new FormData();
   formData.append("description", description);
-  if (deltaDescription) formData.append("deltaDescription", deltaDescription);
-  if (files && files.length > 0) {
-    files.forEach((file) => formData.append("files", file));
-  }
+  formData.append("deltaDescription", deltaDescription);
+  files.forEach((file) => formData.append("files", file));
 
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"}/attempts/${attemptId}/subtasks/${subtaskId}/draft`,
-    {
-      method: "PUT",
-      headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: formData,
-    }
-  );
+  return apiRequest<SubtaskSubmissionResponse>(`/attempts/${attemptId}/subtasks/${subtaskId}/draft`, {
+    method: "PUT", // SDD states PUT for draft
+    body: formData,
+  });
+}
 
-  const data = await res.json().catch(() => res.text());
-  if (!res.ok) throw new Error(data.message || data.error || "Failed to save draft");
-  return data as SubtaskSubmissionResponse;
+export async function submitSubtaskSolution(
+  attemptId: string,
+  subtaskId: string,
+  description: string,
+  deltaDescription: string,
+  files: File[]
+): Promise<SubtaskSubmissionResponse> {
+  const formData = new FormData();
+  formData.append("description", description);
+  formData.append("deltaDescription", deltaDescription);
+  files.forEach((file) => formData.append("files", file));
+
+  return apiRequest<SubtaskSubmissionResponse>(`/attempts/${attemptId}/subtasks/${subtaskId}/submit`, {
+    method: "POST", // SDD states POST for submit
+    body: formData,
+  });
 }
 
 /**
