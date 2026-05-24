@@ -9,9 +9,10 @@ import type { ProblemResponse } from "@/types/problem";
 interface WorkspaceTabProps {
   problem: ProblemResponse;
   onProblemUpdate: (updatedProblem: ProblemResponse) => void;
+  onLocateInTree: (nodeId: string) => void; // <--- ADD THIS
 }
 
-export function WorkspaceTab({ problem, onProblemUpdate }: WorkspaceTabProps) {
+export function WorkspaceTab({ problem, onProblemUpdate, onLocateInTree }: WorkspaceTabProps) {
   const [activeAttempts, setActiveAttempts] = useState<SolutionAttemptResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -186,15 +187,26 @@ export function WorkspaceTab({ problem, onProblemUpdate }: WorkspaceTabProps) {
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {group.active.map((solver, idx) => (
-                        <div key={idx} className="flex items-start gap-3 bg-gray-50 border border-gray-200 p-4 rounded-xl">
-                          <div className="w-10 h-10 rounded-full bg-secondary/10 text-secondary flex items-center justify-center text-xs font-bold border border-secondary/20 shrink-0">
-                            {solver.solverFirstName.charAt(0)}{solver.solverLastName.charAt(0)}
+                        <div key={idx} className="flex flex-col gap-4 bg-gray-50 border border-gray-200 p-4 rounded-xl hover:shadow-sm transition-all hover:border-accent/30">
+                          <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 rounded-full bg-secondary/10 text-secondary flex items-center justify-center text-xs font-bold border border-secondary/20 shrink-0">
+                              {solver.solverFirstName.charAt(0)}{solver.solverLastName.charAt(0)}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-bold text-gray-900 truncate">{solver.solverFirstName} {solver.solverLastName}</p>
+                              <p className="text-[11px] text-gray-500 truncate">{solver.institution}</p>
+                              <p className="text-[10px] text-gray-400 mt-1">Claimed: {new Date(solver.claimedAt).toLocaleDateString()}</p>
+                            </div>
                           </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-bold text-gray-900 truncate">{solver.solverFirstName} {solver.solverLastName}</p>
-                            <p className="text-[11px] text-gray-500 truncate">{solver.institution}</p>
-                            <p className="text-[10px] text-gray-400 mt-1">Claimed: {new Date(solver.claimedAt).toLocaleDateString()}</p>
-                          </div>
+                          <button
+                            onClick={() => onLocateInTree(solver.id)}
+                            className="w-full mt-auto py-2 px-3 bg-white hover:bg-accent hover:text-white text-gray-700 font-medium rounded-lg text-[11px] transition-colors border border-gray-200 hover:border-accent flex justify-center items-center gap-1.5 shadow-sm"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7l-2 2m2-2l2 2m4 4v-4a2 2 0 00-2-2h-6" />
+                            </svg>
+                            Locate in Tree
+                          </button>
                         </div>
                       ))}
                     </div>

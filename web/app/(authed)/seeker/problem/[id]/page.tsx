@@ -295,10 +295,14 @@ export default function ProblemDetailPage() {
       <div className="max-w-7xl mx-auto px-8 py-8 overflow-visible">
         {activeTab === "problem"   && <ProblemTab problem={problem} />}
         {activeTab === "workspace" && (
-           <WorkspaceTab 
+          <WorkspaceTab 
               problem={problem} 
               onProblemUpdate={(updated) => setProblem(updated)}
-           />
+              onLocateInTree={(nodeId) => {
+                setHighlightedNodeId(nodeId);
+                setActiveTab("tree");
+              }}
+          />
         )}
         {activeTab === "proposals" && (
           <ProposalsTab 
