@@ -68,6 +68,7 @@ export interface ProblemResponse {
   seekerId: string;
   organizationName: string;
   createdAt: string;
+  problemDocumentUrl?: string;
   subtasks: SubProblem[];
   tags?: string[];
   matchScore?: number;

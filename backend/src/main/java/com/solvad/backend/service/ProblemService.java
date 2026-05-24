@@ -37,6 +37,12 @@ public class ProblemService {
     @Autowired
     private AuditService auditService;
 
+    @Autowired
+    private ProblemPdfService problemPdfService;
+
+    @Autowired
+    private CloudinaryService cloudinaryService;
+
     public GenerateScopeResponse generateScope(GenerateScopeRequest request, List<MultipartFile> attachments) {
         GenerateScopeResponse response = geminiService.generateSubtasks(
                 request.getTitle(),
@@ -53,11 +59,9 @@ public class ProblemService {
 
     @Transactional
     public ProblemResponse createProblem(UUID seekerUserId, ProblemRequest request) {
-        // Find seeker profile by user ID
         SeekerProfile seeker = seekerProfileRepository.findByUserId(seekerUserId)
                 .orElseThrow(() -> new RuntimeException("Seeker profile not found"));
 
-        // Create and save Problem entity
         Problem problem = new Problem(
                 seeker,
                 request.getTitle(),
@@ -69,9 +73,18 @@ public class ProblemService {
                 request.getSdgFocus()
         );
         
+        try {
+            byte[] pdfBytes = problemPdfService.generateProblemPdf(request, seeker.getOrganizationName());
+            String filename = "problem_" + System.currentTimeMillis() + ".pdf";
+            String pdfUrl = cloudinaryService.uploadBytes(pdfBytes, filename, "problem-documents");
+            problem.setProblemDocumentUrl(pdfUrl);
+        } catch (Exception e) {
+            System.err.println("Failed to generate/upload problem PDF: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
         Problem savedProblem = problemRepository.save(problem);
 
-        // Create and save ProblemSubtask entities
         List<ProblemSubtask> subtasks = request.getSubtasks().stream()
                 .map(subtaskReq -> new ProblemSubtask(
                         savedProblem,

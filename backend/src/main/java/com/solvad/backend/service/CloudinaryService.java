@@ -66,6 +66,37 @@ public class CloudinaryService {
     }
 
     /**
+     * Upload a byte array to Cloudinary (e.g., generated PDFs)
+     * @param bytes The byte array to upload
+     * @param filename The desired filename (including extension)
+     * @param folder The folder path in Cloudinary
+     * @return The secure URL of the uploaded file
+     */
+    @SuppressWarnings("unchecked")
+    public String uploadBytes(byte[] bytes, String filename, String folder) {
+        try {
+            if (bytes == null || bytes.length == 0) {
+                throw new RuntimeException("Byte array is empty");
+            }
+
+            Map<String, Object> uploadResult = cloudinary.uploader().upload(
+                    bytes,
+                    ObjectUtils.asMap(
+                            "folder", "solvad/" + folder,
+                            "resource_type", "raw", // For PDFs and other documents
+                            "public_id", filename.substring(0, filename.lastIndexOf('.')), // Remove extension
+                            "format", filename.substring(filename.lastIndexOf('.') + 1) // Set format from extension
+                    )
+            );
+
+            return uploadResult.get("secure_url").toString();
+
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to upload bytes to Cloudinary: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * Delete a file from Cloudinary using its URL
      * @param fileUrl The Cloudinary URL of the file to delete
      */
