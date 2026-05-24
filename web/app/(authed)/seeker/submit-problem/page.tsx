@@ -17,6 +17,7 @@ export default function SubmitProblemPage() {
   const [currentView, setCurrentView] = useState<ViewState>("FORM_VIEW");
   const [error, setError] = useState<string | null>(null);
   const [problemId, setProblemId] = useState<string | null>(null);
+  const [problemDocumentUrl, setProblemDocumentUrl] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<ProblemPayload>({
     title: "",
@@ -167,6 +168,7 @@ export default function SubmitProblemPage() {
       });
 
       setProblemId(response.id);
+      setProblemDocumentUrl(response.problemDocumentUrl || null);
       setCurrentView("SUCCESS_VIEW");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to publish problem. Please try again.");
@@ -174,9 +176,32 @@ export default function SubmitProblemPage() {
     }
   };
 
-  const handleDownloadPDF = () => {
-    // TODO: Integrate jsPDF or html2canvas for client-side PDF generation
-    alert("PDF download feature coming soon!");
+  const handleDownloadPDF = async () => {
+    if (!problemDocumentUrl) {
+      alert("PDF document is not available yet. Please try again in a moment.");
+      return;
+    }
+
+    try {
+      // Fetch the PDF from Cloudinary
+      const response = await fetch(problemDocumentUrl);
+      if (!response.ok) {
+        throw new Error("Failed to download PDF");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `problem_specification_${problemId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("Failed to download PDF:", error);
+      alert("Failed to download PDF. Please try again.");
+    }
   };
 
   return (
