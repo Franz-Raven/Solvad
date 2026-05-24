@@ -37,6 +37,9 @@ public class ProblemService {
     @Autowired
     private AuditService auditService;
 
+    @Autowired
+    private VectorSimilarityService vectorSimilarityService;
+
     public GenerateScopeResponse generateScope(GenerateScopeRequest request, List<MultipartFile> attachments) {
         GenerateScopeResponse response = geminiService.generateSubtasks(
                 request.getTitle(),
@@ -81,6 +84,7 @@ public class ProblemService {
                         subtaskReq.getSdgFocus()
                 ))
                 .collect(Collectors.toList());
+        vectorSimilarityService.updateProblemEmbedding(savedProblem.getId());
 
         List<ProblemSubtask> savedSubtasks = subtaskRepository.saveAll(subtasks);
 
