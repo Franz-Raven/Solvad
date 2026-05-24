@@ -42,4 +42,7 @@ public interface SolutionAttemptRepository extends JpaRepository<SolutionAttempt
 
     boolean existsByProblemAndTargetSubtaskAndSolverAndStatus(
             Problem problem, ProblemSubtask targetSubtask, SolverProfile solver, SolutionAttemptStatus status);
+
+    Optional<SolutionAttempt> findFirstByProblemAndSolverOrderByClaimedAtDesc(
+            Problem problem, SolverProfile solver);
 }

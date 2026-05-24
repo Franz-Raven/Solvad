@@ -121,6 +121,7 @@ export default function SolverProblemDetailPage() {
   }
 
   const isAlreadyClaimed = myAttempt?.status === "ACTIVE";
+  const isCompleted = myAttempt?.status === "COMPLETED";  // ADD
   const canClaimFresh = problem.status === "OPEN";
   const isUnavailable =
     !isAlreadyClaimed &&
@@ -130,8 +131,7 @@ export default function SolverProblemDetailPage() {
     const canPropose =
   !isAlreadyClaimed &&
   !isUnavailable &&
-  myProposalStatus !== "PENDING" &&
-  myProposalStatus !== "APPROVED";
+  myProposalStatus !== "PENDING";
   
   const tabs: { id: TabType; label: string }[] = [
     { id: "blueprint", label: "Problem Blueprint" },
@@ -155,6 +155,8 @@ export default function SolverProblemDetailPage() {
         </Link>
       );
     }
+
+
 
     if (myProposalStatus === "PENDING") {
       return (
@@ -337,13 +339,14 @@ export default function SolverProblemDetailPage() {
 
        {activeTab === "tree" && (
             <SolutionTreeTab
-              attempts={attempts}
-              isAlreadyClaimed={isAlreadyClaimed}
-              isUnavailable={isUnavailable}
-              myProposalStatus={myProposalStatus}
-              onForkRequest={(parentId, subtaskId) => openProposalModal(subtaskId, parentId)}
-              onClaimNew={() => setActiveTab("subtasks")} // redirect to subtasks tab to pick one
-            />
+            attempts={attempts}
+            isAlreadyClaimed={isAlreadyClaimed}
+            isCompleted={isCompleted}
+            isUnavailable={isUnavailable}
+            myProposalStatus={myProposalStatus}
+            onForkRequest={(parentId, subtaskId) => openProposalModal(subtaskId, parentId)}
+            onClaimNew={() => setActiveTab("subtasks")}
+          />
           )}
 
         {activeTab === "history" && <AuditTimelineTab problemId={problemId} />}

@@ -125,9 +125,6 @@ public class SolutionAttemptService {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // GET solver's active attempt on a specific subtask
-    // -------------------------------------------------------------------------
     @Transactional(readOnly = true)
     public SolutionAttemptResponse getMyAttempt(UUID solverUserId, UUID problemId) {
         Problem problem = problemRepository.findById(problemId)
@@ -136,17 +133,14 @@ public class SolutionAttemptService {
         SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
                 .orElseThrow(() -> new RuntimeException("Solver profile not found"));
 
-        // Return the most recent active attempt for this solver on this problem
-        // (across any subtask)
+        // Return most recent attempt regardless of status
         SolutionAttempt attempt = attemptRepository
-                .findFirstByProblemAndSolverAndStatusOrderByClaimedAtDesc(
-                        problem, solver, SolutionAttemptStatus.ACTIVE)
-                .orElseThrow(() -> new RuntimeException("No active attempt found"));
+                .findFirstByProblemAndSolverOrderByClaimedAtDesc(problem, solver)
+                .orElseThrow(() -> new RuntimeException("No attempt found"));
 
         List<SubtaskSubmission> submissions = submissionRepository.findByAttempt(attempt);
         return mapToResponse(attempt, submissions);
     }
-
     // -------------------------------------------------------------------------
     // GET all active attempts for a solver on a problem (may have multiple
     // if they are working on different subtasks simultaneously — future use)

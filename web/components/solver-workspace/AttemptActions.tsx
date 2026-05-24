@@ -23,7 +23,7 @@ export function AttemptActions({ attemptId }: { attemptId: string }) {
     if (!confirm("Are you sure you want to abandon this attempt?")) return;
     try {
       setLoading(true);
-      await apiRequest(`/attempts/${attemptId}/abandon`, { method: "POST" });
+      await apiRequest(`/attempts/${attemptId}/abandon`, { method: "DELETE" });
       router.push("/solver/dashboard");
     } catch (err: any) {
       alert(`Abandon failed: ${err.message}`);

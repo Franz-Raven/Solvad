@@ -7,6 +7,7 @@ import { AttemptDetailModal } from "./AttemptDetailModal";
 interface SolutionTreeTabProps {
   attempts: SolutionAttemptResponse[];
   isAlreadyClaimed: boolean;
+  isCompleted: boolean;        // ADD
   isUnavailable: boolean;
   myProposalStatus: string | null;
   onForkRequest: (attemptId: string, subtaskId: string) => void;
@@ -33,6 +34,7 @@ function buildHierarchyTree(flatList: SolutionAttemptResponse[]): TreeAttemptNod
 export function SolutionTreeTab({
   attempts,
   isAlreadyClaimed,
+  isCompleted,     
   isUnavailable,
   myProposalStatus,
   onForkRequest,
@@ -46,7 +48,8 @@ export function SolutionTreeTab({
 
   // A solver with a pending/approved proposal should not see fork/claim buttons
   const hasPendingOrApproved =
-    myProposalStatus === "PENDING" || myProposalStatus === "APPROVED";
+  !isCompleted &&
+  (myProposalStatus === "PENDING" || myProposalStatus === "APPROVED");
   const canInteract = !isAlreadyClaimed && !isUnavailable && !hasPendingOrApproved;
 
   useEffect(() => {
@@ -146,7 +149,7 @@ export function SolutionTreeTab({
                   onClick={() => onForkRequest(node.id, node.targetSubtaskId!)}
                     className="px-2.5 py-1 bg-accent/10 hover:bg-accent text-accent hover:text-white text-[11px] font-semibold rounded-lg transition-all border border-accent/20 shadow-sm"
                   >
-                    Submit Proposal ➔
+                    Build Upon ➔
                   </button>
                 )}
                 <button

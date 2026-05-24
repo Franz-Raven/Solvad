@@ -293,14 +293,10 @@ public class ClaimRequestService {
                 .findTopByProblemIdAndTargetSubtaskIdAndSolverIdOrderByCreatedAtDesc(
                         problemId, subtaskId, solver.getId())
                 .map(ClaimRequest::getStatus)
-                .filter(s -> s == ClaimRequestStatus.PENDING || s == ClaimRequestStatus.APPROVED);
+                .filter(s -> s == ClaimRequestStatus.PENDING);
     }
 
-    // -------------------------------------------------------------------------
     // LEGACY: GET MY PROPOSAL STATUS FOR A WHOLE PROBLEM
-    // Kept for backward compatibility — checks if solver has ANY pending/approved
-    // proposal across all subtasks of this problem.
-    // -------------------------------------------------------------------------
     @Transactional(readOnly = true)
     public Optional<ClaimRequestStatus> getMyProposalStatusForProblem(UUID solverUserId, UUID problemId) {
         SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
@@ -309,6 +305,6 @@ public class ClaimRequestService {
         return claimRequestRepository
                 .findTopByProblemIdAndSolverIdOrderByCreatedAtDesc(problemId, solver.getId())
                 .map(ClaimRequest::getStatus)
-                .filter(s -> s == ClaimRequestStatus.PENDING || s == ClaimRequestStatus.APPROVED);
+                .filter(s -> s == ClaimRequestStatus.PENDING); // Removed the APPROVED check
     }
 }

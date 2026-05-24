@@ -75,10 +75,13 @@ public class SolutionAttemptController {
     public ResponseEntity<?> getMyAttempt(
             @RequestHeader("Authorization") String authHeader,
             @PathVariable UUID problemId) {
+
+
         try {
             UUID solverUserId = extractUserId(authHeader);
             SolutionAttemptResponse response = attemptService.getMyAttempt(solverUserId, problemId);
             return ResponseEntity.ok(response);
+
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }

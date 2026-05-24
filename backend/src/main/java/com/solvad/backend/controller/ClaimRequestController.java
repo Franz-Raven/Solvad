@@ -86,8 +86,11 @@ public class ClaimRequestController {
             @PathVariable UUID subtaskId) {
         try {
             UUID solverUserId = extractUserId(authHeader);
+
+            // FIX: Call getMyProposalStatus instead of getMyProposalStatusForProblem
             Optional<ClaimRequestStatus> status =
-                    claimRequestService.getMyProposalStatusForProblem(solverUserId, problemId);
+                    claimRequestService.getMyProposalStatus(solverUserId, problemId, subtaskId);
+
             String statusStr = status.map(Enum::name).orElse("NONE");
             return ResponseEntity.ok(Map.of("status", statusStr));
         } catch (RuntimeException e) {
