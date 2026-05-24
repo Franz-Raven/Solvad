@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -22,4 +23,6 @@ public interface ClaimRequestRepository extends JpaRepository<ClaimRequest, UUID
     @Modifying
     @Query("UPDATE ClaimRequest c SET c.status = 'CANCELLED' WHERE c.problem.id = :problemId AND c.status = 'PENDING'")
     void cancelRemainingPendingRequests(@Param("problemId") UUID problemId);
+
+    Optional<ClaimRequest> findTopByProblemIdAndSolverIdOrderByCreatedAtDesc(UUID problemId, UUID solverId);
 }

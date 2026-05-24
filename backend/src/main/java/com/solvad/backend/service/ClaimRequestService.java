@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -164,5 +165,18 @@ public class ClaimRequestService {
         Problem problem = problemRepository.findById(problemId)
                 .orElseThrow(() -> new RuntimeException("Problem not found"));
         return claimRequestRepository.findByProblemAndStatus(problem, ClaimRequestStatus.PENDING);
+    }
+
+
+    @Transactional(readOnly = true)
+    public Optional<ClaimRequestStatus> getMyProposalStatus(UUID solverUserId, UUID problemId) {
+        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
+                .orElseThrow(() -> new RuntimeException("Solver profile not found"));
+
+        // Only return PENDING or APPROVED — anything else means the solver can resubmit
+        return claimRequestRepository
+                .findTopByProblemIdAndSolverIdOrderByCreatedAtDesc(problemId, solver.getId())
+                .map(ClaimRequest::getStatus)
+                .filter(s -> s == ClaimRequestStatus.PENDING || s == ClaimRequestStatus.APPROVED);
     }
 }

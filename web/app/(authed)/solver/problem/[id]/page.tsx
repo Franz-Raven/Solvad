@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import Portal from "@/components/portal";
 import { getProblemById } from "@/lib/api/problem";
-import { getMyAttempt, getAllAttempts } from "@/lib/api/attempts";
+import { getMyAttempt, getAllAttempts, getMyProposalStatus } from "@/lib/api/attempts";
 import type { ProblemResponse } from "@/types/problem";
 import type { SolutionAttemptResponse } from "@/types/attempt";
 import { AuditTimelineTab } from "@/components/problem-detail-solver/AuditTimelineTab";
@@ -27,7 +27,6 @@ const STATUS_COLORS: Record<string, string> = {
   TERMINATED: "bg-red-500 text-white",
 };
 
-// ─── Build parent→children hierarchy ────────────────────────────────────────
 function buildHierarchyTree(flatList: SolutionAttemptResponse[]): TreeAttemptNode[] {
   const map: Record<string, TreeAttemptNode> = {};
   const roots: TreeAttemptNode[] = [];
@@ -62,18 +61,16 @@ function AttemptDetailModal({
   onClose: () => void;
 }) {
   const attemptDate = new Date(node.claimedAt);
-  const parentRec = node.parentAttemptId ? flatAttemptsList.find((a) => a.id === node.parentAttemptId) : null;
   const [activeSubIdx, setActiveSubIdx] = useState(0);
-  
   const activeSub = node.submissions[activeSubIdx] ?? null;
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", handler);
     document.body.style.overflow = "hidden";
-    return () => { 
+    return () => {
       document.removeEventListener("keydown", handler);
-      document.body.style.overflow = ""; 
+      document.body.style.overflow = "";
     };
   }, [onClose]);
 
@@ -107,7 +104,7 @@ function AttemptDetailModal({
                 </button>
               )}
               <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
-                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
           </div>
@@ -179,7 +176,7 @@ function AttemptCard({
         </span>
       </div>
       <p className="text-[10px] text-gray-400 mt-1">{attemptDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
-      
+
       <div className="flex items-center gap-1.5 mt-3 flex-wrap">
         {node.status === "COMPLETED" && !isAlreadyClaimed && !isUnavailable && !hasPendingProposal && (
           <button
@@ -227,7 +224,7 @@ function SolutionFamilyTree({
               isAlreadyClaimed={isAlreadyClaimed}
               isUnavailable={isUnavailable}
               hasPendingProposal={hasPendingProposal}
-              onBuildUponClick={() => onClaimCall(node.id)} 
+              onBuildUponClick={() => onClaimCall(node.id)}
               onViewClick={() => onViewAttempt(node)}
             />
             {node.children.length > 0 && (
@@ -241,6 +238,7 @@ function SolutionFamilyTree({
       </div>
     );
   }
+
   return (
     <div ref={containerRef} style={{ position: "relative", overflowX: "auto", paddingBottom: 24 }}>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 700, paddingTop: 8, position: "relative", zIndex: 1 }}>
@@ -259,7 +257,7 @@ export default function SolverProblemDetailPage() {
   const [myAttempt, setMyAttempt] = useState<SolutionAttemptResponse | null>(null);
   const [attempts, setAttempts] = useState<SolutionAttemptResponse[]>([]);
   const [activeTab, setActiveTab] = useState<TabType>("blueprint");
-  
+
   const [modalNode, setModalNode] = useState<TreeAttemptNode | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -276,10 +274,29 @@ export default function SolverProblemDetailPage() {
     try {
       setLoading(true);
       setError(null);
+
       const problemData = await getProblemById(problemId);
       setProblem(problemData);
-      
-      try { setMyAttempt(await getMyAttempt(problemId)); } catch { setMyAttempt(null); }
+
+      // Check for active workspace
+      try {
+        const attemptData = await getMyAttempt(problemId);
+        setMyAttempt(attemptData);
+      } catch {
+        setMyAttempt(null);
+
+        // No active workspace — check if solver has a pending/approved proposal
+        try {
+          const proposalStatus = await getMyProposalStatus(problemId);
+          if (proposalStatus === "PENDING" || proposalStatus === "APPROVED") {
+            setHasPendingProposal(true);
+            setProposalSuccessMsg("Your proposal is currently under review by the Seeker.");
+          }
+        } catch {
+          // Not a solver or no proposals — ignore
+        }
+      }
+
       try { setAttempts(await getAllAttempts(problemId)); } catch { setAttempts([]); }
     } catch (err: any) {
       setError(err instanceof Error ? err.message : "Failed to load problem");
@@ -325,7 +342,7 @@ export default function SolverProblemDetailPage() {
   const canClaimFresh = problem.status === "OPEN";
   const isUnavailable = !isAlreadyClaimed && !canClaimFresh && problem.status !== "SOLVED_OPEN_FOR_IMPROVEMENT";
   const structuredTreeRoots = buildHierarchyTree(attempts);
-  
+
   const tabs: { id: TabType; label: string }[] = [
     { id: "blueprint", label: "Problem Blueprint" },
     { id: "subtasks", label: "Sub-problems" },
@@ -409,15 +426,15 @@ export default function SolverProblemDetailPage() {
             </span>
           </div>
 
-          {/* Proposal Success / Pending Banner */}
+          {/* Proposal pending banner */}
           {proposalSuccessMsg && (
-            <div className="mt-5 bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3 shadow-sm animate-in slide-in-from-top-2">
-              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+            <div className="mt-5 bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-center gap-3 shadow-sm">
+              <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               </div>
               <div>
-                <p className="text-sm font-bold text-green-800">Proposal Pending Review</p>
-                <p className="text-xs text-green-700 mt-0.5">{proposalSuccessMsg}</p>
+                <p className="text-sm font-bold text-yellow-800">Proposal Pending Review</p>
+                <p className="text-xs text-yellow-700 mt-0.5">{proposalSuccessMsg}</p>
               </div>
             </div>
           )}
@@ -439,7 +456,7 @@ export default function SolverProblemDetailPage() {
         </div>
       </div>
 
-      {/* ── Page body ─────────────────────────────────────────────────────── */}
+      {/* ── Page body ── */}
       <div className="max-w-7xl mx-auto px-8 py-8 space-y-6">
 
         {/* Active claim banner */}
@@ -484,28 +501,28 @@ export default function SolverProblemDetailPage() {
         {/* ── Tab: AI Sub-problems ── */}
         {activeTab === "subtasks" && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-             <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                <div className="w-8 h-8 bg-secondary/10 rounded-lg flex items-center justify-center">
-                  <svg className="w-5 h-5 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
-                </div>
-                AI-Decomposed Sub-problems
-             </h2>
-             <div className="grid gap-5">
-                {problem.subtasks.map((subtask, index) => (
-                  <div key={subtask.id} className="bg-gradient-to-r from-accent/5 to-secondary/5 rounded-xl p-6 border border-gray-200 shadow-sm">
-                    <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 bg-gradient-to-br from-accent to-secondary rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0 shadow-sm">{index + 1}</div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-3">
-                          <h3 className="text-lg font-bold text-gray-900">{subtask.title}</h3>
-                          <span className="px-2.5 py-1 bg-white border border-secondary/20 text-secondary text-[11px] font-bold tracking-wide uppercase rounded-full shadow-sm">{subtask.departmentFocus}</span>
-                        </div>
-                        <p className="text-gray-700 leading-relaxed text-sm">{subtask.description}</p>
+            <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+              <div className="w-8 h-8 bg-secondary/10 rounded-lg flex items-center justify-center">
+                <svg className="w-5 h-5 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
+              </div>
+              AI-Decomposed Sub-problems
+            </h2>
+            <div className="grid gap-5">
+              {problem.subtasks.map((subtask, index) => (
+                <div key={subtask.id} className="bg-gradient-to-r from-accent/5 to-secondary/5 rounded-xl p-6 border border-gray-200 shadow-sm">
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 bg-gradient-to-br from-accent to-secondary rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0 shadow-sm">{index + 1}</div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-3">
+                        <h3 className="text-lg font-bold text-gray-900">{subtask.title}</h3>
+                        <span className="px-2.5 py-1 bg-white border border-secondary/20 text-secondary text-[11px] font-bold tracking-wide uppercase rounded-full shadow-sm">{subtask.departmentFocus}</span>
                       </div>
+                      <p className="text-gray-700 leading-relaxed text-sm">{subtask.description}</p>
                     </div>
                   </div>
-                ))}
-             </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -536,7 +553,7 @@ export default function SolverProblemDetailPage() {
                 </div>
               </div>
             )}
-            
+
             {/* Submit Proposal CTA at bottom if applicable */}
             {!isAlreadyClaimed && !isUnavailable && !hasPendingProposal && (
               <div className="bg-gradient-to-r from-accent/10 to-secondary/10 rounded-xl shadow-sm border border-accent/20 p-8 flex items-center justify-between">

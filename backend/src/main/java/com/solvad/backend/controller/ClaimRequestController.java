@@ -2,6 +2,7 @@ package com.solvad.backend.controller;
 
 import com.solvad.backend.dto.ProposalDTO;
 import com.solvad.backend.entity.ClaimRequest;
+import com.solvad.backend.entity.ClaimRequestStatus;
 import com.solvad.backend.security.JwtService;
 import com.solvad.backend.service.ClaimRequestService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +11,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -40,6 +43,27 @@ public class ClaimRequestController {
 
             ClaimRequest request = claimRequestService.submitProposal(solverUserId, proposalDTO);
             return ResponseEntity.ok(request);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // GET MY PROPOSAL STATUS (Solver Action)
+    // GET /api/problems/{problemId}/proposals/my-status
+    // Returns { "status": "PENDING" | "APPROVED" | "REJECTED" | "NONE" }
+    // -------------------------------------------------------------------------
+    @GetMapping("/problems/{problemId}/proposals/my-status")
+    @PreAuthorize("hasRole('SOLVER')")
+    public ResponseEntity<?> getMyProposalStatus(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable UUID problemId) {
+        try {
+            UUID solverUserId = extractUserId(authHeader);
+            Optional<ClaimRequestStatus> status =
+                    claimRequestService.getMyProposalStatus(solverUserId, problemId);
+            String statusStr = status.map(Enum::name).orElse("NONE");
+            return ResponseEntity.ok(Map.of("status", statusStr));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
