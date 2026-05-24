@@ -381,4 +381,31 @@ public class ProblemService {
         
         return count;
     }
+
+    @Transactional
+    public void updateMaxConcurrentSolvers(UUID seekerUserId, UUID problemId, int maxSolvers) {
+        Problem problem = problemRepository.findById(problemId)
+                .orElseThrow(() -> new RuntimeException("Problem not found"));
+
+        SeekerProfile seeker = seekerProfileRepository.findByUserId(seekerUserId)
+                .orElseThrow(() -> new RuntimeException("Seeker profile not found"));
+
+        if (!problem.getSeeker().getId().equals(seeker.getId())) {
+            throw new RuntimeException("You do not own this problem.");
+        }
+
+        if (maxSolvers < 1) {
+            throw new RuntimeException("Max solvers must be at least 1.");
+        }
+
+        problem.setMaxConcurrentSolvers(maxSolvers);
+        problemRepository.save(problem);
+
+        // Optional: Log it to the Audit service
+        auditService.log(
+                problemId, seekerUserId, seeker.getOrganizationName(), "SEEKER",
+                AuditEventType.PROBLEM_UPDATED,
+                "Updated concurrent solver limit to " + maxSolvers
+        );
+    }
 }
