@@ -132,7 +132,10 @@ export default function SolverWorkspacePage() {
   const submittedCount = attempt.submissions.filter((s) => s.status === "SUBMITTED").length;
   const activeSubtask = problem.subtasks.find((s) => s.id === activeSubtaskId);
   const existingSubmission = activeSubtask ? attempt.submissions.find((s) => s.subtaskId === activeSubtask.id) : undefined;
-  const parentSubmission = activeSubtask ? attempt.parentSubmissions?.find((s) => s.subtaskId === activeSubtask.id) : undefined;
+  
+
+
+
   const isForked = !!attempt.parentAttemptId; 
 
   return (
@@ -300,9 +303,9 @@ export default function SolverWorkspacePage() {
                 isSubmitted={existingSubmission?.status === "SUBMITTED"}
                 isForked={isForked}
                 
-                // ADD THESE TWO PROPS:
-                parentDescription={parentSubmission?.description} 
-                parentFiles={parentSubmission?.fileUrls}          
+                // USE THE EXACT FIELD NAMES FROM YOUR JSON PAYLOAD
+                parentDescription={attempt.parentDescription ?? undefined}
+                parentFiles={attempt.parentFileUrls ?? []}
                 
                 onSuccess={() => fetchWorkspace(false)} 
               />
