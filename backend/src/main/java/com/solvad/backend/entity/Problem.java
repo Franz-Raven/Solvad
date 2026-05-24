@@ -61,6 +61,8 @@ public class Problem {
     @Column(name = "max_concurrent_solvers", nullable = false)
     private int maxConcurrentSolvers = 3;
 
+
+
     public Problem() {
     }
 
@@ -179,4 +181,7 @@ public class Problem {
     public void setTags(List<String> tags) {
         this.tags = tags != null ? tags : new ArrayList<>();
     }
+
+    public int getMaxConcurrentSolvers() { return maxConcurrentSolvers; }
+    public void setMaxConcurrentSolvers(int maxConcurrentSolvers) { this.maxConcurrentSolvers = maxConcurrentSolvers; }
 }

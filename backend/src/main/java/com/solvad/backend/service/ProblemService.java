@@ -10,6 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import com.solvad.backend.entity.SolutionAttempt;
+import com.solvad.backend.entity.SolutionAttemptStatus;
 
 import java.util.List;
 import java.util.Map;
@@ -148,20 +150,21 @@ public class ProblemService {
 
             // FORCE CLOSE LOGIC: If moving to CLOSED or COMPLETED, we must terminate any active attempts
             if (newStatus == ProblemStatus.CLOSED || newStatus == ProblemStatus.COMPLETED) {
-                attemptRepository.findByProblemAndStatus(problem, SolutionAttemptStatus.ACTIVE)
-                        .ifPresent(attempt -> {
-                            attempt.setStatus(SolutionAttemptStatus.TERMINATED); // <-- Updated
-                            attemptRepository.save(attempt);
-
-                            auditService.log(
-                                    problemId,
-                                    seekerUserId,
-                                    seeker.getOrganizationName(),
-                                    "SEEKER",
-                                    AuditEventType.STATUS_CHANGED,
-                                    "Seeker forcefully " + newStatus.name().toLowerCase() + " the problem. The active solution attempt was terminated."
-                            );
-                        });
+                List<SolutionAttempt> activeAttempts = attemptRepository.findByProblemAndStatus(problem, SolutionAttemptStatus.ACTIVE);
+                for (SolutionAttempt attempt : activeAttempts) {
+                    attempt.setStatus(SolutionAttemptStatus.TERMINATED);
+                    attemptRepository.save(attempt);
+                }
+                if (!activeAttempts.isEmpty()) {
+                    auditService.log(
+                            problemId,
+                            seekerUserId,
+                            seeker.getOrganizationName(),
+                            "SEEKER",
+                            AuditEventType.STATUS_CHANGED,
+                            "Seeker forcefully " + newStatus.name().toLowerCase() + " the problem. All active solution attempts were terminated."
+                    );
+                }
             }
 
             problem.setStatus(newStatus);
@@ -235,7 +238,8 @@ public class ProblemService {
                 problem.getCreatedAt(),
                 subtaskResponses,
                 tags,
-                problem.getProblemDocumentUrl()
+                problem.getProblemDocumentUrl(),
+                problem.getMaxConcurrentSolvers()
         );
     }
 
