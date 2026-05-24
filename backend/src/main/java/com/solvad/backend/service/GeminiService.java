@@ -29,12 +29,12 @@ public class GeminiService {
         this.objectMapper = objectMapper;
     }
 
-    public GenerateScopeResponse generateSubtasks(String title, String backgroundContext, 
-                                                  String primaryStatement, String objectives, 
+    public GenerateScopeResponse generateSubtasks(String title, String backgroundContext,
+                                                  String primaryStatement, String objectives,
                                                   String constraints, String preferredProgram,
                                                   List<MultipartFile> attachments) {
         String prompt = buildPrompt(title, backgroundContext, primaryStatement, objectives, constraints, preferredProgram);
-        
+
         System.out.println("[GeminiService] Sending prompt to Gemini API...");
 
         try {
@@ -52,7 +52,7 @@ public class GeminiService {
         }
     }
 
-    private String buildPrompt(String title, String backgroundContext, String primaryStatement, 
+    private String buildPrompt(String title, String backgroundContext, String primaryStatement,
                               String objectives, String constraints, String preferredProgram) {
         StringBuilder prompt = new StringBuilder();
         prompt.append("You are an expert at analyzing complex industry problems and determining if they can be broken down into collaborative sub-tasks.\n\n");
@@ -68,11 +68,11 @@ public class GeminiService {
             prompt.append("Constraints: ").append(constraints).append("\n");
         }
         prompt.append("Target Academic Program: ").append(preferredProgram).append("\n\n");
-        
+
         prompt.append("If files are attached, analyze their content to better understand the problem context.\n\n");
-        
+
         prompt.append("Analyze this problem and determine if it can be meaningfully broken down into 0-3 sub-tasks.\n\n");
-        
+
         prompt.append("IMPORTANT GUIDELINES:\n");
         prompt.append("- DECOMPOSITION TYPE: Break the problem down into massive, independent functional modules, physical sub-structures, or distinct operational frameworks.\n");
         prompt.append("- NO SDLC/PHASES: DO NOT break the problem down by chronological phases (e.g., NEVER output 'Planning', 'Testing', 'Data Gathering', or 'Implementation').\n");
@@ -83,11 +83,11 @@ public class GeminiService {
         prompt.append("- IF INDIVISIBLE: If the core problem is a single monolithic challenge that cannot be split into distinct functional modules, return an empty array [].\n\n");
 
         prompt.append("EXAMPLE DECOMPOSITIONS:\n");
-        
+
         prompt.append("Example 1 (Software/IT Problem - Hospital Management):\n");
         prompt.append("- BAD (Phases/Layers): [\"Database Schema Design\", \"API Integration\", \"Security Audit\"]\n");
         prompt.append("- GOOD (Modules): [\"Core Doctor-Patient Appointment Portal\", \"AI-Powered Handwriting OCR Scanner for Medical Notes\", \"IoT Patient Vitals Hardware Integration\"]\n\n");
-        
+
         prompt.append("Example 2 (Civil/Environmental Engineering - River Flooding):\n");
         prompt.append("- BAD (Phases/Software): [\"Site Inspection\", \"Build a Flood Warning Mobile App\", \"Post-Construction Testing\"]\n");
         prompt.append("- GOOD (Physical Sub-structures): [\"Hydrological Catchment & Spillway Design\", \"Reinforced Retaining Wall & Embankment Structural Engineering\", \"Soil Permeability & Riparian Buffer Zone Analysis\"]\n\n");
@@ -105,7 +105,7 @@ public class GeminiService {
         // prompt.append("- For environmental problems: Water Quality Analysis, Structural Assessment, Environmental Impact, Infrastructure Planning\n");
         // prompt.append("- For business problems: Market Research, Financial Analysis, Strategy Development, Operations Management\n");
         // prompt.append("- For engineering problems: Mechanical Design, Electrical Systems, Testing & Validation, Manufacturing Process\n\n");
-        
+
         prompt.append("AVAILABLE ACADEMIC PROGRAMS (use EXACT names for departmentFocus):\n");
         prompt.append("Information Technology & Computer Science: BS Information Technology, BS Computer Science, BS Computer Engineering, BS Information Systems, BS Entertainment and Multimedia Computing, Associate in Computer Technology\n");
         prompt.append("Engineering: BS Civil Engineering, BS Electrical Engineering, BS Electronics Engineering, BS Mechanical Engineering, BS Chemical Engineering, BS Industrial Engineering, BS Geodetic Engineering, BS Sanitary Engineering, BS Mining Engineering, BS Metallurgical Engineering, BS Ceramic Engineering, BS Agricultural and Biosystems Engineering\n");
@@ -120,7 +120,7 @@ public class GeminiService {
         prompt.append("Maritime Studies: BS Marine Transportation, BS Marine Engineering, BS Naval Architecture and Marine Engineering\n");
         prompt.append("Criminology & Public Safety: BS Criminology, BS Forensic Science\n");
         prompt.append("Other Programs: BS Aviation, BS Aeronautical Engineering, BS Library and Information Science, BS Customs Administration, AB Legal Management, Bachelor of Laws (LLB)\n\n");
-        
+
         prompt.append("SUSTAINABLE DEVELOPMENT GOALS (SDG) - Use EXACT names for sdgFocus:\n");
         prompt.append("1. No Poverty\n");
         prompt.append("2. Zero Hunger\n");
@@ -139,7 +139,7 @@ public class GeminiService {
         prompt.append("15. Life on Land\n");
         prompt.append("16. Peace, Justice and Strong Institutions\n");
         prompt.append("17. Partnerships for the Goals\n\n");
-        
+
         prompt.append("ADDITIONAL TASK: ENHANCE AND FINALIZE PROBLEM INFORMATION\n");
         prompt.append("In addition to generating subtasks, you must also review and enhance the problem information provided above.\n");
         prompt.append("- Analyze the problem title, background context, primary statement, objectives, and constraints\n");
@@ -149,7 +149,7 @@ public class GeminiService {
         prompt.append("- Ensure each objective and constraint is a single, actionable statement\n");
         prompt.append("- Assign the MOST APPROPRIATE Sustainable Development Goal (SDG) for the main problem based on its primary focus\n");
         prompt.append("- For each subtask, assign the MOST APPROPRIATE SDG based on its specific focus (subtasks may have different SDGs from the main problem)\n\n");
-        
+
         prompt.append("Format your response as a JSON object with this EXACT structure:\n");
         prompt.append("{\n");
         prompt.append("  \"enhancedProblem\": {\n");
@@ -167,21 +167,21 @@ public class GeminiService {
         prompt.append("}\n");
         prompt.append("If no subtasks are needed, the generatedSubproblems array should be empty: [].\n");
         prompt.append("Only return the JSON object, nothing else.");
-        
+
         return prompt.toString();
     }
 
     private String callGeminiAPI(String prompt, List<MultipartFile> attachments) {
         // Use gemini-1.5-flash for multimodal support (handles images, PDFs, Word docs, etc.)
         String url = "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=" + geminiApiKey;
-        
+
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        
+
         // Build parts array - start with text prompt
         List<Map<String, Object>> parts = new ArrayList<>();
         parts.add(Map.of("text", prompt));
-        
+
         // Add file attachments as inline data (base64 encoded)
         if (attachments != null && !attachments.isEmpty()) {
             for (MultipartFile file : attachments) {
@@ -189,7 +189,7 @@ public class GeminiService {
                     String mimeType = file.getContentType();
                     byte[] fileBytes = file.getBytes();
                     String base64Data = Base64.getEncoder().encodeToString(fileBytes);
-                    
+
                     // Add inline data part for Gemini to analyze
                     parts.add(Map.of(
                         "inline_data", Map.of(
@@ -203,18 +203,18 @@ public class GeminiService {
                 }
             }
         }
-        
+
         Map<String, Object> requestBody = Map.of(
             "contents", List.of(
                 Map.of("parts", parts)
             )
         );
-        
+
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
-        
+
         @SuppressWarnings("unchecked")
         Map<String, Object> response = restTemplate.postForObject(url, request, Map.class);
-        
+
         if (response != null && response.containsKey("candidates")) {
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> candidates = (List<Map<String, Object>>) response.get("candidates");
@@ -228,7 +228,7 @@ public class GeminiService {
                 }
             }
         }
-        
+
         throw new RuntimeException("Failed to get response from Gemini API");
     }
 
@@ -240,22 +240,22 @@ public class GeminiService {
 
             // Parse the complete response with enhanced problem and subtasks
             Map<String, Object> responseMap = objectMapper.readValue(
-                jsonString, 
+                jsonString,
                 new TypeReference<Map<String, Object>>(){}
             );
-            
+
             // Extract enhanced problem
             EnhancedProblemResponse enhancedProblem = objectMapper.convertValue(
-                responseMap.get("enhancedProblem"), 
+                responseMap.get("enhancedProblem"),
                 EnhancedProblemResponse.class
             );
-            
+
             // Extract generated subproblems
             List<SubtaskResponse> subtasks = objectMapper.convertValue(
-                responseMap.get("generatedSubproblems"), 
+                responseMap.get("generatedSubproblems"),
                 new TypeReference<List<SubtaskResponse>>(){}
             );
-            
+
             // Ensure temporary UUIDs are set since Gemini doesn't generate them
             if (subtasks != null) {
                 subtasks.forEach(task -> {
@@ -264,7 +264,7 @@ public class GeminiService {
             } else {
                 subtasks = new ArrayList<>();
             }
-            
+
             return new GenerateScopeResponse(enhancedProblem, subtasks);
         } catch (Exception e) {
             System.err.println("Failed to parse JSON: " + e.getMessage());
@@ -273,8 +273,8 @@ public class GeminiService {
         }
     }
 
-    private GenerateScopeResponse generateFallbackResponse(String title, String backgroundContext, 
-                                                           String primaryStatement, String objectives, 
+    private GenerateScopeResponse generateFallbackResponse(String title, String backgroundContext,
+                                                           String primaryStatement, String objectives,
                                                            String constraints, String preferredProgram) {
         // Return original problem info with empty subtasks list
         EnhancedProblemResponse enhancedProblem = new EnhancedProblemResponse(
@@ -285,7 +285,8 @@ public class GeminiService {
             constraints != null ? Arrays.asList(constraints.split("\\n")) : new ArrayList<>(),
             null  // sdgFocus - not available in fallback response
         );
-        
+
         return new GenerateScopeResponse(enhancedProblem, new ArrayList<>());
     }
+
 }
