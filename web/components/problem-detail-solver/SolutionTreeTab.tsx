@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import type { SolutionAttemptResponse, TreeAttemptNode } from "@/types/attempt";
 import { AttemptDetailModal } from "./AttemptDetailModal";
 
 interface SolutionTreeTabProps {
   attempts: SolutionAttemptResponse[];
   isAlreadyClaimed: boolean;
-  isCompleted: boolean;        // ADD
+  isCompleted: boolean;
   isUnavailable: boolean;
   myProposalStatus: string | null;
   onForkRequest: (attemptId: string, subtaskId: string) => void;
@@ -44,7 +44,27 @@ export function SolutionTreeTab({
   const containerRef = useRef<HTMLDivElement>(null);
   const [, setTick] = useState(0);
 
-  const structuredTreeRoots = buildHierarchyTree(attempts);
+  // 1. ADD STATE FOR FILTER
+  const [selectedSubtaskId, setSelectedSubtaskId] = useState<string>("ALL");
+
+  // 2. EXTRACT UNIQUE SUBTASKS FROM ATTEMPTS
+  const uniqueSubtasks = useMemo(() => {
+    const map = new Map<string, string>();
+    attempts.forEach((a) => {
+      if (a.targetSubtaskId && a.targetSubtaskTitle) {
+        map.set(a.targetSubtaskId, a.targetSubtaskTitle);
+      }
+    });
+    return Array.from(map.entries()).map(([id, title]) => ({ id, title }));
+  }, [attempts]);
+
+  // 3. FILTER ATTEMPTS BEFORE BUILDING THE TREE
+  const filteredAttempts = useMemo(() => {
+    if (selectedSubtaskId === "ALL") return attempts;
+    return attempts.filter((a) => a.targetSubtaskId === selectedSubtaskId);
+  }, [attempts, selectedSubtaskId]);
+
+  const structuredTreeRoots = buildHierarchyTree(filteredAttempts);
 
   // A solver with a pending/approved proposal should not see fork/claim buttons
   const hasPendingOrApproved =
@@ -55,7 +75,7 @@ export function SolutionTreeTab({
   useEffect(() => {
     const t = setTimeout(() => setTick((n) => n + 1), 80);
     return () => clearTimeout(t);
-  }, [attempts]);
+  }, [filteredAttempts]); // Re-trigger layout calculation when filtered list changes
 
   function renderLevel(nodes: TreeAttemptNode[]): React.ReactNode {
     return (
@@ -309,44 +329,84 @@ export function SolutionTreeTab({
             <h2 className="text-xl font-bold text-gray-900">
               Solution Evolution Tree
             </h2>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-500 mt-1 mb-4">
               Each node is a solution attempt. Forked nodes branch downward from
               their parent — click <strong>View</strong> to see details and
               before/after comparisons.
             </p>
+
+            {/* 4. RENDER FILTER BUTTONS IF THERE ARE MULTIPLE SUBTASKS */}
+            {uniqueSubtasks.length > 1 && (
+              <div className="flex items-center gap-2 flex-wrap border-t border-gray-100 pt-4">
+                <span className="text-sm font-semibold text-gray-700 mr-2">Filter Tree:</span>
+                <button
+                  onClick={() => setSelectedSubtaskId("ALL")}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
+                    selectedSubtaskId === "ALL"
+                      ? "bg-gray-800 text-white border-gray-800 shadow-sm"
+                      : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                  }`}
+                >
+                  All Sub-problems
+                </button>
+                {uniqueSubtasks.map((st) => (
+                  <button
+                    key={st.id}
+                    onClick={() => setSelectedSubtaskId(st.id)}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
+                      selectedSubtaskId === st.id
+                        ? "bg-gray-800 text-white border-gray-800 shadow-sm"
+                        : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                    }`}
+                  >
+                    {st.title}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
+
           <div className="bg-gray-50/50 rounded-xl border border-gray-100 p-4">
             <div
               ref={containerRef}
               style={{ position: "relative", overflowX: "auto", paddingBottom: 24 }}
             >
-              <svg
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  pointerEvents: "none",
-                  zIndex: 0,
-                  overflow: "visible",
-                }}
-                width={containerRef.current?.scrollWidth ?? 0}
-                height={containerRef.current?.scrollHeight ?? 0}
-              >
-                {buildConnectorLines(structuredTreeRoots)}
-              </svg>
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  minWidth: 700,
-                  paddingTop: 8,
-                  position: "relative",
-                  zIndex: 1,
-                }}
-              >
-                {renderLevel(structuredTreeRoots)}
-              </div>
+              {/* Show empty state if the current filter yields 0 results */}
+              {filteredAttempts.length === 0 ? (
+                <div className="text-center py-12 text-sm text-gray-500">
+                  No attempts match this sub-problem yet.
+                </div>
+              ) : (
+                <>
+                  <svg
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      pointerEvents: "none",
+                      zIndex: 0,
+                      overflow: "visible",
+                    }}
+                    width={containerRef.current?.scrollWidth ?? 0}
+                    height={containerRef.current?.scrollHeight ?? 0}
+                  >
+                    {buildConnectorLines(structuredTreeRoots)}
+                  </svg>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      minWidth: 700,
+                      paddingTop: 8,
+                      position: "relative",
+                      zIndex: 1,
+                    }}
+                  >
+                    {renderLevel(structuredTreeRoots)}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -354,7 +414,7 @@ export function SolutionTreeTab({
 
       {/* Claim from scratch CTA — only show if solver can interact */}
       {canInteract && attempts.length > 0 && (
-        <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 flex items-center justify-between">
+        <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 flex items-center justify-between mt-6">
           <div>
             <h3 className="font-semibold text-gray-900">Start from scratch?</h3>
             <p className="text-sm text-gray-600 mt-1">
@@ -373,7 +433,7 @@ export function SolutionTreeTab({
 
       {/* Pending banner inside the tree tab */}
       {hasPendingOrApproved && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 flex items-start gap-3">
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 flex items-start gap-3 mt-6">
           <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse mt-1 flex-shrink-0" />
           <div>
             <p className="text-sm font-semibold text-amber-800">

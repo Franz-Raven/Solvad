@@ -88,13 +88,14 @@ public class ClaimRequestService {
         SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
                 .orElseThrow(() -> new RuntimeException("Solver profile not found"));
 
-        // Check if solver already has a pending or approved proposal for this specific subtask
+
+        // Check if solver already has a pending proposal for this specific subtask
         if (claimRequestRepository.existsByProblemIdAndTargetSubtaskIdAndSolverIdAndStatusIn(
                 problem.getId(),
                 targetSubtask.getId(),
                 solver.getId(),
-                Arrays.asList(ClaimRequestStatus.PENDING, ClaimRequestStatus.APPROVED))) {
-            throw new RuntimeException("You already have a pending or approved proposal for this sub-problem.");
+                Arrays.asList(ClaimRequestStatus.PENDING))) {
+            throw new RuntimeException("You already have a pending proposal for this sub-problem.");
         }
 
         // Check if solver already has an active attempt on this specific subtask
