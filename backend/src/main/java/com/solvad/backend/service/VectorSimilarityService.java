@@ -23,22 +23,25 @@ public class VectorSimilarityService {
     private EmbeddingService embeddingService;
 
     public List<SimilarityResultDTO> findSimilarProblems(UUID problemId, double threshold) {
+        // 1. Verify problem exists
         Problem currentProblem = problemRepository.findById(problemId)
                 .orElseThrow(() -> new RuntimeException("Problem not found"));
 
-        float[] embedding = currentProblem.getEmbedding();
-        if (embedding == null) {
+        // 2. Try to get existing embedding
+        String vectorStr = vectorRepository.getEmbeddingAsString(problemId);
+
+        // 3. If no embedding exists, generate one
+        if (vectorStr == null) {
             String searchableText = embeddingService.buildSearchableText(currentProblem);
-            embedding = embeddingService.generateEmbedding(searchableText);
-            if (embedding != null) {
-                currentProblem.setEmbedding(embedding);
-                problemRepository.save(currentProblem);
-            } else {
+            float[] embedding = embeddingService.generateEmbedding(searchableText);
+            if (embedding == null) {
                 return List.of();
             }
+            vectorStr = toVectorString(embedding);
+            vectorRepository.updateEmbedding(problemId, vectorStr);
         }
 
-        String vectorStr = toVectorString(embedding);
+        // 4. Find similar problems using the vector
         return vectorRepository.findSimilarProblems(problemId, vectorStr, threshold);
     }
 

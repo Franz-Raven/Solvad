@@ -59,10 +59,11 @@ public class Problem {
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
-
-    @Convert(converter = FloatArrayVectorConverter.class)
-    @Column(columnDefinition = "vector(384)")
-    private float[] embedding;
+//
+//    @Convert(converter = FloatArrayVectorConverter.class)
+//    @Column(columnDefinition = "vector(384)")
+//    @Transient
+//    private float[] embedding;
 
     public Problem() {
     }
@@ -183,6 +184,6 @@ public class Problem {
         this.tags = tags != null ? tags : new ArrayList<>();
     }
 
-    public float[] getEmbedding() { return embedding; }
-    public void setEmbedding(float[] embedding) { this.embedding = embedding; }
+//    public float[] getEmbedding() { return embedding; }
+//    public void setEmbedding(float[] embedding) { this.embedding = embedding; }
 }

@@ -40,11 +40,14 @@ public class VectorRepository {
                 )
         );
     }
+
     public void updateEmbedding(UUID problemId, String embeddingVector) {
         String sql = "UPDATE problems SET embedding = CAST(? AS vector) WHERE id = ?";
-        jdbcTemplate.update(sql, embeddingVector, problemId);
+        int rows = jdbcTemplate.update(sql, embeddingVector, problemId);
+        System.out.println("Rows affected: " + rows);
+        long dimensions = embeddingVector.chars().filter(c -> c == ',').count() + 1;
+        System.out.println("Vector dimensions: " + dimensions);
     }
-
     public String getEmbeddingAsString(UUID problemId) {
         String sql = "SELECT embedding::text FROM problems WHERE id = ?";
         try {
