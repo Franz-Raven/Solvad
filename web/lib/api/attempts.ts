@@ -1,6 +1,7 @@
 import { apiRequest } from "../api";
 import type { SolutionAttemptResponse, SubtaskSubmissionResponse } from "@/types/attempt";
 import type { AuditLogEntry } from "@/types/attempt";
+import type { ProposalRequest, ClaimRequestResponse } from "@/types/attempt";
 
 /**
  * Claim a problem (solver)
@@ -148,6 +149,16 @@ export async function getAuditLog(
 ): Promise<AuditLogEntry[]> {
   return apiRequest<AuditLogEntry[]>(`/problems/${problemId}/audit-log`, {
     method: "GET",
+  });
+}
+
+export async function submitProposal(
+  problemId: string,
+  data: ProposalRequest
+): Promise<ClaimRequestResponse> {
+  return apiRequest(`/problems/${problemId}/proposals`, {
+    method: "POST",
+    body: JSON.stringify(data),
   });
 }
 // <-- REMOVED EXTRA FLOATING BRACE FROM HERE

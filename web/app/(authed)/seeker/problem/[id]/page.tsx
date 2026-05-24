@@ -11,6 +11,7 @@ import { AuditTimelineTab } from "@/components/problem-detail-seeker/AuditTimeli
 import { SettingsTab } from "@/components/problem-detail-seeker/SettingsTab";
 import { SolutionTreeTab } from "@/components/problem-detail-seeker/SolutionTreeTab";
 import { PlaceholderTab } from "@/components/problem-detail-seeker/PlaceholderTab";
+import { ProposalsTab } from "@/components/problem-detail-seeker/ProposalsTab";
 
 type TabType = "problem" | "insights" | "tree" | "history" | "settings";
 
@@ -145,6 +146,7 @@ export default function ProblemDetailPage() {
 
   const tabs: { id: TabType; label: string }[] = [
     { id: "problem",  label: "Problem Profile" },
+    { id: "proposals", label: "Solver Proposals" }, // <-- ADD THIS LINE
     { id: "insights", label: "AI Insights" },
     { id: "tree",     label: "Solution Tree" },
     { id: "history",  label: "Audit Timeline" },
@@ -331,12 +333,14 @@ export default function ProblemDetailPage() {
       </div>
 
       {/* Tab Content */}
+      {/* Tab Content */}
       <div className="max-w-7xl mx-auto px-8 py-8 overflow-visible">
-        {activeTab === "problem"  && <ProblemTab problem={problem} />}
-        {activeTab === "insights" && <PlaceholderTab title="AI Insights & Similarity" />}
-        {activeTab === "tree"     && <SolutionTreeTab problemId={problemId} />}
-        {activeTab === "history"  && <AuditTimelineTab problemId={problemId} />}
-        {activeTab === "settings" && <SettingsTab problem={problem} onDelete={handleDeleteProblem} />}
+        {activeTab === "problem"   && <ProblemTab problem={problem} />}
+        {activeTab === "proposals" && <ProposalsTab problemId={problemId} />} {/* <-- ADD THIS LINE */}
+        {activeTab === "insights"  && <PlaceholderTab title="AI Insights & Similarity" />}
+        {activeTab === "tree"      && <SolutionTreeTab problemId={problemId} />}
+        {activeTab === "history"   && <AuditTimelineTab problemId={problemId} />}
+        {activeTab === "settings"  && <SettingsTab problem={problem} onDelete={handleDeleteProblem} />}
       </div>
     </div>
   );
