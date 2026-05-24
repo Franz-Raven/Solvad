@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+
+import { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { getAllAttempts } from "@/lib/api/attempts";
 import type { SolutionAttemptResponse, TreeAttemptNode } from "@/types/attempt";
@@ -16,7 +17,6 @@ function buildHierarchyTree(flatList: SolutionAttemptResponse[]): TreeAttemptNod
   const map: Record<string, TreeAttemptNode> = {};
   const roots: TreeAttemptNode[] = [];
   flatList.forEach((item) => { map[item.id] = { ...item, children: [] }; });
-
   flatList.forEach((item) => {
     const node = map[item.id];
     if (item.parentAttemptId && map[item.parentAttemptId]) {
@@ -42,7 +42,6 @@ function AttemptDetailModal({
   const parentRec = node.parentAttemptId
     ? flatAttemptsList.find((a) => a.id === node.parentAttemptId)
     : null;
-
   const [activeSubIdx, setActiveSubIdx] = useState(0);
   const [viewPanel, setViewPanel] = useState<"current" | "previous">("current");
 
@@ -89,7 +88,7 @@ function AttemptDetailModal({
                 </span>
               </div>
               <p className="text-xs text-gray-500 mt-0.5">
-                {node.solverDegreeProgram} · {node.solverInstitution}
+                {node.degreeProgram} · {node.institution}
               </p>
               <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                 {node.parentAttemptId && (
@@ -271,10 +270,9 @@ function AttemptCard({
   onViewClick: () => void;
 }) {
   const attemptDate = new Date(node.claimedAt);
-
   return (
     <div
-      className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:border-blue-300 hover:shadow-md transition-all w-56 select-none"
+      className="attempt-card bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:border-accent/40 hover:shadow-md transition-all w-56 select-none"
       style={{ minWidth: "224px", maxWidth: "224px" }}
     >
       <div className="flex items-start justify-between gap-1 mb-1">
@@ -282,15 +280,15 @@ function AttemptCard({
           <p className="font-bold text-gray-900 text-sm leading-tight truncate">
             {node.solverFirstName} {node.solverLastName}
           </p>
-          <p className="text-[11px] text-gray-500 leading-snug truncate">{node.solverDegreeProgram}</p>
-          <p className="text-[10px] text-gray-400 truncate">{node.solverInstitution}</p>
+          <p className="text-[11px] text-gray-500 leading-snug truncate">{node.degreeProgram}</p>
+          <p className="text-[10px] text-gray-400 truncate">{node.institution}</p>
         </div>
-        <span className={`flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full border ml-1 mt-0.5 ${
+        <span className={`status-badge flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full border ml-1 mt-0.5 ${
           node.status === "COMPLETED"
-            ? "bg-green-100 text-green-700 border-green-200"
+            ? "bg-green-50 text-green-700 border-green-200"
             : (node.status === "ABANDONED" || node.status === "TERMINATED")
-            ? "bg-red-100 text-red-700 border-red-200"
-            : "bg-yellow-100 text-yellow-700 border-yellow-200"
+            ? "bg-red-50 text-red-700 border-red-200"
+            : "bg-amber-50 text-amber-700 border-amber-200"
         }`}>
           {node.status}
         </span>
@@ -298,7 +296,7 @@ function AttemptCard({
 
       {node.parentAttemptId && (
         <div className="flex items-center gap-1 mt-1 mb-1">
-          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 border border-blue-100 text-blue-700 text-[10px] font-semibold rounded-full">
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 border border-blue-100 text-blue-600 text-[10px] font-semibold rounded-full">
             <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7l-2 2m2-2l2 2m4 4v-4a2 2 0 00-2-2h-6" />
             </svg>
@@ -314,12 +312,12 @@ function AttemptCard({
         {node.submissions.filter((s) => s.status === "SUBMITTED").length} / {node.submissions.length} subtasks submitted
       </p>
 
-      <div className="flex items-center gap-1.5 mt-3">
+      <div className="flex items-center justify-end mt-3">
         <button
           onClick={(e) => { e.stopPropagation(); onViewClick(); }}
-          className="px-2.5 py-1 text-[11px] font-medium text-gray-500 hover:text-gray-800 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 transition-all"
+          className="px-3 py-1 text-[11px] font-medium text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-100 transition-all w-full"
         >
-          View ↗
+          View Solution ↗
         </button>
       </div>
     </div>
@@ -330,9 +328,11 @@ function AttemptCard({
 function SolutionFamilyTree({
   roots,
   onViewAttempt,
+  isAnimating,
 }: {
   roots: TreeAttemptNode[];
   onViewAttempt: (node: TreeAttemptNode) => void;
+  isAnimating: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [, setTick] = useState(0);
@@ -421,18 +421,36 @@ function SolutionFamilyTree({
   const treeHeight = containerRef.current?.scrollHeight ?? 0;
 
   return (
-    <div ref={containerRef} style={{ position: "relative", overflowX: "auto", paddingBottom: 24 }}>
-      {svgLines.length > 0 && (
-        <svg
-          style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none", zIndex: 0, overflow: "visible" }}
-          width={treeWidth}
-          height={treeHeight}
-        >
-          {svgLines}
-        </svg>
-      )}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 700, paddingTop: 8, position: "relative", zIndex: 1 }}>
-        {renderLevel(roots)}
+    <div className="tree-viewport" ref={containerRef}>
+      <div 
+        className={`tree-content ${isAnimating ? "exiting" : "entering"}`} 
+        style={{ position: "relative", padding: "24px 16px 32px", zIndex: 1 }}
+      >
+        {roots.length === 0 ? (
+          <div className="tree-empty">
+            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mb-1">
+              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <p className="text-sm text-gray-500 font-medium">No attempts for this sub-problem yet</p>
+          </div>
+        ) : (
+          <>
+            {svgLines.length > 0 && (
+              <svg
+                style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none", zIndex: 0, overflow: "visible" }}
+                width={treeWidth}
+                height={treeHeight}
+              >
+                {svgLines}
+              </svg>
+            )}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 700, paddingTop: 8, position: "relative", zIndex: 1 }}>
+              {renderLevel(roots)}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -444,12 +462,46 @@ export function SolutionTreeTab({ problemId }: { problemId: string }) {
   const [loading, setLoading] = useState(true);
   const [modalNode, setModalNode] = useState<TreeAttemptNode | null>(null);
 
+  // Filter & Animation States
+  const [selectedSubtaskId, setSelectedSubtaskId] = useState<string>("ALL");
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [displayedSubtaskId, setDisplayedSubtaskId] = useState<string>("ALL");
+
   useEffect(() => {
     getAllAttempts(problemId)
       .then(setAttempts)
       .catch((err: unknown) => console.error("Failed to load attempts", err))
       .finally(() => setLoading(false));
   }, [problemId]);
+
+  // Extract unique subtasks for the dropdown filter (only if your API returns targetSubtaskId)
+  const uniqueSubtasks = useMemo(() => {
+    const map = new Map<string, string>();
+    attempts.forEach((a) => {
+      if (a.targetSubtaskId && a.targetSubtaskTitle) {
+        map.set(a.targetSubtaskId, a.targetSubtaskTitle);
+      }
+    });
+    return Array.from(map.entries()).map(([id, title]) => ({ id, title }));
+  }, [attempts]);
+
+  // Apply the currently displayed filter
+  const filteredAttempts = useMemo(() => {
+    if (displayedSubtaskId === "ALL") return attempts;
+    return attempts.filter((a) => a.targetSubtaskId === displayedSubtaskId);
+  }, [attempts, displayedSubtaskId]);
+
+  const roots = buildHierarchyTree(filteredAttempts);
+
+  function handleFilterChange(id: string) {
+    if (id === selectedSubtaskId) return;
+    setSelectedSubtaskId(id);
+    setIsAnimating(true);
+    setTimeout(() => {
+      setDisplayedSubtaskId(id);
+      setIsAnimating(false);
+    }, 220);
+  }
 
   if (loading) {
     return (
@@ -461,22 +513,88 @@ export function SolutionTreeTab({ problemId }: { problemId: string }) {
 
   if (attempts.length === 0) {
     return (
-      <div className="bg-white rounded-xl shadow-md border border-gray-200 p-12 text-center">
-        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+        <div className="w-16 h-16 bg-gray-50 border border-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
           </svg>
         </div>
-        <h3 className="text-xl font-bold text-gray-900 mb-2">No attempts yet</h3>
-        <p className="text-gray-600">No students have claimed this problem yet. Check back soon.</p>
+        <h3 className="text-xl font-bold text-gray-900 mb-2">No solutions yet</h3>
+        <p className="text-gray-500 mb-6 max-w-sm mx-auto">
+          Once solvers claim this problem and begin submitting their approaches, their progress will appear here.
+        </p>
       </div>
     );
   }
 
-  const roots = buildHierarchyTree(attempts);
-
   return (
     <>
+      <style>{`
+        /* Tree viewport — fixed height, no resize */
+        .tree-viewport {
+          min-height: 420px;
+          max-height: 600px;
+          overflow: auto;
+          position: relative;
+          border-radius: 12px;
+          background: 
+            radial-gradient(ellipse at 20% 50%, rgba(99,102,241,0.04) 0%, transparent 60%),
+            radial-gradient(ellipse at 80% 20%, rgba(124,58,237,0.04) 0%, transparent 60%),
+            #fafafa;
+          border: 1px solid #e5e7eb;
+        }
+
+        /* Dot grid pattern */
+        .tree-viewport::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background-image: radial-gradient(circle, #d1d5db 1px, transparent 1px);
+          background-size: 24px 24px;
+          opacity: 0.5;
+          pointer-events: none;
+          border-radius: 12px;
+        }
+
+        /* Fade + lift animation for tree content */
+        .tree-content {
+          transition: opacity 0.22s ease, transform 0.22s ease;
+        }
+        .tree-content.exiting {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        .tree-content.entering {
+          opacity: 1;
+          transform: translateY(0);
+        }
+
+        /* Card hover lift */
+        .attempt-card {
+          transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.18s ease;
+        }
+        .attempt-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+        }
+
+        /* Status badge pulse for IN_PROGRESS */
+        .status-badge {
+          letter-spacing: 0.02em;
+        }
+
+        /* Empty state inside viewport */
+        .tree-empty {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+        }
+      `}</style>
+
       {modalNode && (
         <AttemptDetailModal
           node={modalNode}
@@ -485,27 +603,59 @@ export function SolutionTreeTab({ problemId }: { problemId: string }) {
         />
       )}
 
-      <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
-        <div className="mb-6">
-          <h2 className="text-xl font-bold text-gray-900">Solution Evolution Tree</h2>
-          <p className="text-xs text-gray-500 mt-1">
-            Each node is a solution attempt. Forked nodes branch downward from their parent — click{" "}
-            <strong>View</strong> on any card to read the submitted work.
-          </p>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="mb-6 flex flex-col md:flex-row md:items-start justify-between gap-4">
+          <div style={{ flex: 1 }}>
+            <h2 className="text-xl font-bold text-gray-900">Solution Evolution Tree</h2>
+            <p className="text-xs text-gray-500 mt-1">
+              Monitor how solvers are building upon each other's solutions. Click <strong className="text-gray-700">View Solution</strong> to inspect their code and documentation.
+            </p>
+          </div>
+
+          {/* Filter Dropdown */}
+          {uniqueSubtasks.length > 1 && (
+            <div className="flex items-center gap-2">
+              <label htmlFor="seeker-subtask-filter" className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                Filter by Sub-problem:
+              </label>
+              <div className="relative">
+                <select
+                  id="seeker-subtask-filter"
+                  value={selectedSubtaskId}
+                  onChange={(e) => handleFilterChange(e.target.value)}
+                  className="appearance-none bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-accent focus:border-accent block w-full pl-3 pr-10 py-2 outline-none transition-colors cursor-pointer"
+                  style={{ minWidth: "200px", maxWidth: "300px" }}
+                >
+                  <option value="ALL">All Sub-problems</option>
+                  {uniqueSubtasks.map((st) => (
+                    <option key={st.id} value={st.id}>
+                      {st.title}
+                    </option>
+                  ))}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
-        <div className="flex items-center gap-4 mb-5 flex-wrap">
+        {/* Legend */}
+        <div className="flex items-center gap-4 mb-4 flex-wrap">
           <span className="text-xs text-gray-500 font-medium uppercase tracking-wide">Legend:</span>
           <span className="inline-flex items-center gap-1.5 text-xs text-green-700">
-            <span className="w-2.5 h-2.5 rounded-full bg-green-100 border border-green-200 inline-block" />
+            <span className="w-2.5 h-2.5 rounded-full bg-green-50 border border-green-200 inline-block" />
             Completed
           </span>
-          <span className="inline-flex items-center gap-1.5 text-xs text-yellow-700">
-            <span className="w-2.5 h-2.5 rounded-full bg-yellow-100 border border-yellow-200 inline-block" />
+          <span className="inline-flex items-center gap-1.5 text-xs text-amber-700">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-50 border border-amber-200 inline-block" />
             Active
           </span>
           <span className="inline-flex items-center gap-1.5 text-xs text-red-700">
-            <span className="w-2.5 h-2.5 rounded-full bg-red-100 border border-red-200 inline-block" />
+            <span className="w-2.5 h-2.5 rounded-full bg-red-50 border border-red-200 inline-block" />
             Abandoned / Terminated
           </span>
           <span className="inline-flex items-center gap-1.5 text-xs text-blue-700">
@@ -515,15 +665,17 @@ export function SolutionTreeTab({ problemId }: { problemId: string }) {
             Forked attempt
           </span>
           <span className="ml-auto text-xs text-gray-400">
-            {attempts.length} total attempt{attempts.length !== 1 ? "s" : ""}
+            {filteredAttempts.length} attempt{filteredAttempts.length !== 1 ? "s" : ""}
           </span>
         </div>
 
-        <div className="bg-gray-50/50 rounded-xl border border-gray-100 p-4">
-          <SolutionFamilyTree roots={roots} onViewAttempt={(node) => setModalNode(node)} />
-        </div>
+        {/* Tree Render */}
+        <SolutionFamilyTree 
+          roots={roots} 
+          onViewAttempt={(node) => setModalNode(node)} 
+          isAnimating={isAnimating}
+        />
       </div>
-
     </>
   );
 }
