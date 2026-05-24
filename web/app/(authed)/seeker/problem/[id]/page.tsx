@@ -10,9 +10,7 @@ import { ProblemTab } from "@/components/problem-detail-seeker/ProblemTab";
 import { AuditTimelineTab } from "@/components/problem-detail-seeker/AuditTimelineTab";
 import { SettingsTab } from "@/components/problem-detail-seeker/SettingsTab";
 import { SolutionTreeTab } from "@/components/problem-detail-seeker/SolutionTreeTab";
-import { PlaceholderTab } from "@/components/problem-detail-seeker/PlaceholderTab";
 import { ProposalsTab } from "@/components/problem-detail-seeker/ProposalsTab";
-
 
 type TabType = "problem" | "proposals" | "insights" | "tree" | "history" | "settings";
 
@@ -26,7 +24,6 @@ const STATUS_COLORS: Record<string, string> = {
   TERMINATED: "bg-red-500 text-white",
 };
 
-// Human-readable labels for each status
 const STATUS_LABELS: Record<string, string> = {
   OPEN: "Open",
   SOLVED_OPEN_FOR_IMPROVEMENT: "Solved – Open for Improvement",
@@ -34,7 +31,6 @@ const STATUS_LABELS: Record<string, string> = {
   CLOSED: "Closed",
 };
 
-// Description shown in the general confirmation modal
 const STATUS_DESCRIPTIONS: Record<string, string> = {
   OPEN: "The problem will be visible to solvers and open for new claims.",
   SOLVED_OPEN_FOR_IMPROVEMENT: "The problem will be marked as solved but remain visible so solvers can continue to improve upon it.",
@@ -46,15 +42,17 @@ export default function ProblemDetailPage() {
   const params = useParams();
   const router = useRouter();
   const problemId = params.id as string;
+
   const [problem, setProblem] = useState<ProblemResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
   const [activeTab, setActiveTab] = useState<TabType>("problem");
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
 
-  // Modal state
-  // "confirm"  → general "are you sure?" modal
-  // "terminate" → specific warning when a solver is still active
+  // NEW: State to hold the ID of the node we want to jump to in the Solution Tree
+  const [highlightedNodeId, setHighlightedNodeId] = useState<string | null>(null);
+
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
   const [modalMode, setModalMode] = useState<"confirm" | "terminate" | null>(null);
 
@@ -74,32 +72,24 @@ export default function ProblemDetailPage() {
   };
 
   const handleStatusChangeClick = (newStatus: string) => {
-  setShowStatusDropdown(false);
-  setPendingStatus(newStatus);
+    setShowStatusDropdown(false);
+    setPendingStatus(newStatus);
 
-  console.log("Current problem status:", problem?.status); // add this
-  console.log("New status:", newStatus);
+    const solverIsActive = problem?.status === "CLAIMED" || problem?.status === "IN_PROGRESS";
+    const isClosingAction = newStatus === "COMPLETED" || newStatus === "CLOSED";
 
-  const solverIsActive =
-    problem?.status === "CLAIMED" || problem?.status === "IN_PROGRESS";
-  const isClosingAction =
-    newStatus === "COMPLETED" || newStatus === "CLOSED";
-
-  console.log("solverIsActive:", solverIsActive); // add this
-
-  if (isClosingAction && solverIsActive) {
-    setModalMode("terminate");
-  } else {
-    setModalMode("confirm");
-  }
-};
+    if (isClosingAction && solverIsActive) {
+      setModalMode("terminate");
+    } else {
+      setModalMode("confirm");
+    }
+  };
 
   const cancelModal = () => {
     setPendingStatus(null);
     setModalMode(null);
   };
 
-  // Actually call the API
   const executeStatusChange = async (status: string) => {
     try {
       const updatedProblem = await updateProblemStatus(problemId, status);
@@ -147,7 +137,7 @@ export default function ProblemDetailPage() {
 
   const tabs: { id: TabType; label: string }[] = [
     { id: "problem",  label: "Problem Profile" },
-    { id: "proposals", label: "Solver Proposals" }, // <-- ADD THIS LINE
+    { id: "proposals", label: "Solver Proposals" },
     { id: "insights", label: "AI Insights" },
     { id: "tree",     label: "Solution Tree" },
     { id: "history",  label: "Audit Timeline" },
@@ -272,18 +262,14 @@ export default function ProblemDetailPage() {
                 <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-20">
                   {(["OPEN", "SOLVED_OPEN_FOR_IMPROVEMENT", "COMPLETED", "CLOSED"] as const).map((status) => {
                     const isDestructive = status === "COMPLETED" || status === "CLOSED";
-                    const solverIsActive =
-                      problem.status === "CLAIMED" || problem.status === "IN_PROGRESS";
+                    const solverIsActive = problem.status === "CLAIMED" || problem.status === "IN_PROGRESS";
                     const willTerminate = isDestructive && solverIsActive;
-
                     return (
                       <button
                         key={status}
                         onClick={() => handleStatusChangeClick(status)}
                         className={`w-full px-4 py-2.5 text-left text-sm transition-colors flex items-center justify-between gap-2 ${
-                          willTerminate
-                            ? "hover:bg-red-50 text-red-700"
-                            : "hover:bg-gray-100 text-gray-700"
+                          willTerminate ? "hover:bg-red-50 text-red-700" : "hover:bg-gray-100 text-gray-700"
                         }`}
                       >
                         <span>{STATUS_LABELS[status]}</span>
@@ -319,7 +305,11 @@ export default function ProblemDetailPage() {
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  // Clear highlight state if we manually click away from the tree tab
+                  if (tab.id !== "tree") setHighlightedNodeId(null);
+                }}
                 className={`py-4 px-2 font-medium text-sm border-b-2 transition-colors ${
                   activeTab === tab.id
                     ? "border-accent text-accent"
@@ -336,8 +326,21 @@ export default function ProblemDetailPage() {
       {/* Tab Content */}
       <div className="max-w-7xl mx-auto px-8 py-8 overflow-visible">
         {activeTab === "problem"   && <ProblemTab problem={problem} />}
-        {activeTab === "proposals" && <ProposalsTab problemId={problemId} />} {/* <-- ADD THIS LINE */}
-        {activeTab === "tree"      && <SolutionTreeTab problemId={problemId} />}
+        {activeTab === "proposals" && (
+          <ProposalsTab 
+            problemId={problemId} 
+            onLocateInTree={(nodeId) => {
+              setHighlightedNodeId(nodeId);
+              setActiveTab("tree");
+            }} 
+          />
+        )}
+        {activeTab === "tree"      && (
+          <SolutionTreeTab 
+            problemId={problemId} 
+            highlightedAttemptId={highlightedNodeId} 
+          />
+        )}
         {activeTab === "history"   && <AuditTimelineTab problemId={problemId} />}
         {activeTab === "settings"  && <SettingsTab problem={problem} onDelete={handleDeleteProblem} />}
       </div>

@@ -1,19 +1,25 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-// Adjust this import path based on where you defined these API calls
-import { getPendingProposals, evaluateProposal } from "@/lib/api/problem"; 
+import React, { useEffect, useState, useMemo } from "react";
+import { getPendingProposals, evaluateProposal } from "@/lib/api/problem";
 import type { ClaimRequestResponse } from "@/types/attempt";
+
+type SortOrder = "newest-first" | "oldest-first";
 
 interface ProposalsTabProps {
   problemId: string;
+  onLocateInTree: (nodeId: string) => void;
 }
 
-export function ProposalsTab({ problemId }: ProposalsTabProps) {
+export function ProposalsTab({ problemId, onLocateInTree }: ProposalsTabProps) {
   const [proposals, setProposals] = useState<ClaimRequestResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
+  // UX States
+  const [sortOrder, setSortOrder] = useState<SortOrder>("newest-first");
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+
   // Modal State
   const [selectedProposal, setSelectedProposal] = useState<ClaimRequestResponse | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -24,14 +30,9 @@ export function ProposalsTab({ problemId }: ProposalsTabProps) {
 
   // Lock body scroll when modal is open
   useEffect(() => {
-    if (selectedProposal) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
+    if (selectedProposal) document.body.style.overflow = "hidden";
+    else document.body.style.overflow = "";
+    return () => { document.body.style.overflow = ""; };
   }, [selectedProposal]);
 
   const fetchPendingProposals = async () => {
@@ -59,6 +60,15 @@ export function ProposalsTab({ problemId }: ProposalsTabProps) {
     }
   };
 
+  const toggleGroup = (groupId: string) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupId)) next.delete(groupId);
+      else next.add(groupId);
+      return next;
+    });
+  };
+
   const getFilenameFromUrl = (url: string) => {
     try {
       const decoded = decodeURIComponent(url);
@@ -68,6 +78,30 @@ export function ProposalsTab({ problemId }: ProposalsTabProps) {
       return "Attachment";
     }
   };
+
+  // Group and sort the proposals
+  const groupedProposals = useMemo(() => {
+    const sorted = [...proposals].sort((a, b) => {
+      const timeA = new Date(a.createdAt).getTime();
+      const timeB = new Date(b.createdAt).getTime();
+      return sortOrder === "newest-first" ? timeB - timeA : timeA - timeB;
+    });
+
+    const map = new Map<string, { title: string; items: ClaimRequestResponse[] }>();
+    
+    sorted.forEach(p => {
+      // Fallbacks in case property names differ slightly in your API
+      const sid = (p as any).targetSubtaskId || (p as any).subtaskId || "general";
+      const title = (p as any).targetSubtaskTitle || (p as any).subtaskTitle || "General Proposals";
+      
+      if (!map.has(sid)) {
+        map.set(sid, { title, items: [] });
+      }
+      map.get(sid)!.items.push(p);
+    });
+    
+    return Array.from(map.entries());
+  }, [proposals, sortOrder]);
 
   if (loading) {
     return (
@@ -102,80 +136,160 @@ export function ProposalsTab({ problemId }: ProposalsTabProps) {
 
   return (
     <div className="space-y-6">
-      {/* Header section */}
-      <div className="flex items-center justify-between bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div>
-          <h3 className="text-xl font-bold text-gray-900">Pending Proposals</h3>
-          <p className="text-sm text-gray-500 mt-1">
-            Review approaches and approve up to 3 concurrent Solvers.
-          </p>
+      {/* ── Header & Sorter Controls ── */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Pending Proposals</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Review approaches grouped by sub-problem.
+            </p>
+          </div>
+          <span className="text-xs font-semibold px-3 py-1.5 bg-accent/10 text-accent rounded-full border border-accent/20">
+            {proposals.length} pending request{proposals.length !== 1 ? "s" : ""}
+          </span>
         </div>
-        <div className="bg-secondary/10 text-secondary px-4 py-2 rounded-lg font-bold border border-secondary/20 shadow-sm">
-          {proposals.length} Pending
+
+        <div className="flex items-center gap-4 mt-4 flex-wrap">
+          {/* Order Toggle (Audit Log Style) */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500 font-medium">Order:</span>
+            {(
+              [
+                { value: "newest-first", label: "Newest first" },
+                { value: "oldest-first", label: "Oldest first" },
+              ] as { value: SortOrder; label: string }[]
+            ).map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setSortOrder(opt.value)}
+                className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
+                  sortOrder === opt.value
+                    ? "bg-accent text-white border-accent shadow-sm"
+                    : "bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Grid Layout for Scalability */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {proposals.map((proposal) => {
-          const fileCount = proposal.supportingDocuments 
-            ? proposal.supportingDocuments.split(",").length 
-            : 0;
+      {/* ── Grouped Proposal Grid ── */}
+      <div className="space-y-8">
+        {groupedProposals.map(([groupId, group]) => {
+          const isCollapsed = collapsedGroups.has(groupId);
 
           return (
-            <div 
-              key={proposal.id} 
-              className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all flex flex-col h-full group"
-            >
-              {/* Card Header */}
-              <div className="p-5 border-b border-gray-100">
+            <div key={groupId} className="flex flex-col gap-3">
+              {/* Group Header (Collapsible) */}
+              <button 
+                onClick={() => toggleGroup(groupId)}
+                className="flex items-center justify-between w-full p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors group"
+              >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-secondary/20 to-accent/20 flex items-center justify-center text-secondary font-bold text-sm shadow-inner flex-shrink-0">
-                    {proposal.solver.firstName.charAt(0)}{proposal.solver.lastName.charAt(0)}
+                  <div className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-500 group-hover:text-accent shadow-sm transition-colors">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
                   </div>
-                  <div className="min-w-0">
-                    <h4 className="font-semibold text-gray-900 truncate">
-                      {proposal.solver.firstName} {proposal.solver.lastName}
-                    </h4>
-                    <p className="text-xs text-gray-500 truncate">{proposal.solver.institution || "Independent Solver"}</p>
+                  <div className="text-left">
+                    <h3 className="font-bold text-gray-900 text-sm">{group.title}</h3>
+                    <p className="text-[11px] text-gray-500">{group.items.length} proposal{group.items.length !== 1 ? 's' : ''}</p>
                   </div>
                 </div>
-              </div>
-
-              {/* Card Body (Truncated Preview) */}
-              <div className="p-5 flex-1 flex flex-col">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                  Approach Summary
-                </p>
-                <p className="text-sm text-gray-600 line-clamp-3 mb-4 flex-1">
-                  {proposal.proposedApproach}
-                </p>
-                
-                {/* Meta Tags */}
-                <div className="flex items-center gap-2 mt-auto pt-4 border-t border-gray-50">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 text-gray-600 rounded-md text-xs font-medium">
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                    {new Date(proposal.createdAt).toLocaleDateString()}
-                  </span>
-                  {fileCount > 0 && (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 rounded-md text-xs font-medium border border-blue-100">
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
-                      {fileCount} {fileCount === 1 ? 'File' : 'Files'}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Card Footer Action */}
-              <div className="p-4 pt-0">
-                <button
-                  onClick={() => setSelectedProposal(proposal)}
-                  className="w-full py-2.5 px-4 bg-gray-50 hover:bg-secondary hover:text-white text-gray-700 font-medium rounded-lg text-sm transition-colors border border-gray-200 hover:border-secondary flex justify-center items-center gap-2"
+                <svg
+                  className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${isCollapsed ? "" : "rotate-180"}`}
+                  fill="none" stroke="currentColor" viewBox="0 0 24 24"
                 >
-                  Review Full Proposal
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
-                </button>
-              </div>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {/* Cards Grid */}
+              {!isCollapsed && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {group.items.map((proposal) => {
+                    const fileCount = proposal.supportingDocuments 
+                      ? proposal.supportingDocuments.split(",").length 
+                      : 0;
+                    const parentAttemptId = (proposal as any).parentAttemptId;
+
+                    return (
+                      <div 
+                        key={proposal.id} 
+                        className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all flex flex-col h-full"
+                      >
+                        {/* Card Header */}
+                        <div className="p-4 border-b border-gray-100">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-secondary/20 to-accent/20 flex items-center justify-center text-secondary font-bold text-sm shadow-inner flex-shrink-0 border border-secondary/10">
+                              {proposal.solver.firstName.charAt(0)}{proposal.solver.lastName.charAt(0)}
+                            </div>
+                            <div className="min-w-0">
+                              <h4 className="font-semibold text-gray-900 truncate text-sm">
+                                {proposal.solver.firstName} {proposal.solver.lastName}
+                              </h4>
+                              <p className="text-[11px] text-gray-500 truncate">{proposal.solver.institution || "Independent Solver"}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Card Body */}
+                        <div className="p-4 flex-1 flex flex-col">
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">
+                            Approach Summary
+                          </p>
+                          <p className="text-sm text-gray-600 line-clamp-3 mb-3 flex-1">
+                            {proposal.proposedApproach}
+                          </p>
+                          
+                          {parentAttemptId && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onLocateInTree(parentAttemptId);
+                              }}
+                              className="mb-3 text-[11px] font-semibold text-accent hover:text-secondary flex items-center gap-1 transition-colors w-fit border border-accent/20 bg-accent/5 px-2.5 py-1 rounded-full hover:bg-accent/10"
+                            >
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7l-2 2m2-2l2 2m4 4v-4a2 2 0 00-2-2h-6" />
+                              </svg>
+                              View Existing Solution They Want to Fork ➔
+                            </button>
+                          )}
+                          
+                          {/* Meta Tags */}
+                          <div className="flex items-center gap-2 mt-auto pt-3 border-t border-gray-50 flex-wrap">
+                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-50 border border-gray-100 text-gray-500 rounded-md text-[10px] font-medium">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                              {new Date(proposal.createdAt).toLocaleDateString()}
+                            </span>
+                            {fileCount > 0 && (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 bg-secondary/5 text-secondary rounded-md text-[10px] font-medium border border-secondary/20">
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                                {fileCount} {fileCount === 1 ? 'File' : 'Files'}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Card Footer Action */}
+                        <div className="p-3 pt-0">
+                          <button
+                            onClick={() => setSelectedProposal(proposal)}
+                            className="w-full py-2 px-4 bg-gray-50 hover:bg-accent hover:text-white text-gray-700 font-medium rounded-lg text-xs transition-colors border border-gray-200 hover:border-accent flex justify-center items-center gap-2"
+                          >
+                            Review Full Proposal
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
         })}
@@ -187,12 +301,11 @@ export function ProposalsTab({ problemId }: ProposalsTabProps) {
           className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto"
           onClick={(e) => { if (e.target === e.currentTarget && !actionLoading) setSelectedProposal(null); }}
         >
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
-            
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200 border border-gray-200">
             {/* Modal Header */}
             <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between flex-shrink-0 bg-gray-50/50 rounded-t-2xl">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-secondary to-accent flex items-center justify-center text-white font-bold text-lg shadow-md">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-secondary to-accent flex items-center justify-center text-white font-bold text-lg shadow-md border border-white/20">
                   {selectedProposal.solver.firstName.charAt(0)}{selectedProposal.solver.lastName.charAt(0)}
                 </div>
                 <div>
@@ -207,7 +320,7 @@ export function ProposalsTab({ problemId }: ProposalsTabProps) {
               <button
                 onClick={() => setSelectedProposal(null)}
                 disabled={actionLoading !== null}
-                className="text-gray-400 hover:text-gray-700 bg-white border border-gray-200 p-2 rounded-full shadow-sm hover:bg-gray-50 transition-colors disabled:opacity-50"
+                className="text-gray-400 hover:text-gray-700 bg-white border border-gray-200 p-2 rounded-full shadow-sm hover:bg-gray-100 transition-colors disabled:opacity-50"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
@@ -215,10 +328,9 @@ export function ProposalsTab({ problemId }: ProposalsTabProps) {
 
             {/* Modal Scrollable Content */}
             <div className="p-6 overflow-y-auto flex-1">
-              
               <div className="mb-8">
                 <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 flex items-center gap-2">
-                  <svg className="w-5 h-5 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                  <svg className="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                   Full Proposed Approach
                 </h4>
                 <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed shadow-inner">
@@ -229,7 +341,7 @@ export function ProposalsTab({ problemId }: ProposalsTabProps) {
               {selectedProposal.supportingDocuments && selectedProposal.supportingDocuments.length > 0 && (
                 <div>
                   <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 flex items-center gap-2">
-                    <svg className="w-5 h-5 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                    <svg className="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
                     Attachments
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -241,7 +353,7 @@ export function ProposalsTab({ problemId }: ProposalsTabProps) {
                         rel="noopener noreferrer"
                         className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:text-secondary hover:border-secondary hover:shadow-md transition-all group"
                       >
-                        <div className="bg-blue-50 text-blue-600 p-2 rounded-md group-hover:bg-secondary/10 group-hover:text-secondary transition-colors">
+                        <div className="bg-secondary/10 text-secondary p-2 rounded-md group-hover:bg-secondary group-hover:text-white transition-colors border border-secondary/20 group-hover:border-transparent">
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                         </div>
                         <span className="truncate font-medium flex-1">
@@ -255,18 +367,18 @@ export function ProposalsTab({ problemId }: ProposalsTabProps) {
             </div>
 
             {/* Modal Actions Footer */}
-            <div className="p-6 border-t border-gray-100 bg-white flex justify-end gap-3 rounded-b-2xl flex-shrink-0">
+            <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex justify-end gap-3 rounded-b-2xl flex-shrink-0">
               <button
                 onClick={() => handleEvaluation(selectedProposal.id, false)}
                 disabled={actionLoading !== null}
-                className="px-6 py-2.5 text-red-600 bg-red-50 hover:bg-red-100 border border-red-100 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50"
+                className="px-6 py-2.5 text-red-600 bg-white hover:bg-red-50 border border-red-200 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 shadow-sm"
               >
                 {actionLoading === selectedProposal.id ? "Rejecting..." : "Reject Proposal"}
               </button>
               <button
                 onClick={() => handleEvaluation(selectedProposal.id, true)}
                 disabled={actionLoading !== null}
-                className="px-6 py-2.5 text-white bg-secondary hover:bg-accent rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 shadow-md hover:shadow-lg flex items-center gap-2"
+                className="px-6 py-2.5 text-white bg-accent hover:bg-secondary rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 shadow-md hover:shadow-lg flex items-center gap-2"
               >
                 {actionLoading === selectedProposal.id ? (
                   <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Approving...</>
