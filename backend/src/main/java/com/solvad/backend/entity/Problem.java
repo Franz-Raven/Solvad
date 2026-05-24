@@ -58,6 +58,9 @@ public class Problem {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "max_concurrent_solvers", nullable = false)
+    private int maxConcurrentSolvers = 3;
+
     public Problem() {
     }
 

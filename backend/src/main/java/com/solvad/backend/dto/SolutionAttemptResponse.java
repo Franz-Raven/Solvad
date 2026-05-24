@@ -23,6 +23,10 @@ public class SolutionAttemptResponse {
     private UUID parentAttemptId;
     private String parentSolverName;
 
+    private UUID targetSubtaskId;
+    private String targetSubtaskTitle;
+
+
     // Update your constructor to accept these, and add getters/setters!
 
     public SolutionAttemptResponse() {
@@ -34,7 +38,8 @@ public class SolutionAttemptResponse {
                                    String status, List<SubtaskSubmissionResponse> submissions,
                                    LocalDateTime claimedAt, LocalDateTime updatedAt,
                                    LocalDateTime completedAt,
-                                   UUID parentAttemptId, String parentSolverName) {
+                                   UUID parentAttemptId, String parentSolverName,
+                                   UUID targetSubtaskId, String targetSubtaskTitle) {
         this.id = id;
         this.problemId = problemId;
         this.problemTitle = problemTitle;
@@ -50,6 +55,8 @@ public class SolutionAttemptResponse {
         this.completedAt = completedAt;
         this.parentAttemptId = parentAttemptId;
         this.parentSolverName = parentSolverName;
+        this.targetSubtaskId = targetSubtaskId;
+        this.targetSubtaskTitle = targetSubtaskTitle;
     }
 
     public UUID getId() { return id; }
@@ -111,4 +118,8 @@ public class SolutionAttemptResponse {
     public String getDeltaDescription() { return deltaDescription; }
     public void setDeltaDescription(String deltaDescription) { this.deltaDescription = deltaDescription; }
 
+    public UUID getTargetSubtaskId() { return targetSubtaskId; }
+    public void setTargetSubtaskId(UUID targetSubtaskId) { this.targetSubtaskId = targetSubtaskId; }
+    public String getTargetSubtaskTitle() { return targetSubtaskTitle; }
+    public void setTargetSubtaskTitle(String targetSubtaskTitle) { this.targetSubtaskTitle = targetSubtaskTitle; }
 }

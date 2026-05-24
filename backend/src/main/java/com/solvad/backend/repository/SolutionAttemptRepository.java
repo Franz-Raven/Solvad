@@ -1,9 +1,6 @@
 package com.solvad.backend.repository;
 
-import com.solvad.backend.entity.Problem;
-import com.solvad.backend.entity.SolutionAttempt;
-import com.solvad.backend.entity.SolutionAttemptStatus;
-import com.solvad.backend.entity.SolverProfile;
+import com.solvad.backend.entity.*;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -36,4 +33,15 @@ public interface SolutionAttemptRepository extends JpaRepository<SolutionAttempt
 
     @Query("SELECT COUNT(sa) FROM SolutionAttempt sa WHERE sa.problem.id = :problemId AND sa.status = 'ACTIVE'")
     int countActiveSolversByProblemId(@Param("problemId") UUID problemId);
+
+    // Replace the old countActiveSolversByProblemId with this subtask-scoped version
+    @Query("SELECT COUNT(a) FROM SolutionAttempt a WHERE a.problem.id = :problemId AND a.targetSubtask.id = :subtaskId AND a.status = 'ACTIVE'")
+    int countActiveSolversBySubtaskId(@Param("problemId") UUID problemId, @Param("subtaskId") UUID subtaskId);
+
+    // Find by problem + subtask + status (for tree view)
+    List<SolutionAttempt> findByProblemIdAndTargetSubtaskIdOrderByClaimedAtAsc(UUID problemId, UUID subtaskId);
+
+    // Check if solver already has active attempt on this specific subtask
+    boolean existsByProblemAndTargetSubtaskAndSolverAndStatus(
+            Problem problem, ProblemSubtask targetSubtask, SolverProfile solver, SolutionAttemptStatus status);
 }
