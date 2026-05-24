@@ -19,8 +19,8 @@ export async function claimProblem(problemId: string, parentAttemptId?: string):
 /**
  * Abandon an active claim (solver)
  */
-export async function abandonClaim(problemId: string): Promise<void> {
-  return apiRequest<void>(`/problems/${problemId}/claim`, {
+export async function abandonClaim(attemptId: string): Promise<void> {
+  await apiRequest(`/attempts/${attemptId}/abandon`, {
     method: "DELETE",
   });
 }
@@ -44,38 +44,40 @@ export async function deleteFileFromSubmission(
   );
 }
 
-/**
- * Save draft of a subtask solution (Multipart/Supabase)
- */
 export async function saveSubtaskDraft(
   attemptId: string,
   subtaskId: string,
   description: string,
-  deltaDescription?: string,
-  files?: File[]
+  deltaDescription: string,
+  files: File[]
 ): Promise<SubtaskSubmissionResponse> {
   const formData = new FormData();
   formData.append("description", description);
-  if (deltaDescription) formData.append("deltaDescription", deltaDescription);
-  if (files && files.length > 0) {
-    files.forEach((file) => formData.append("files", file));
-  }
+  formData.append("deltaDescription", deltaDescription);
+  files.forEach((file) => formData.append("files", file));
 
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"}/attempts/${attemptId}/subtasks/${subtaskId}/draft`,
-    {
-      method: "PUT",
-      headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: formData,
-    }
-  );
+  return apiRequest<SubtaskSubmissionResponse>(`/attempts/${attemptId}/subtasks/${subtaskId}/draft`, {
+    method: "PUT", // SDD states PUT for draft
+    body: formData,
+  });
+}
 
-  const data = await res.json().catch(() => res.text());
-  if (!res.ok) throw new Error(data.message || data.error || "Failed to save draft");
-  return data as SubtaskSubmissionResponse;
+export async function submitSubtaskSolution(
+  attemptId: string,
+  subtaskId: string,
+  description: string,
+  deltaDescription: string,
+  files: File[]
+): Promise<SubtaskSubmissionResponse> {
+  const formData = new FormData();
+  formData.append("description", description);
+  formData.append("deltaDescription", deltaDescription);
+  files.forEach((file) => formData.append("files", file));
+
+  return apiRequest<SubtaskSubmissionResponse>(`/attempts/${attemptId}/subtasks/${subtaskId}/submit`, {
+    method: "POST", // SDD states POST for submit
+    body: formData,
+  });
 }
 
 /**
@@ -120,12 +122,6 @@ export async function completeAttempt(attemptId: string): Promise<SolutionAttemp
   return apiRequest(`/attempts/${attemptId}/complete`, { method: "POST" });
 }
 
-/**
- * Abandon the attempt (Solver Action)
- */
-export async function abandonAttempt(attemptId: string): Promise<void> {
-  return apiRequest(`/attempts/${attemptId}/abandon`, { method: "POST" });
-}
 
 export async function getAllAttempts(
   problemId: string
@@ -201,24 +197,29 @@ export async function getAuditLog(
 export async function submitProposal(
   problemId: string,
   proposedApproach: string,
+  subtaskId: string,           // ADD — now required
   parentAttemptId?: string,
   files?: File[]
 ): Promise<ClaimRequestResponse> {
   const formData = new FormData();
-  
-  // 1. Append the text fields
   formData.append("proposedApproach", proposedApproach);
+  formData.append("subtaskId", subtaskId);              // ADD
   if (parentAttemptId) formData.append("parentAttemptId", parentAttemptId);
-  
-  // 2. Append the files (if any)
   if (files && files.length > 0) {
     files.forEach((file) => formData.append("files", file));
   }
-
-  // 3. Delegate to your apiRequest utility! 
-  // It will automatically handle the token, error parsing, and leave the Content-Type blank for FormData
   return apiRequest<ClaimRequestResponse>(`/problems/${problemId}/proposals`, {
     method: "POST",
     body: formData,
   });
+}
+
+export async function getAttemptsForSubtask(
+  problemId: string,
+  subtaskId: string
+): Promise<SolutionAttemptResponse[]> {
+  return apiRequest<SolutionAttemptResponse[]>(
+    `/problems/${problemId}/subtasks/${subtaskId}/attempts`,
+    { method: "GET" }
+  );
 }

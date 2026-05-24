@@ -19,15 +19,22 @@ export interface SolutionAttemptResponse {
   solverId: string;
   solverFirstName: string;
   solverLastName: string;
-  solverInstitution: string;
-  solverDegreeProgram: string;
-  status: "ACTIVE" | "ABANDONED" | "COMPLETED" | "TERMINATED";
+  institution: string;
+  parentSubmissions?: SubtaskSubmissionResponse[];
+  degreeProgram: string;
+  status: string;
   submissions: SubtaskSubmissionResponse[];
   claimedAt: string;
   updatedAt: string;
-  completedAt: string | null;
-  parentAttemptId?: string;
-  parentSolverName?: string;
+  completedAt?: string;
+  parentAttemptId?: string | null;
+  parentAttemptName?: string | null;
+  targetSubtaskId?: string | null;      // ADD
+  targetSubtaskTitle?: string | null;   // ADD
+
+  parentSolverName?: string | null;
+  parentDescription?: string | null;
+  parentFileUrls?: string[];
 }
 
 export interface TreeAttemptNode extends SolutionAttemptResponse {
@@ -67,10 +74,12 @@ export interface ProposalRequest {
 export interface ClaimRequestResponse {
   id: string;
   problem: { id: string };
-  solver: { id: string; firstName: string; lastName: string;  institution?: string;};
+  solver: { id: string; firstName: string; lastName: string; institution?: string; };
   proposedApproach: string;
   supportingDocuments?: string;
   status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
   createdAt: string;
- 
+  targetSubtaskId?: string;    // ADD
+  targetSubtaskTitle?: string; // ADD
+  parentAttemptId?: string;
 }

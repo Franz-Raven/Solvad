@@ -75,10 +75,13 @@ public class SolutionAttemptController {
     public ResponseEntity<?> getMyAttempt(
             @RequestHeader("Authorization") String authHeader,
             @PathVariable UUID problemId) {
+
+
         try {
             UUID solverUserId = extractUserId(authHeader);
             SolutionAttemptResponse response = attemptService.getMyAttempt(solverUserId, problemId);
             return ResponseEntity.ok(response);
+
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -200,23 +203,7 @@ public class SolutionAttemptController {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // MARK SOLVED — Seeker marks problem as solved
-    // POST /api/problems/{problemId}/mark-solved
-    // -------------------------------------------------------------------------
-    @PostMapping("/api/problems/{problemId}/mark-solved")
-    @PreAuthorize("hasRole('SEEKER')")
-    public ResponseEntity<?> markAsSolved(
-            @RequestHeader("Authorization") String authHeader,
-            @PathVariable UUID problemId) {
-        try {
-            UUID seekerUserId = extractUserId(authHeader);
-            SolutionAttemptResponse response = attemptService.markAsSolved(seekerUserId, problemId);
-            return ResponseEntity.ok(response);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
+
 
     // -------------------------------------------------------------------------
     // Helper
@@ -235,6 +222,52 @@ public class SolutionAttemptController {
 
             List<SolutionAttemptResponse> responses = attemptService.getMyAttempts(solverUserId);
             return ResponseEntity.ok(responses);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // -------------------------------------------------------------------------
+// ABANDON ATTEMPT
+// DELETE /api/attempts/{attemptId}/abandon
+// -------------------------------------------------------------------------
+    @DeleteMapping("/api/attempts/{attemptId}/abandon")
+    @PreAuthorize("hasRole('SOLVER')")
+    public ResponseEntity<?> abandonAttempt(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable UUID attemptId) {
+        try {
+            UUID solverUserId = extractUserId(authHeader);
+            attemptService.abandonAttempt(solverUserId, attemptId);
+            return ResponseEntity.ok("Attempt abandoned successfully");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // ADD this new endpoint
+    @GetMapping("/api/problems/{problemId}/subtasks/{subtaskId}/attempts")
+    @PreAuthorize("hasAnyRole('SEEKER', 'SOLVER', 'ADMIN')")
+    public ResponseEntity<?> getAttemptsForSubtask(
+            @PathVariable UUID problemId,
+            @PathVariable UUID subtaskId) {
+        try {
+            List<SolutionAttemptResponse> responses = attemptService.getAttemptsForSubtask(problemId, subtaskId);
+            return ResponseEntity.ok(responses);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/api/problems/{problemId}/mark-solved")
+    @PreAuthorize("hasRole('SEEKER')")
+    public ResponseEntity<?> markAsSolved(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable UUID problemId) {
+        try {
+            UUID seekerUserId = extractUserId(authHeader);
+            attemptService.markAsSolved(seekerUserId, problemId); // void now
+            return ResponseEntity.ok("Problem marked as solved");
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
