@@ -66,25 +66,6 @@ public class SolutionAttemptController {
     }
 
 
-
-    // -------------------------------------------------------------------------
-    // ABANDON — Solver abandons their active claim
-    // DELETE /api/problems/{problemId}/claim
-    // -------------------------------------------------------------------------
-    @DeleteMapping("/api/problems/{problemId}/claim")
-    @PreAuthorize("hasRole('SOLVER')")
-    public ResponseEntity<?> abandonClaim(
-            @RequestHeader("Authorization") String authHeader,
-            @PathVariable UUID problemId) {
-        try {
-            UUID solverUserId = extractUserId(authHeader);
-            attemptService.abandonClaim(solverUserId, problemId);
-            return ResponseEntity.ok("Claim abandoned successfully");
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
-
     // -------------------------------------------------------------------------
     // MY ATTEMPT — Solver gets their active attempt on a problem
     // GET /api/problems/{problemId}/my-attempt
@@ -104,29 +85,64 @@ public class SolutionAttemptController {
     }
 
     // -------------------------------------------------------------------------
-    // SAVE/SUBMIT subtask — Solver saves draft or finalizes a subtask submission
-    // POST /api/attempts/{attemptId}/subtasks/{subtaskId}
-    //
-    // Multipart form:
-    //   - description (String)
-    //   - action      (String: "SAVE_DRAFT" | "SUBMIT")
-    //   - files       (MultipartFile[], optional)
+    // SAVE DRAFT - SDD Section 3.6
+    // PUT /api/attempts/{attemptId}/subtasks/{subtaskId}/draft
     // -------------------------------------------------------------------------
-    @PostMapping("/api/attempts/{attemptId}/subtasks/{subtaskId}")
+    @PutMapping("/api/attempts/{attemptId}/subtasks/{subtaskId}/draft")
     @PreAuthorize("hasRole('SOLVER')")
-    public ResponseEntity<?> saveOrSubmitSubtask(
+    public ResponseEntity<?> saveSubtaskDraft(
             @RequestHeader("Authorization") String authHeader,
             @PathVariable UUID attemptId,
             @PathVariable UUID subtaskId,
             @RequestParam("description") String description,
-            @RequestParam("action") String action,
-            @RequestParam(value = "deltaDescription", required = false, defaultValue = "") String deltaDescription, // <-- Added
+            @RequestParam(value = "deltaDescription", required = false, defaultValue = "") String deltaDescription,
             @RequestParam(value = "files", required = false) List<MultipartFile> files) {
         try {
-            UUID solverUserId = extractUserId(authHeader); // [cite: 1840]
-            SubtaskSubmissionResponse response = attemptService.saveOrSubmitSubtask(
-                    solverUserId, attemptId, subtaskId, description, action, files, deltaDescription); // <-- Passed parameter
-            return ResponseEntity.ok(response); // [cite: 1842]
+            UUID solverUserId = extractUserId(authHeader);
+            SubtaskSubmissionResponse response = attemptService.saveSubtaskDraft(
+                    solverUserId, attemptId, subtaskId, description, files, deltaDescription);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // SUBMIT SUBTASK - SDD Section 3.6
+    // POST /api/attempts/{attemptId}/subtasks/{subtaskId}/submit
+    // -------------------------------------------------------------------------
+    @PostMapping("/api/attempts/{attemptId}/subtasks/{subtaskId}/submit")
+    @PreAuthorize("hasRole('SOLVER')")
+    public ResponseEntity<?> lockAndSubmitSubtask(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable UUID attemptId,
+            @PathVariable UUID subtaskId,
+            @RequestParam("description") String description,
+            @RequestParam(value = "deltaDescription", required = false, defaultValue = "") String deltaDescription,
+            @RequestParam(value = "files", required = false) List<MultipartFile> files) {
+        try {
+            UUID solverUserId = extractUserId(authHeader);
+            SubtaskSubmissionResponse response = attemptService.lockAndSubmitSubtask(
+                    solverUserId, attemptId, subtaskId, description, files, deltaDescription);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // COMPLETE ATTEMPT - SDD Section 3.6
+    // POST /api/attempts/{attemptId}/complete
+    // -------------------------------------------------------------------------
+    @PostMapping("/api/attempts/{attemptId}/complete")
+    @PreAuthorize("hasRole('SOLVER')")
+    public ResponseEntity<?> completeAttempt(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable UUID attemptId) {
+        try {
+            UUID solverUserId = extractUserId(authHeader);
+            SolutionAttemptResponse response = attemptService.finalizeAttempt(solverUserId, attemptId);
+            return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -224,23 +240,5 @@ public class SolutionAttemptController {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // SUBMIT FULL ATTEMPT — Solver finishes their overall attempt
-    // POST /api/attempts/{attemptId}/submit
-    // -------------------------------------------------------------------------
-    @PostMapping("/api/attempts/{attemptId}/submit")
-    @PreAuthorize("hasRole('SOLVER')")
-    public ResponseEntity<?> submitFullAttempt(
-            @RequestHeader("Authorization") String authHeader,
-            @PathVariable UUID attemptId) {
-        try {
-            String token = authHeader.substring(7);
-            UUID solverUserId = jwtService.extractUserId(token);
 
-            SolutionAttemptResponse response = attemptService.submitFullAttempt(solverUserId, attemptId);
-            return ResponseEntity.ok(response);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
 }
