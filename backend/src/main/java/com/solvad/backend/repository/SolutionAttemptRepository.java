@@ -5,6 +5,8 @@ import com.solvad.backend.entity.SolutionAttempt;
 import com.solvad.backend.entity.SolutionAttemptStatus;
 import com.solvad.backend.entity.SolverProfile;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -31,4 +33,7 @@ public interface SolutionAttemptRepository extends JpaRepository<SolutionAttempt
 
     // Check if solver already has an active attempt on this problem
     boolean existsByProblemAndSolverAndStatus(Problem problem, SolverProfile solver, SolutionAttemptStatus status);
+
+    @Query("SELECT COUNT(sa) FROM SolutionAttempt sa WHERE sa.problem.id = :problemId AND sa.status = 'ACTIVE'")
+    int countActiveSolversByProblemId(@Param("problemId") UUID problemId);
 }

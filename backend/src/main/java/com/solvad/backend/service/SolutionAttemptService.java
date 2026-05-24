@@ -41,39 +41,19 @@ public class SolutionAttemptService {
     private AuditService auditService;
 
     // -------------------------------------------------------------------------
-    // CLAIM
+    // WORKSPACE INITIALIZATION (Triggered via ClaimRequestService Approval)
     // -------------------------------------------------------------------------
 
     @Transactional
-    public SolutionAttemptResponse claimProblem(UUID solverUserId, UUID problemId, UUID parentAttemptId) {
-        Problem problem = problemRepository.findById(problemId)
-                .orElseThrow(() -> new RuntimeException("Problem not found"));
-
-        boolean isFork = parentAttemptId != null;
-        if (isFork) {
-            if (problem.getStatus() != ProblemStatus.OPEN
-                    && problem.getStatus() != ProblemStatus.SOLVED_OPEN_FOR_IMPROVEMENT) {
-                throw new RuntimeException("Problem is not available for forking");
-            }
-        } else if (problem.getStatus() != ProblemStatus.OPEN) {
-            throw new RuntimeException("Only OPEN problems can be claimed");
-        }
-
-        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
-                .orElseThrow(() -> new RuntimeException("Solver profile not found"));
-
-        if (attemptRepository.existsByProblemAndSolverAndStatus(problem, solver, SolutionAttemptStatus.ACTIVE)) {
-            throw new RuntimeException("You have already claimed this problem");
-        }
-
-        String solverFullName = solver.getFirstName() + " " + solver.getLastName();
+    public SolutionAttemptResponse initializeApprovedAttempt(ClaimRequest request) {
+        Problem problem = request.getProblem();
+        SolverProfile solver = request.getSolver();
 
         SolutionAttempt attempt = new SolutionAttempt(problem, solver);
+        String solverFullName = solver.getFirstName() + " " + solver.getLastName();
 
-        if (parentAttemptId != null) {
-            SolutionAttempt parent = attemptRepository.findById(parentAttemptId)
-                    .orElseThrow(() -> new RuntimeException("Parent attempt not found"));
-
+        if (request.getParentAttempt() != null) {
+            SolutionAttempt parent = request.getParentAttempt();
             attempt.setParentAttempt(parent);
             SolutionAttempt savedAttempt = attemptRepository.save(attempt);
 
@@ -90,45 +70,43 @@ public class SolutionAttemptService {
             String parentName = parent.getSolver().getFirstName() + " " + parent.getSolver().getLastName();
 
             auditService.log(
-                    problemId,
-                    solverUserId,
+                    problem.getId(),
+                    solver.getUser().getId(),
                     solverFullName,
                     "SOLVER",
                     AuditEventType.ATTEMPT_FORKED,
-                    solverFullName + " forked this attempt, building on " + parentName + "'s previous work."
+                    solverFullName + "'s approved proposal generated a forked attempt from " + parentName + "."
             );
 
         } else {
             attemptRepository.save(attempt);
 
             auditService.log(
-                    problemId,
-                    solverUserId,
+                    problem.getId(),
+                    solver.getUser().getId(),
                     solverFullName,
                     "SOLVER",
                     AuditEventType.ATTEMPT_CLAIMED,
-                    solverFullName + " claimed this problem. The seeker has been notified."
+                    solverFullName + "'s proposal was approved. Active workspace generated."
             );
         }
 
-        // Only transition to CLAIMED if it was OPEN. If it's already SOLVED_OPEN_FOR_IMPROVEMENT, leave it.
         if (problem.getStatus() == ProblemStatus.OPEN) {
             problem.setStatus(ProblemStatus.CLAIMED);
             problemRepository.save(problem);
 
             auditService.log(
-                    problemId,
+                    problem.getId(),
                     null,
                     "SYSTEM",
                     "SYSTEM",
                     AuditEventType.STATUS_CHANGED,
-                    "Status automatically changed from OPEN → CLAIMED after solver claimed the problem."
+                    "Status automatically changed from OPEN → CLAIMED after a proposal was approved."
             );
         }
 
         return mapToResponse(attempt, submissionRepository.findByAttempt(attempt));
     }
-
     // -------------------------------------------------------------------------
     // ABANDON
     // -------------------------------------------------------------------------

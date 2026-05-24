@@ -65,20 +65,7 @@ public class SolutionAttemptController {
         }
     }
 
-    @PostMapping("/api/problems/{problemId}/claim")
-    @PreAuthorize("hasRole('SOLVER')")
-    public ResponseEntity<?> claimProblem(
-            @RequestHeader("Authorization") String authHeader,
-            @PathVariable UUID problemId,
-            @RequestParam(required = false) UUID parentAttemptId) { // <-- Added parameter
-        try {
-            UUID solverUserId = extractUserId(authHeader);
-            SolutionAttemptResponse response = attemptService.claimProblem(solverUserId, problemId, parentAttemptId);
-            return ResponseEntity.ok(response);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
+
 
     // -------------------------------------------------------------------------
     // ABANDON — Solver abandons their active claim
