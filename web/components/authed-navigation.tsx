@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import { getDashboardPath } from "@/lib/auth-utils";
 
@@ -9,6 +9,7 @@ export default function AuthedNavigation() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const handleLogout = async () => {
     await logout();
@@ -20,6 +21,14 @@ export default function AuthedNavigation() {
 
   // Check if current path matches
   const isActive = (path: string) => pathname === path;
+  
+  // Check if tab is active for seeker dashboard
+  const isTabActive = (tab: string) => {
+    if (pathname !== "/seeker/dashboard") return false;
+    const currentTab = searchParams.get("tab");
+    if (!currentTab && tab === "home") return true;
+    return currentTab === tab;
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-b border-gray-200">
@@ -35,14 +44,43 @@ export default function AuthedNavigation() {
 
           {/* Tabs */}
           <nav className="flex items-center gap-8">
-            <Link
-              href={homePath}
-              className={`text-gray-900 font-medium hover:text-primary-foreground transition-colors ${
-                isActive(homePath) ? "border-b-2 border-accent pb-1" : ""
-              }`}
-            >
-              Home
-            </Link>
+            {user?.role === "SEEKER" ? (
+              <>
+                <Link
+                  href="/seeker/dashboard"
+                  className={`text-gray-900 font-medium hover:text-primary-foreground transition-colors ${
+                    isTabActive("home") ? "border-b-2 border-accent pb-1" : ""
+                  }`}
+                >
+                  Home
+                </Link>
+                <Link
+                  href="/seeker/dashboard?tab=activity"
+                  className={`text-gray-900 font-medium hover:text-primary-foreground transition-colors ${
+                    isTabActive("activity") ? "border-b-2 border-accent pb-1" : ""
+                  }`}
+                >
+                  Recent Activity
+                </Link>
+                <Link
+                  href="/seeker/dashboard?tab=overview"
+                  className={`text-gray-900 font-medium hover:text-primary-foreground transition-colors ${
+                    isTabActive("overview") ? "border-b-2 border-accent pb-1" : ""
+                  }`}
+                >
+                  Overview
+                </Link>
+              </>
+            ) : (
+              <Link
+                href={homePath}
+                className={`text-gray-900 font-medium hover:text-primary-foreground transition-colors ${
+                  isActive(homePath) ? "border-b-2 border-accent pb-1" : ""
+                }`}
+              >
+                Home
+              </Link>
+            )}
             
             {/* Admin-specific tabs */}
             {user?.role === "ADMIN" && (
