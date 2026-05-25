@@ -232,6 +232,18 @@ public class GeminiService {
         throw new RuntimeException("Failed to get response from Gemini API");
     }
 
+    public String callGeminiAPI(String prompt) {
+        if (prompt == null || prompt.trim().isEmpty()) {
+            throw new IllegalArgumentException("Prompt cannot be empty");
+        }
+        if (prompt.length() > 30_000) {
+            throw new IllegalArgumentException("Prompt exceeds maximum length");
+        }
+        // remove potential injection
+        String sanitizedPrompt = prompt.replaceAll("[\\r\\n]+", " ").trim();
+        return callGeminiAPI(sanitizedPrompt, null);
+    }
+
     private GenerateScopeResponse parseGeminiResponse(String response) {
         try {
             // Clean markdown formatting if Gemini includes it
