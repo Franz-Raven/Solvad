@@ -2,11 +2,13 @@ package com.solvad.backend.service;
 
 import com.solvad.backend.dto.*;
 import com.solvad.backend.entity.*;
+import com.solvad.backend.event.ProblemCreatedEvent;
 import com.solvad.backend.repository.ProblemRepository;
 import com.solvad.backend.repository.ProblemSubtaskRepository;
 import com.solvad.backend.repository.SeekerProfileRepository;
 import com.solvad.backend.repository.SolutionAttemptRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -39,6 +41,11 @@ public class ProblemService {
     @Autowired
     private AuditService auditService;
 
+    @Autowired
+    private VectorSimilarityService vectorSimilarityService;
+
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
     @Autowired
     private ProblemPdfService problemPdfService;
 
@@ -84,7 +91,7 @@ public class ProblemService {
             System.err.println("Failed to generate/upload problem PDF: " + e.getMessage());
             e.printStackTrace();
         }
-        
+
         Problem savedProblem = problemRepository.save(problem);
 
         List<ProblemSubtask> subtasks = request.getSubtasks().stream()
@@ -101,6 +108,7 @@ public class ProblemService {
 
         savedProblem.setTags(MatchmakingService.buildTagsForProblem(savedProblem, savedSubtasks));
         problemRepository.save(savedProblem);
+//        vectorSimilarityService.updateProblemEmbedding(savedProblem.getId());
 
         auditService.log(
                 savedProblem.getId(),
@@ -112,7 +120,9 @@ public class ProblemService {
         );
 
         // Map to response DTO
+        eventPublisher.publishEvent(new ProblemCreatedEvent(savedProblem.getId()));
         return mapToResponse(savedProblem, savedSubtasks, seeker);
+
     }
 
     public List<ProblemResponse> getMyProblems(UUID seekerUserId) {
