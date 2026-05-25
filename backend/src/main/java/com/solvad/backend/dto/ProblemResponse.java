@@ -26,14 +26,17 @@ public class ProblemResponse {
     private List<String> tags = new ArrayList<>();
     private Double matchScore;
     private Boolean courseMatch;
+    private int maxConcurrentSolvers = 3;
+
 
     public ProblemResponse() {
     }
 
     public ProblemResponse(UUID id, String title, String backgroundContext, String primaryStatement,
-                          String objectives, String constraints, String preferredProgram, String sdgFocus, String status,
-                          UUID seekerId, String seekerOrganization, LocalDateTime createdAt,
-                          List<SubtaskResponse> subtasks, List<String> tags, String problemDocumentUrl) {
+                           String objectives, String constraints, String preferredProgram, String sdgFocus, String status,
+                           UUID seekerId, String seekerOrganization, LocalDateTime createdAt,
+                           List<SubtaskResponse> subtasks, List<String> tags, String problemDocumentUrl,
+                           int maxConcurrentSolvers) {
         this.id = id;
         this.title = title;
         this.backgroundContext = backgroundContext;
@@ -49,7 +52,11 @@ public class ProblemResponse {
         this.subtasks = subtasks;
         this.tags = tags != null ? tags : new ArrayList<>();
         this.problemDocumentUrl = problemDocumentUrl;
+        this.maxConcurrentSolvers = maxConcurrentSolvers;
     }
+
+    public int getMaxConcurrentSolvers() { return maxConcurrentSolvers; }
+    public void setMaxConcurrentSolvers(int maxConcurrentSolvers) { this.maxConcurrentSolvers = maxConcurrentSolvers; }
 
     public UUID getId() {
         return id;

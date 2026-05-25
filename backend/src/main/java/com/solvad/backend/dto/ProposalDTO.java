@@ -10,19 +10,24 @@ public class ProposalDTO {
     private UUID parentAttemptId;
     private UUID solverId;
     private UUID problemId;
+    private UUID subtaskId;
+
 
     public ProposalDTO() {
     }
 
-    public ProposalDTO(String proposedApproach, List<String> supportingDocuments, UUID parentAttemptId, UUID solverId, UUID problemId) {
+    public ProposalDTO(String proposedApproach, List<String> supportingDocuments, UUID parentAttemptId, UUID solverId, UUID problemId, UUID subtaskId) {
         this.proposedApproach = proposedApproach;
         this.supportingDocuments = supportingDocuments;
         this.parentAttemptId = parentAttemptId;
         this.solverId = solverId;
         this.problemId = problemId;
+        this.subtaskId = subtaskId;
     }
 
     // Getters and Setters
+    public UUID getSubtaskId() { return subtaskId; }
+    public void setSubtaskId(UUID subtaskId) { this.subtaskId = subtaskId; }
 
     public String getProposedApproach() {
         return proposedApproach;

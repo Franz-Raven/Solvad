@@ -2,14 +2,18 @@ package com.solvad.backend.service;
 
 import com.solvad.backend.dto.*;
 import com.solvad.backend.entity.*;
+import com.solvad.backend.event.ProblemCreatedEvent;
 import com.solvad.backend.repository.ProblemRepository;
 import com.solvad.backend.repository.ProblemSubtaskRepository;
 import com.solvad.backend.repository.SeekerProfileRepository;
 import com.solvad.backend.repository.SolutionAttemptRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import com.solvad.backend.entity.SolutionAttempt;
+import com.solvad.backend.entity.SolutionAttemptStatus;
 
 import java.util.List;
 import java.util.Map;
@@ -37,6 +41,17 @@ public class ProblemService {
     @Autowired
     private AuditService auditService;
 
+    @Autowired
+    private VectorSimilarityService vectorSimilarityService;
+
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
+    @Autowired
+    private ProblemPdfService problemPdfService;
+
+    @Autowired
+    private CloudinaryService cloudinaryService;
+
     public GenerateScopeResponse generateScope(GenerateScopeRequest request, List<MultipartFile> attachments) {
         GenerateScopeResponse response = geminiService.generateSubtasks(
                 request.getTitle(),
@@ -53,11 +68,9 @@ public class ProblemService {
 
     @Transactional
     public ProblemResponse createProblem(UUID seekerUserId, ProblemRequest request) {
-        // Find seeker profile by user ID
         SeekerProfile seeker = seekerProfileRepository.findByUserId(seekerUserId)
                 .orElseThrow(() -> new RuntimeException("Seeker profile not found"));
 
-        // Create and save Problem entity
         Problem problem = new Problem(
                 seeker,
                 request.getTitle(),
@@ -69,9 +82,18 @@ public class ProblemService {
                 request.getSdgFocus()
         );
         
+        try {
+            byte[] pdfBytes = problemPdfService.generateProblemPdf(request, seeker.getOrganizationName());
+            String filename = "problem_" + System.currentTimeMillis() + ".pdf";
+            String pdfUrl = cloudinaryService.uploadBytes(pdfBytes, filename, "problem-documents");
+            problem.setProblemDocumentUrl(pdfUrl);
+        } catch (Exception e) {
+            System.err.println("Failed to generate/upload problem PDF: " + e.getMessage());
+            e.printStackTrace();
+        }
+
         Problem savedProblem = problemRepository.save(problem);
 
-        // Create and save ProblemSubtask entities
         List<ProblemSubtask> subtasks = request.getSubtasks().stream()
                 .map(subtaskReq -> new ProblemSubtask(
                         savedProblem,
@@ -86,6 +108,7 @@ public class ProblemService {
 
         savedProblem.setTags(MatchmakingService.buildTagsForProblem(savedProblem, savedSubtasks));
         problemRepository.save(savedProblem);
+//        vectorSimilarityService.updateProblemEmbedding(savedProblem.getId());
 
         auditService.log(
                 savedProblem.getId(),
@@ -97,7 +120,9 @@ public class ProblemService {
         );
 
         // Map to response DTO
+        eventPublisher.publishEvent(new ProblemCreatedEvent(savedProblem.getId()));
         return mapToResponse(savedProblem, savedSubtasks, seeker);
+
     }
 
     public List<ProblemResponse> getMyProblems(UUID seekerUserId) {
@@ -148,20 +173,21 @@ public class ProblemService {
 
             // FORCE CLOSE LOGIC: If moving to CLOSED or COMPLETED, we must terminate any active attempts
             if (newStatus == ProblemStatus.CLOSED || newStatus == ProblemStatus.COMPLETED) {
-                attemptRepository.findByProblemAndStatus(problem, SolutionAttemptStatus.ACTIVE)
-                        .ifPresent(attempt -> {
-                            attempt.setStatus(SolutionAttemptStatus.TERMINATED); // <-- Updated
-                            attemptRepository.save(attempt);
-
-                            auditService.log(
-                                    problemId,
-                                    seekerUserId,
-                                    seeker.getOrganizationName(),
-                                    "SEEKER",
-                                    AuditEventType.STATUS_CHANGED,
-                                    "Seeker forcefully " + newStatus.name().toLowerCase() + " the problem. The active solution attempt was terminated."
-                            );
-                        });
+                List<SolutionAttempt> activeAttempts = attemptRepository.findByProblemAndStatus(problem, SolutionAttemptStatus.ACTIVE);
+                for (SolutionAttempt attempt : activeAttempts) {
+                    attempt.setStatus(SolutionAttemptStatus.TERMINATED);
+                    attemptRepository.save(attempt);
+                }
+                if (!activeAttempts.isEmpty()) {
+                    auditService.log(
+                            problemId,
+                            seekerUserId,
+                            seeker.getOrganizationName(),
+                            "SEEKER",
+                            AuditEventType.STATUS_CHANGED,
+                            "Seeker forcefully " + newStatus.name().toLowerCase() + " the problem. All active solution attempts were terminated."
+                    );
+                }
             }
 
             problem.setStatus(newStatus);
@@ -235,7 +261,8 @@ public class ProblemService {
                 problem.getCreatedAt(),
                 subtaskResponses,
                 tags,
-                problem.getProblemDocumentUrl()
+                problem.getProblemDocumentUrl(),
+                problem.getMaxConcurrentSolvers()
         );
     }
 
@@ -376,5 +403,32 @@ public class ProblemService {
         }
         
         return count;
+    }
+
+    @Transactional
+    public void updateMaxConcurrentSolvers(UUID seekerUserId, UUID problemId, int maxSolvers) {
+        Problem problem = problemRepository.findById(problemId)
+                .orElseThrow(() -> new RuntimeException("Problem not found"));
+
+        SeekerProfile seeker = seekerProfileRepository.findByUserId(seekerUserId)
+                .orElseThrow(() -> new RuntimeException("Seeker profile not found"));
+
+        if (!problem.getSeeker().getId().equals(seeker.getId())) {
+            throw new RuntimeException("You do not own this problem.");
+        }
+
+        if (maxSolvers < 1) {
+            throw new RuntimeException("Max solvers must be at least 1.");
+        }
+
+        problem.setMaxConcurrentSolvers(maxSolvers);
+        problemRepository.save(problem);
+
+        // Optional: Log it to the Audit service
+        auditService.log(
+                problemId, seekerUserId, seeker.getOrganizationName(), "SEEKER",
+                AuditEventType.PROBLEM_UPDATED,
+                "Updated concurrent solver limit to " + maxSolvers
+        );
     }
 }

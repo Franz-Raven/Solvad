@@ -5,6 +5,7 @@ export interface AuthResponse {
   userId: string;
   email: string;
   role: UserRole;
+  profileUrl?: string;
 }
 
 export interface User {
@@ -15,6 +16,8 @@ export interface User {
   role: UserRole;
   institution?: string;
   degreeProgram?: string;
+  organizationName?: string;
+  profileUrl?: string;
 }
 
 // Common registration fields
@@ -36,6 +39,7 @@ export interface SolverRegisterPayload extends BaseRegisterPayload {
 export interface SeekerRegisterPayload extends BaseRegisterPayload {
   organizationName: string;
   contactPerson: string;
+  contactNumber?: string;
 }
 
 export interface LoginPayload {

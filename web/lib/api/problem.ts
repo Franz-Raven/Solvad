@@ -157,3 +157,22 @@ export async function evaluateProposal(proposalId: string, isApproved: boolean):
     method: "POST",
   });
 }
+
+// Add this to your api/problem.ts file
+
+export async function updateProblemMaxSolvers(problemId: string, maxSolvers: number): Promise<void> {
+  const token = localStorage.getItem("token"); // Adjust this to match how you store your JWT
+
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/api/problems/${problemId}/max-solvers?maxSolvers=${maxSolvers}`, {
+    method: "PUT",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const errorMessage = await response.text();
+    throw new Error(errorMessage || "Failed to update maximum concurrent solvers");
+  }
+}

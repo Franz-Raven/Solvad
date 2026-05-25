@@ -10,12 +10,15 @@ public class SeekerProfileRequest {
     @NotBlank(message = "Contact person is required")
     private String contactPerson;
 
+    private String contactNumber;
+
     public SeekerProfileRequest() {
     }
 
-    public SeekerProfileRequest(String organizationName, String contactPerson) {
+    public SeekerProfileRequest(String organizationName, String contactPerson, String contactNumber) {
         this.organizationName = organizationName;
         this.contactPerson = contactPerson;
+        this.contactNumber = contactNumber;
     }
 
     public String getOrganizationName() {
@@ -32,5 +35,13 @@ public class SeekerProfileRequest {
 
     public void setContactPerson(String contactPerson) {
         this.contactPerson = contactPerson;
+    }
+
+    public String getContactNumber() {
+        return contactNumber;
+    }
+
+    public void setContactNumber(String contactNumber) {
+        this.contactNumber = contactNumber;
     }
 }

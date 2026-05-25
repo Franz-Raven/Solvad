@@ -184,7 +184,8 @@ public class MatchmakingService {
                 problem.getCreatedAt(),
                 subtaskResponses,
                 tags,
-                problem.getProblemDocumentUrl()
+                problem.getProblemDocumentUrl(),
+                problem.getMaxConcurrentSolvers()
         );
     }
 

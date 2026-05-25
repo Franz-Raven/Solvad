@@ -25,14 +25,17 @@ public class SeekerRegisterRequest {
     @NotBlank(message = "Contact person is required")
     private String contactPerson;
 
+    private String contactNumber;
+
     public SeekerRegisterRequest() {
     }
 
-    public SeekerRegisterRequest(String email, String password, String organizationName, String contactPerson) {
+    public SeekerRegisterRequest(String email, String password, String organizationName, String contactPerson, String contactNumber) {
         this.email = email;
         this.password = password;
         this.organizationName = organizationName;
         this.contactPerson = contactPerson;
+        this.contactNumber = contactNumber;
     }
 
     public String getEmail() {
@@ -65,5 +68,13 @@ public class SeekerRegisterRequest {
 
     public void setContactPerson(String contactPerson) {
         this.contactPerson = contactPerson;
+    }
+
+    public String getContactNumber() {
+        return contactNumber;
+    }
+
+    public void setContactNumber(String contactNumber) {
+        this.contactNumber = contactNumber;
     }
 }
