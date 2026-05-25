@@ -7,12 +7,11 @@ import type { ProblemResponse, SeekerNotification } from "@/types/problem";
 import { SeekerOverview } from "@/components/seeker-dashboard/SeekerOverview";
 import { SeekerRecentActivity } from "@/components/seeker-dashboard/SeekerRecentActivity";
 import { SeekerPostedProblems } from "@/components/seeker-dashboard/SeekerPostedProblems";
-import AIInsightsTab from "@/components/problem-detail-seeker/AIInsightsTab";
 
 export default function SeekerDashboardPage() {
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab") || "home";
-
+  
   const [problems, setProblems] = useState<ProblemResponse[]>([]);
   const [notifications, setNotifications] = useState<SeekerNotification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,7 +43,7 @@ export default function SeekerDashboardPage() {
     inProgress: problems.filter((p) => p.status === "IN_PROGRESS").length,
     solved: problems.filter(
       (p) =>
-        p.status === "SOLVED_OPEN_FOR_IMPROVEMENT" || p.status === "COMPLETED",
+        p.status === "SOLVED_OPEN_FOR_IMPROVEMENT" || p.status === "COMPLETED"
     ).length,
   };
 
@@ -58,7 +57,7 @@ export default function SeekerDashboardPage() {
             error={error}
           />
         )}
-
+        
         {activeTab === "overview" && (
           <SeekerOverview
             totalProblems={stats.total}
@@ -66,7 +65,7 @@ export default function SeekerDashboardPage() {
             solved={stats.solved}
           />
         )}
-
+        
         {activeTab === "activity" && (
           <SeekerRecentActivity notifications={notifications} />
         )}
