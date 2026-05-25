@@ -3,7 +3,22 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/auth-context";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Camera } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowLeft,
+  BriefcaseBusiness,
+  Building2,
+  Camera,
+  CheckCircle2,
+  GraduationCap,
+  Mail,
+  Phone,
+  Settings2,
+  Shield,
+  Sparkles,
+  User2,
+  Users2,
+} from "lucide-react";
 import { getMyProfile as getSeekerProfile, updateMyProfile as updateSeekerProfile } from "@/lib/api/seeker";
 import { getMyProfile as getSolverProfile, updateMyProfile as updateSolverProfile } from "@/lib/api/solver";
 import { uploadProfilePicture } from "@/lib/api/user";
@@ -183,337 +198,481 @@ export default function ProfilePage() {
     return user.email[0].toUpperCase();
   };
 
+  const getDisplayName = () => {
+    if (!user) return "Your profile";
+    if (user.role === "SOLVER") {
+      const fullName = [solverData.firstName, solverData.lastName].filter(Boolean).join(" ").trim();
+      return fullName || "Solver profile";
+    }
+    return seekerData.organizationName || "Seeker profile";
+  };
+
+  const getRoleLabel = () => {
+    if (!user) return "";
+    return user.role === "SOLVER" ? "Solver" : "Seeker";
+  };
+
+  const parsedSkills = solverData.skills
+    .split(",")
+    .map((skill) => skill.trim())
+    .filter(Boolean);
+
   if (!user) {
     return null;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4 max-w-4xl">
-        {/* Header */}
-        <div className="mb-6">
-          <button
-            onClick={handleBack}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors mb-4"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="font-medium">Back</span>
-          </button>
-          <h1 className="text-3xl font-bold text-gray-900">Profile</h1>
-          <p className="text-gray-600 mt-1">Manage your account information</p>
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 py-8">
+      <div className="mx-auto max-w-6xl px-4">
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <button
+              onClick={handleBack}
+              className="mb-4 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:border-slate-300 hover:text-slate-900"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>Back</span>
+            </button>
+            <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Profile</h1>
+          </div>
         </div>
 
-        {/* Main Content Card */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          {/* Tabs */}
-          <div className="flex border-b border-gray-200">
-            <button
-              onClick={() => setActiveTab("profile")}
-              className={`flex-1 px-6 py-4 font-medium transition-colors ${
-                activeTab === "profile"
-                  ? "text-accent border-b-2 border-accent bg-accent/5"
-                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-              }`}
-            >
-              Profile Information
-            </button>
-            <button
-              onClick={() => setActiveTab("settings")}
-              className={`flex-1 px-6 py-4 font-medium transition-colors ${
-                activeTab === "settings"
-                  ? "text-accent border-b-2 border-accent bg-accent/5"
-                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-              }`}
-            >
-              Settings
-            </button>
-          </div>
+        <div className="grid gap-6 lg:grid-cols-[320px,1fr]">
+          <aside className="space-y-6">
+            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="flex flex-col items-center text-center">
+                <div className="relative group">
+                  {user.profileUrl ? (
+                    <img
+                      src={user.profileUrl}
+                      alt="Profile"
+                      className="h-28 w-28 rounded-full border-4 border-white object-cover shadow-md ring-1 ring-slate-200"
+                    />
+                  ) : (
+                    <div className="flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent/80 text-3xl font-semibold text-white shadow-md">
+                      {getInitials()}
+                    </div>
+                  )}
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploadingImage}
+                    className="absolute -bottom-1 -right-1 rounded-full border border-white bg-slate-900 p-2.5 text-white shadow-md transition-transform hover:scale-105 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Camera className="h-4 w-4" />
+                  </button>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleProfilePictureUpload}
+                  className="hidden"
+                />
 
-          {/* Content */}
-          <div className="p-8">
-            {/* Success Message */}
-            {success && (
-              <div className="mb-6 p-4 rounded-lg bg-green-500/10 border border-green-500/20 text-green-700">
-                ✓ Profile updated successfully!
-              </div>
-            )}
+                <h2 className="mt-4 text-xl font-semibold text-slate-900">{getDisplayName()}</h2>
+                <p className="mt-1 text-sm text-slate-500">{user.email}</p>
+                <span className="mt-3 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium uppercase tracking-wide text-slate-600">
+                  <Shield className="h-3.5 w-3.5" />
+                  {getRoleLabel()}
+                </span>
 
-            {/* Error Message */}
-            {error && (
-              <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-700">
-                {error}
+                {isUploadingImage ? (
+                  <p className="mt-4 text-sm text-slate-500">Uploading image...</p>
+                ) : (
+                  <p className="mt-4 text-sm text-slate-500">
+                    Upload a clean square image for the best result.
+                  </p>
+                )}
               </div>
-            )}
 
-            {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-accent"></div>
+              <div className="mt-6 space-y-3 border-t border-slate-100 pt-6 text-sm text-slate-600">
+                <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3">
+                  <Mail className="h-4 w-4 text-slate-400" />
+                  <span className="truncate">{user.email}</span>
+                </div>
+
+                {user.role === "SOLVER" ? (
+                  <>
+                    <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3">
+                      <Building2 className="h-4 w-4 text-slate-400" />
+                      <span className="truncate">{solverData.institution || "No institution selected"}</span>
+                    </div>
+                    <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3">
+                      <GraduationCap className="h-4 w-4 text-slate-400" />
+                      <span className="truncate">{solverData.degreeProgram || "No degree program selected"}</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3">
+                      <Building2 className="h-4 w-4 text-slate-400" />
+                      <span className="truncate">{seekerData.organizationName || "No organization set"}</span>
+                    </div>
+                    <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3">
+                      <User2 className="h-4 w-4 text-slate-400" />
+                      <span className="truncate">{seekerData.contactPerson || "No contact person set"}</span>
+                    </div>
+                  </>
+                )}
               </div>
-            ) : (
-              <>
-                {activeTab === "profile" && (
-                  <div className="space-y-6">
-                    {/* Profile Picture Upload */}
-                    <div className="flex flex-col items-center pb-6 border-b border-gray-200">
-                      <div className="relative group">
-                        {user.profileUrl ? (
-                          <img
-                            src={user.profileUrl}
-                            alt="Profile"
-                            className="w-32 h-32 rounded-full object-cover border-4 border-gray-100 shadow-lg"
-                          />
-                        ) : (
-                          <div className="w-32 h-32 rounded-full bg-gradient-to-br from-accent to-primary-foreground flex items-center justify-center text-white font-bold text-4xl shadow-lg">
-                            {getInitials()}
-                          </div>
-                        )}
-                        <button
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={isUploadingImage}
-                          className="absolute bottom-0 right-0 p-3 bg-accent text-white rounded-full shadow-lg hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed group-hover:scale-110"
-                        >
-                          <Camera className="w-5 h-5" />
-                        </button>
+            </div>
+
+          </aside>
+
+          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-200 px-4 pt-4 sm:px-6">
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setActiveTab("profile")}
+                  className={`inline-flex items-center gap-2 rounded-t-2xl px-4 py-3 text-sm font-medium transition-colors ${
+                    activeTab === "profile"
+                      ? "bg-accent/5 text-accent"
+                      : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+                  }`}
+                >
+                  <User2 className="h-4 w-4" />
+                  Profile information
+                </button>
+                <button
+                  onClick={() => setActiveTab("settings")}
+                  className={`inline-flex items-center gap-2 rounded-t-2xl px-4 py-3 text-sm font-medium transition-colors ${
+                    activeTab === "settings"
+                      ? "bg-accent/5 text-accent"
+                      : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+                  }`}
+                >
+                  <Settings2 className="h-4 w-4" />
+                  Settings
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 sm:p-8">
+              {success && (
+                <div className="mb-6 flex items-start gap-3 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>Profile updated successfully.</span>
+                </div>
+              )}
+
+              {error && (
+                <div className="mb-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              {isLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <div className="h-10 w-10 animate-spin rounded-full border-2 border-accent/20 border-b-accent"></div>
+                </div>
+              ) : (
+                <>
+                  {activeTab === "profile" && (
+                    <div className="space-y-6">
+                      <div className="rounded-3xl border border-slate-200 bg-slate-50/60 p-5">
+                        <h2 className="text-lg font-semibold text-slate-900">Profile overview</h2>
+                        <p className="mt-1 text-sm text-slate-600">
+                          Review your basic account details and update the fields that matter most.
+                        </p>
                       </div>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        onChange={handleProfilePictureUpload}
-                        className="hidden"
-                      />
-                      {isUploadingImage && (
-                        <p className="mt-3 text-sm text-gray-600">Uploading...</p>
+
+                      <div className="rounded-3xl border border-slate-200 p-5">
+                        <div className="mb-5 flex items-center gap-3">
+                          <div className="rounded-2xl bg-slate-100 p-2 text-slate-700">
+                            <Shield className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-slate-900">Account</h3>
+                            <p className="text-sm text-slate-500">Read-only information tied to your login.</p>
+                          </div>
+                        </div>
+
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <div>
+                            <label className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+                              <Mail className="h-4 w-4 text-slate-400" />
+                              Email
+                            </label>
+                            <input
+                              type="email"
+                              value={user.email || ""}
+                              disabled
+                              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-500"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+                              <Shield className="h-4 w-4 text-slate-400" />
+                              Role
+                            </label>
+                            <input
+                              type="text"
+                              value={getRoleLabel()}
+                              disabled
+                              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-500"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {user.role === "SEEKER" && (
+                        <div className="rounded-3xl border border-slate-200 p-5">
+                          <div className="mb-5 flex items-center gap-3">
+                            <div className="rounded-2xl bg-slate-100 p-2 text-slate-700">
+                              <Users2 className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-slate-900">Organization details</h3>
+                              <p className="text-sm text-slate-500">This helps solvers identify and contact your team.</p>
+                            </div>
+                          </div>
+
+                          <div className="grid gap-4">
+                            <div>
+                              <label className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+                                <Building2 className="h-4 w-4 text-slate-400" />
+                                Organization Name
+                              </label>
+                              <input
+                                type="text"
+                                value={seekerData.organizationName}
+                                onChange={(e) =>
+                                  setSeekerData({
+                                    ...seekerData,
+                                    organizationName: e.target.value,
+                                  })
+                                }
+                                className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15"
+                              />
+                            </div>
+
+                            <div className="grid gap-4 md:grid-cols-2">
+                              <div>
+                                <label className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+                                  <User2 className="h-4 w-4 text-slate-400" />
+                                  Contact Person
+                                </label>
+                                <input
+                                  type="text"
+                                  value={seekerData.contactPerson}
+                                  onChange={(e) =>
+                                    setSeekerData({
+                                      ...seekerData,
+                                      contactPerson: e.target.value,
+                                    })
+                                  }
+                                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+                                  <Phone className="h-4 w-4 text-slate-400" />
+                                  Contact Number
+                                </label>
+                                <input
+                                  type="tel"
+                                  value={seekerData.contactNumber}
+                                  onChange={(e) =>
+                                    setSeekerData({
+                                      ...seekerData,
+                                      contactNumber: e.target.value,
+                                    })
+                                  }
+                                  placeholder="+63 912 345 6789"
+                                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       )}
-                      <p className="mt-3 text-sm text-gray-500">Click the camera icon to upload a profile picture</p>
-                    </div>
 
-                    {/* User Info (Read-only) */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Email
-                      </label>
-                      <input
-                        type="email"
-                        value={user?.email || ""}
-                        disabled
-                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 cursor-not-allowed"
-                      />
-                    </div>
+                      {user.role === "SOLVER" && (
+                        <div className="rounded-3xl border border-slate-200 p-5">
+                          <div className="mb-5 flex items-center gap-3">
+                            <div className="rounded-2xl bg-slate-100 p-2 text-slate-700">
+                              <BriefcaseBusiness className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-slate-900">Academic and skill profile</h3>
+                              <p className="text-sm text-slate-500">Keep this current so problem recommendations stay relevant.</p>
+                            </div>
+                          </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Role
-                      </label>
-                      <input
-                        type="text"
-                        value={user?.role || ""}
-                        disabled
-                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 cursor-not-allowed"
-                      />
-                    </div>
+                          <div className="grid gap-4 md:grid-cols-2">
+                            <div>
+                              <label className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+                                <User2 className="h-4 w-4 text-slate-400" />
+                                First Name
+                              </label>
+                              <input
+                                type="text"
+                                value={solverData.firstName}
+                                onChange={(e) =>
+                                  setSolverData({
+                                    ...solverData,
+                                    firstName: e.target.value,
+                                  })
+                                }
+                                className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15"
+                              />
+                            </div>
 
-                    {/* Seeker Profile Fields */}
-                    {user?.role === "SEEKER" && (
-                      <>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Organization Name
-                          </label>
-                          <input
-                            type="text"
-                            value={seekerData.organizationName}
-                            onChange={(e) =>
-                              setSeekerData({
-                                ...seekerData,
-                                organizationName: e.target.value,
-                              })
-                            }
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
-                          />
-                        </div>
+                            <div>
+                              <label className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+                                <User2 className="h-4 w-4 text-slate-400" />
+                                Last Name
+                              </label>
+                              <input
+                                type="text"
+                                value={solverData.lastName}
+                                onChange={(e) =>
+                                  setSolverData({
+                                    ...solverData,
+                                    lastName: e.target.value,
+                                  })
+                                }
+                                className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15"
+                              />
+                            </div>
+                          </div>
 
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Contact Person
-                          </label>
-                          <input
-                            type="text"
-                            value={seekerData.contactPerson}
-                            onChange={(e) =>
-                              setSeekerData({
-                                ...seekerData,
-                                contactPerson: e.target.value,
-                              })
-                            }
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Contact Number
-                          </label>
-                          <input
-                            type="tel"
-                            value={seekerData.contactNumber}
-                            onChange={(e) =>
-                              setSeekerData({
-                                ...seekerData,
-                                contactNumber: e.target.value,
-                              })
-                            }
-                            placeholder="+63 912 345 6789"
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
-                          />
-                        </div>
-                      </>
-                    )}
-
-                    {/* Solver Profile Fields */}
-                    {user?.role === "SOLVER" && (
-                      <>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            First Name
-                          </label>
-                          <input
-                            type="text"
-                            value={solverData.firstName}
-                            onChange={(e) =>
-                              setSolverData({
-                                ...solverData,
-                                firstName: e.target.value,
-                              })
-                            }
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Last Name
-                          </label>
-                          <input
-                            type="text"
-                            value={solverData.lastName}
-                            onChange={(e) =>
-                              setSolverData({
-                                ...solverData,
-                                lastName: e.target.value,
-                              })
-                            }
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Institution/University
-                          </label>
-                          <Select
-                            value={solverData.institution}
-                            onValueChange={(value) =>
-                              setSolverData({
-                                ...solverData,
-                                institution: value,
-                              })
-                            }
-                          >
-                            <SelectTrigger className="w-full px-4 py-3 !h-auto">
-                              <SelectValue placeholder="Select your university" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {cebuUniversities.map((university) => (
-                                <SelectItem key={university} value={university}>
-                                  {university}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Degree Program
-                          </label>
-                          <Select
-                            value={solverData.degreeProgram}
-                            onValueChange={(value) =>
-                              setSolverData({
-                                ...solverData,
-                                degreeProgram: value,
-                              })
-                            }
-                          >
-                            <SelectTrigger className="w-full px-4 py-3 !h-auto">
-                              <SelectValue placeholder="Select your degree program" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {programCategories.map((category) => (
-                                <div key={category.name}>
-                                  {category.programs.map((program) => (
-                                    <SelectItem key={program} value={program}>
-                                      {program}
+                          <div className="mt-4 grid gap-4">
+                            <div>
+                              <label className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+                                <Building2 className="h-4 w-4 text-slate-400" />
+                                Institution / University
+                              </label>
+                              <Select
+                                value={solverData.institution}
+                                onValueChange={(value) =>
+                                  setSolverData({
+                                    ...solverData,
+                                    institution: value,
+                                  })
+                                }
+                              >
+                                <SelectTrigger className="!h-auto w-full rounded-2xl border-slate-300 px-4 py-3">
+                                  <SelectValue placeholder="Select your university" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {cebuUniversities.map((university) => (
+                                    <SelectItem key={university} value={university}>
+                                      {university}
                                     </SelectItem>
                                   ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div>
+                              <label className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+                                <GraduationCap className="h-4 w-4 text-slate-400" />
+                                Degree Program
+                              </label>
+                              <Select
+                                value={solverData.degreeProgram}
+                                onValueChange={(value) =>
+                                  setSolverData({
+                                    ...solverData,
+                                    degreeProgram: value,
+                                  })
+                                }
+                              >
+                                <SelectTrigger className="!h-auto w-full rounded-2xl border-slate-300 px-4 py-3">
+                                  <SelectValue placeholder="Select your degree program" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {programCategories.map((category) => (
+                                    <div key={category.name}>
+                                      {category.programs.map((program) => (
+                                        <SelectItem key={program} value={program}>
+                                          {program}
+                                        </SelectItem>
+                                      ))}
+                                    </div>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div>
+                              <label className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+                                <Sparkles className="h-4 w-4 text-slate-400" />
+                                Skills
+                              </label>
+                              <input
+                                type="text"
+                                value={solverData.skills}
+                                onChange={(e) =>
+                                  setSolverData({
+                                    ...solverData,
+                                    skills: e.target.value,
+                                  })
+                                }
+                                placeholder="Java, Python, React, SQL"
+                                className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15"
+                              />
+                              <p className="mt-2 text-sm text-slate-500">
+                                Add comma-separated keywords to improve matching quality.
+                              </p>
+
+                              {parsedSkills.length > 0 && (
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  {parsedSkills.map((skill) => (
+                                    <span
+                                      key={skill}
+                                      className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600"
+                                    >
+                                      {skill}
+                                    </span>
+                                  ))}
                                 </div>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                              )}
+                            </div>
+                          </div>
                         </div>
+                      )}
+                    </div>
+                  )}
 
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Skills (comma-separated)
-                          </label>
-                          <input
-                            type="text"
-                            value={solverData.skills}
-                            onChange={(e) =>
-                              setSolverData({
-                                ...solverData,
-                                skills: e.target.value,
-                              })
-                            }
-                            placeholder="Java, Python, React, etc."
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
-                          />
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
+                  {activeTab === "settings" && (
+                    <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center">
+                      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-slate-600 shadow-sm">
+                        <Settings2 className="h-5 w-5" />
+                      </div>
+                      <h2 className="mt-4 text-lg font-semibold text-slate-900">Settings are staying light for now</h2>
+                      <p className="mt-2 text-sm text-slate-600">
+                        More account controls can live here later, but the essential profile editing tools are already available in the profile tab.
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
 
-                {activeTab === "settings" && (
-                  <div className="space-y-4">
-                    <p className="text-gray-500 text-center py-12">
-                      Settings section coming soon...
-                    </p>
-                  </div>
-                )}
-              </>
+            {activeTab === "profile" && (
+              <div className="flex flex-col-reverse gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4 sm:flex-row sm:items-center sm:justify-end">
+                <button
+                  onClick={handleBack}
+                  className="rounded-full border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={isSaving || isLoading}
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  {isSaving ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
             )}
           </div>
-
-          {/* Footer */}
-          {activeTab === "profile" && (
-            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
-              <button
-                onClick={handleBack}
-                className="px-6 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-white transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={isSaving || isLoading}
-                className="px-6 py-2.5 bg-accent text-white font-medium rounded-lg hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSaving ? "Saving..." : "Save Changes"}
-              </button>
-            </div>
-          )}
         </div>
       </div>
     </div>
