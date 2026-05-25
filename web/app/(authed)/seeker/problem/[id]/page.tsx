@@ -12,6 +12,7 @@ import { SettingsTab } from "@/components/problem-detail-seeker/SettingsTab";
 import { SolutionTreeTab } from "@/components/problem-detail-seeker/SolutionTreeTab";
 import { ProposalsTab } from "@/components/problem-detail-seeker/ProposalsTab";
 import { WorkspaceTab } from "@/components/problem-detail-seeker/WorkspaceTab";
+import AIInsightsTab from "@/components/problem-detail-seeker/AIInsightsTab";
 
 type TabType = "problem" | "proposals" | "workspace" | "insights" | "tree" | "history" | "settings";
 
@@ -313,6 +314,7 @@ export default function ProblemDetailPage() {
             }} 
           />
         )}
+        {activeTab === "insights"  && <AIInsightsTab problemId={problemId} />}  
         {activeTab === "tree"      && <SolutionTreeTab problemId={problemId} highlightedAttemptId={highlightedNodeId} />}
         {activeTab === "history"   && <AuditTimelineTab problemId={problemId} />}
         {activeTab === "settings"  && <SettingsTab problem={problem} onDelete={handleDeleteProblem} />}
