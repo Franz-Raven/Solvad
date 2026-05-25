@@ -45,7 +45,7 @@ export default function SimilarityWarningCard({
             e.stopPropagation();
             window.open(`/seeker/problem/${HistoricalProblemId}`, "_blank");
           }}
-          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-lg transition-colors flex-shrink-0 ml-4"
+          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-lg transition-colors shrink-0 ml-4"
         >
           View Details
         </button>
