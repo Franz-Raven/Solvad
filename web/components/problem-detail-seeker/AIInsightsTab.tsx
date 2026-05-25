@@ -128,7 +128,7 @@ export default function AIInsightsTab({ problemId }: AIInsightsTabProps) {
             </h3>
             <p className="text-sm text-gray-700">
               Found {similarProjects.length} project
-              {similarProjects.length > 1 ? "s" : ""} with ≥75% semantic
+              {similarProjects.length > 1 ? "s" : ""} with ≥60% semantic
               similarity. Review these before proceeding to ensure your problem
               is unique.
             </p>
