@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import { getDashboardPath } from "@/lib/auth-utils";
+import ProfileDropdown from "@/components/profile-dropdown";
 
 export default function AuthedNavigation() {
   const { user, logout } = useAuth();
@@ -95,22 +96,9 @@ export default function AuthedNavigation() {
             )}
           </nav>
 
-          {/* Right Side - User Info & Logout */}
-          <div className="flex items-center gap-4">
-            {user && (
-              <div className="flex flex-col items-end">
-                <span className="text-sm font-semibold text-gray-900">
-                  {user.firstName} {user.lastName}
-                </span>
-                <span className="text-xs text-gray-500">{user.email}</span>
-              </div>
-            )}
-            <button
-              onClick={handleLogout}
-              className="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg"
-            >
-              Logout
-            </button>
+          {/* Right Side - Profile Dropdown */}
+          <div className="flex items-center">
+            <ProfileDropdown onLogout={handleLogout} />
           </div>
         </div>
       </div>

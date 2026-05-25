@@ -9,16 +9,29 @@ public class SeekerProfileResponse {
     private String email;
     private String organizationName;
     private String contactPerson;
+    private String contactNumber;
+    private String profileUrl;
 
     public SeekerProfileResponse() {
     }
 
-    public SeekerProfileResponse(UUID id, UUID userId, String email, String organizationName, String contactPerson) {
+    public SeekerProfileResponse(UUID id, UUID userId, String email, String organizationName, String contactPerson, String contactNumber) {
         this.id = id;
         this.userId = userId;
         this.email = email;
         this.organizationName = organizationName;
         this.contactPerson = contactPerson;
+        this.contactNumber = contactNumber;
+    }
+
+    public SeekerProfileResponse(UUID id, UUID userId, String email, String organizationName, String contactPerson, String contactNumber, String profileUrl) {
+        this.id = id;
+        this.userId = userId;
+        this.email = email;
+        this.organizationName = organizationName;
+        this.contactPerson = contactPerson;
+        this.contactNumber = contactNumber;
+        this.profileUrl = profileUrl;
     }
 
     public UUID getId() {
@@ -59,5 +72,21 @@ public class SeekerProfileResponse {
 
     public void setContactPerson(String contactPerson) {
         this.contactPerson = contactPerson;
+    }
+
+    public String getContactNumber() {
+        return contactNumber;
+    }
+
+    public void setContactNumber(String contactNumber) {
+        this.contactNumber = contactNumber;
+    }
+
+    public String getProfileUrl() {
+        return profileUrl;
+    }
+
+    public void setProfileUrl(String profileUrl) {
+        this.profileUrl = profileUrl;
     }
 }

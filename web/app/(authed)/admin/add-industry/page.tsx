@@ -6,7 +6,6 @@ import Link from "next/link";
 import { registerSeeker } from "@/lib/api/auth";
 
 export default function AddIndustryPage() {
-  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -17,6 +16,7 @@ export default function AddIndustryPage() {
     confirmPassword: "",
     organizationName: "",
     contactPerson: "",
+    contactNumber: "",
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -50,6 +50,7 @@ export default function AddIndustryPage() {
         password: formData.password,
         organizationName: formData.organizationName,
         contactPerson: formData.contactPerson,
+        contactNumber: formData.contactNumber || undefined,
       });
       
       setSuccess(true);
@@ -59,6 +60,7 @@ export default function AddIndustryPage() {
         confirmPassword: "",
         organizationName: "",
         contactPerson: "",
+        contactNumber: "",
       });
 
       setTimeout(() => {
@@ -208,6 +210,21 @@ export default function AddIndustryPage() {
                   className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all text-foreground placeholder:text-muted-foreground"
                   placeholder="John Doe"
                   required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="contactNumber" className="block text-sm font-medium text-foreground mb-2">
+                  Contact Number
+                </label>
+                <input
+                  type="tel"
+                  id="contactNumber"
+                  name="contactNumber"
+                  value={formData.contactNumber}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all text-foreground placeholder:text-muted-foreground"
+                  placeholder="+63 912 345 6789"
                 />
               </div>
             </div>
