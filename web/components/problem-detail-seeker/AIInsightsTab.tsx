@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { fetchSimilarityInsights } from "@/lib/api/similarity";
 import type { SimilarityMatch } from "@/types/similarity";
 import SimilarityWarningCard from "./SimilarityWarningCard";
+import { fetchGapAnalysis, GapAnalysisResponse } from "@/lib/api/gap-analysis";
+import GapAnalysisView from "./GapAnalysisView";
 
 interface AIInsightsTabProps {
   problemId: string;
@@ -14,6 +16,11 @@ export default function AIInsightsTab({ problemId }: AIInsightsTabProps) {
   const [hasDuplicates, setHasDuplicates] = useState(false);
   const [similarProjects, setSimilarProjects] = useState<SimilarityMatch[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  const [selectedHistoricalId, setSelectedHistoricalId] = useState<string | null>(null);
+  const [gapAnalysis, setGapAnalysis] = useState<GapAnalysisResponse | null>(null);
+  const [gapLoading, setGapLoading] = useState(false);
+  const [gapError, setGapError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchSimilarity();
@@ -32,6 +39,28 @@ export default function AIInsightsTab({ problemId }: AIInsightsTabProps) {
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSelectProblem = (id: string) => {
+    setSelectedHistoricalId(id);
+    // Clear previous gap analysis when selection changes
+    setGapAnalysis(null);
+    setGapError(null);
+  };
+
+  const handleViewGapAnalysis = async () => {
+    if (!selectedHistoricalId) return;
+
+    setGapLoading(true);
+    setGapError(null);
+    try {
+      const result = await fetchGapAnalysis(problemId, selectedHistoricalId);
+      setGapAnalysis(result);
+    } catch (err) {
+      setGapError(err instanceof Error ? err.message : "Failed to load gap analysis");
+    } finally {
+      setGapLoading(false);
     }
   };
 
@@ -110,7 +139,7 @@ export default function AIInsightsTab({ problemId }: AIInsightsTabProps) {
       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
         <div className="flex gap-3">
           <svg
-            className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5"
+            className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -142,8 +171,36 @@ export default function AIInsightsTab({ problemId }: AIInsightsTabProps) {
           HistoricalProblemId={project.HistoricalProblemId}
           HistoricalTitle={project.HistoricalTitle}
           SimilarityPercentage={project.SimilarityPercentage}
+          isSelected={selectedHistoricalId === project.HistoricalProblemId}
+            onSelect={handleSelectProblem}
         />
       ))}
+
+      <div className="mt-6 flex justify-end">
+          <button
+            onClick={handleViewGapAnalysis}
+            disabled={!selectedHistoricalId || gapLoading}
+            className={`px-6 py-2 rounded-lg font-semibold transition-colors ${
+              !selectedHistoricalId || gapLoading
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-accent hover:bg-secondary text-white"
+            }`}
+          >
+            {gapLoading ? "Analyzing..." : "View Gap Analysis"}
+          </button>
+        </div>
+
+        {gapError && (
+          <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+            {gapError}
+          </div>
+        )}
+
+        {gapAnalysis && (
+          <div className="mt-8 border-t pt-6">
+            <GapAnalysisView data={gapAnalysis} />
+          </div>
+        )}
     </div>
   );
 }
