@@ -7,14 +7,26 @@ interface GapAnalysisViewProps {
   data: GapAnalysisResponse;
 }
 
+function cleanMarkdown(text: string): string {
+  if (!text) return text;
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '$1')  // bold
+    .replace(/__(.*?)__/g, '$1')      // bold alternate
+    .replace(/\*(.*?)\*/g, '$1')      // italic
+    .replace(/_(.*?)_/g, '$1')        // italic alternate
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // links
+    .replace(/`(.*?)`/g, '$1');       // inline code
+}
+
 export default function GapAnalysisView({ data }: GapAnalysisViewProps) {
   return (
     <div className="space-y-6">
       <h3 className="text-xl font-semibold text-gray-900">Gap Analysis Report</h3>
 
       <div className="bg-accent/5 rounded-lg p-5 border border-accent/20">
-        <h4 className="font-semibold text-accent mb-2">Executive Summary</h4>
-        <p className="text-gray-700">{data.executiveSummary}</p>
+         <h4 className="font-semibold text-accent mb-2">Executive Summary</h4>
+        <p className="text-gray-700">{cleanMarkdown(data.executiveSummary)}</p>
+
       </div>
 
       <Section title="Feature Differences" items={data.featureDifferences} />

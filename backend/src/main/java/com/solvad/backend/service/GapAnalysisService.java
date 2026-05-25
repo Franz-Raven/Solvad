@@ -57,6 +57,15 @@ public class GapAnalysisService {
                 .findBySourceProblemIdAndMatchedHistoricalProblemId(newProblemId, historicalProblemId)
                 .orElseThrow(() -> new RuntimeException("Cache not found"));
 
+        if (cache.getExecutiveSummary() == null || cache.getRecommendation() == null) {
+            gapAnalysisRepository.delete(cache);
+            // Re-fetch from Gemini
+            Problem newProblem = problemRepository.findById(newProblemId).orElseThrow();
+            Problem historicalProblem = problemRepository.findById(historicalProblemId).orElseThrow();
+            GapAnalysisResponse freshResponse = performGapAnalysis(newProblem, historicalProblem);
+            cacheGapAnalysis(newProblemId, historicalProblemId, freshResponse);
+            return freshResponse;
+        }
         try {
             // Deserialize JSON arrays from TEXT columns
             List<String> features = objectMapper.readValue(
@@ -180,7 +189,9 @@ public class GapAnalysisService {
                     historicalProblemId,
                     features,
                     technical,
-                    unique
+                    unique,
+                    response.executiveSummary(),
+                    response.recommendation()
             );
 
             gapAnalysisRepository.save(cache);

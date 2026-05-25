@@ -33,6 +33,12 @@ public class GapAnalysisCache {
     @Column(name = "generated_at", updatable = false)
     private LocalDateTime generatedAt;
 
+    @Column(columnDefinition = "TEXT")
+    private String executiveSummary;
+
+    @Column(columnDefinition = "TEXT")
+    private String recommendation;
+
     public GapAnalysisCache() {}
 
     public GapAnalysisCache(UUID sourceProblemId, UUID matchedHistoricalProblemId,
@@ -43,6 +49,16 @@ public class GapAnalysisCache {
         this.featureDifferences = featureDifferences;
         this.technicalDeviations = technicalDeviations;
         this.uniqueContributions = uniqueContributions;
+    }
+
+    public GapAnalysisCache(UUID sourceProblemId, UUID matchedHistoricalProblemId,
+                            String featureDifferences, String technicalDeviations,
+                            String uniqueContributions,
+                            String executiveSummary, String recommendation) {
+        this(sourceProblemId, matchedHistoricalProblemId, featureDifferences,
+                technicalDeviations, uniqueContributions);
+        this.executiveSummary = executiveSummary;
+        this.recommendation = recommendation;
     }
 
     public UUID getAnalysisId() { return analysisId; }
@@ -70,4 +86,12 @@ public class GapAnalysisCache {
     }
 
     public LocalDateTime getGeneratedAt() { return generatedAt; }
+
+    public String getExecutiveSummary() { return executiveSummary; }
+
+    public void setExecutiveSummary(String executiveSummary) { this.executiveSummary = executiveSummary; }
+
+    public String getRecommendation() { return recommendation; }
+
+    public void setRecommendation(String recommendation) { this.recommendation = recommendation; }
 }
