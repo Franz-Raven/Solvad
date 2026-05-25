@@ -4,6 +4,7 @@ import com.solvad.backend.dto.ProposalDTO;
 import com.solvad.backend.dto.SolutionAttemptResponse;
 import com.solvad.backend.entity.ClaimRequest;
 import com.solvad.backend.entity.ClaimRequestStatus;
+import com.solvad.backend.entity.User;
 import com.solvad.backend.security.JwtService;
 import com.solvad.backend.service.ClaimRequestService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -138,6 +139,9 @@ public class ClaimRequestController {
     // -------------------------------------------------------------------------
     private Map<String, Object> mapToDTO(ClaimRequest r) {
         Map<String, Object> dto = new java.util.HashMap<>();
+        var solver = r.getSolver();
+        User user = solver.getUser();
+        String profilePictureUrl = user.getProfileUrl();
         dto.put("id",                  r.getId());
         dto.put("proposedApproach",    r.getProposedApproach() != null ? r.getProposedApproach() : "");
         dto.put("supportingDocuments", r.getSupportingDocuments() != null ? r.getSupportingDocuments() : "");
@@ -150,7 +154,8 @@ public class ClaimRequestController {
                 "id",          r.getSolver().getId(),
                 "firstName",   r.getSolver().getFirstName(),
                 "lastName",    r.getSolver().getLastName(),
-                "institution", r.getSolver().getInstitution() != null ? r.getSolver().getInstitution() : ""
+                "institution", r.getSolver().getInstitution() != null ? r.getSolver().getInstitution() : "",
+                "profilePictureUrl", profilePictureUrl != null ? profilePictureUrl : ""
         ));
         dto.put("problem", Map.of("id", r.getProblem().getId()));
         return dto;

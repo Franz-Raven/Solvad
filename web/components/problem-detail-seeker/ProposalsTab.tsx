@@ -28,6 +28,8 @@ export function ProposalsTab({ problem, onLocateInTree }: ProposalsTabProps) {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
+  const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
+
   useEffect(() => {
     fetchData();
   }, [problem.id]);
@@ -87,6 +89,36 @@ export function ProposalsTab({ problem, onLocateInTree }: ProposalsTabProps) {
     try { return decodeURIComponent(url).split("/").pop() || "Attachment"; } 
     catch { return "Attachment"; }
   };
+
+  const renderAvatar = (solver: { firstName: string; lastName: string; profilePictureUrl?: string }, id: string, size = 40) => {
+  const hasImage = solver.profilePictureUrl && !imgErrors[id];
+  const initials = `${solver.firstName.charAt(0)}${solver.lastName.charAt(0)}`;
+  const sizeClass = size === 40 ? "w-10 h-10" : "w-12 h-12";
+  const textSize = size === 40 ? "text-sm" : "text-lg";
+  console.log("solver:", solver);
+  console.log("profilePictureUrl:", solver.profilePictureUrl);
+  console.log("hasImage:", hasImage);
+
+  if (hasImage) {
+    return (
+      <div className={`${sizeClass} rounded-full overflow-hidden bg-gray-100 flex-shrink-0 border border-secondary/10 shadow-inner`}>
+        <img
+          src={solver.profilePictureUrl}
+          alt={`${solver.firstName} ${solver.lastName}`}
+          className="w-full h-full object-cover"
+          onError={() => setImgErrors(prev => ({ ...prev, [id]: true }))}
+        />
+      </div>
+    );
+  }
+
+  // Fallback: show initials
+  return (
+    <div className={`${sizeClass} rounded-full bg-gradient-to-br from-secondary/20 to-accent/20 flex items-center justify-center text-secondary font-bold ${textSize} shadow-inner border border-secondary/10 flex-shrink-0`}>
+      {initials}
+    </div>
+  );
+};
 
   // Group by Sub-problem
   const groupedData = useMemo(() => {
@@ -214,6 +246,8 @@ export function ProposalsTab({ problem, onLocateInTree }: ProposalsTabProps) {
                     {group.proposals.map((proposal) => {
                       const fileCount = proposal.supportingDocuments ? proposal.supportingDocuments.split(",").length : 0;
                       const parentAttemptId = (proposal as any).parentAttemptId;
+                      const avatarId = `avatar-${proposal.id}`;
+                      
 
                       return (
                         <div key={proposal.id} className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all flex flex-col h-full relative">
@@ -233,9 +267,7 @@ export function ProposalsTab({ problem, onLocateInTree }: ProposalsTabProps) {
 
                           <div className="p-4 border-b border-gray-100">
                             <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-secondary/20 to-accent/20 flex items-center justify-center text-secondary font-bold text-sm shadow-inner shrink-0 border border-secondary/10">
-                                {proposal.solver.firstName.charAt(0)}{proposal.solver.lastName.charAt(0)}
-                              </div>
+                              {renderAvatar(proposal.solver, avatarId, 40)}
                               <div className="min-w-0">
                                 <h4 className="font-semibold text-gray-900 truncate text-sm">{proposal.solver.firstName} {proposal.solver.lastName}</h4>
                                 <p className="text-[11px] text-gray-500 truncate">{proposal.solver.institution || "Independent Solver"}</p>
@@ -291,9 +323,7 @@ export function ProposalsTab({ problem, onLocateInTree }: ProposalsTabProps) {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200 border border-gray-200">
             <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between flex-shrink-0 bg-gray-50/50 rounded-t-2xl">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-secondary to-accent flex items-center justify-center text-white font-bold text-lg shadow-md border border-white/20">
-                  {selectedProposal.solver.firstName.charAt(0)}{selectedProposal.solver.lastName.charAt(0)}
-                </div>
+                {renderAvatar(selectedProposal.solver, `modal-${selectedProposal.id}`, 48)}
                 <div>
                   <h2 className="text-xl font-bold text-gray-900">{selectedProposal.solver.firstName} {selectedProposal.solver.lastName}</h2>
                   <p className="text-sm text-gray-500">{selectedProposal.solver.institution} • Submitted on {new Date(selectedProposal.createdAt).toLocaleDateString()}</p>
