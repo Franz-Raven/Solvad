@@ -6,7 +6,7 @@ import type { SimilarityMatch } from "@/types/similarity";
 import SimilarityWarningCard from "./SimilarityWarningCard";
 import { fetchGapAnalysis, GapAnalysisResponse } from "@/lib/api/gap-analysis";
 import GapAnalysisView from "./GapAnalysisView";
-console.log("GapAnalysisView type:", typeof GapAnalysisView, GapAnalysisView);
+
 interface AIInsightsTabProps {
   problemId: string;
 }

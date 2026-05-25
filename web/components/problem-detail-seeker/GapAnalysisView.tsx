@@ -10,12 +10,11 @@ interface GapAnalysisViewProps {
 function cleanMarkdown(text: string): string {
   if (!text) return text;
   return text
-    .replace(/\*\*(.*?)\*\*/g, '$1')  // bold
-    .replace(/__(.*?)__/g, '$1')      // bold alternate
-    .replace(/\*(.*?)\*/g, '$1')      // italic
-    .replace(/_(.*?)_/g, '$1')        // italic alternate
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // links
-    .replace(/`(.*?)`/g, '$1');       // inline code
+    .replace(/\*\*/g, '')   // remove all ** (bold markers)
+    .replace(/__/g, '')     // remove all __
+    .replace(/\*/g, '')     // remove single * (italic)
+    .replace(/`/g, '')      // remove backticks
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1'); // convert links to text only
 }
 
 export default function GapAnalysisView({ data }: GapAnalysisViewProps) {

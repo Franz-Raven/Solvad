@@ -85,11 +85,11 @@ public class GapAnalysisService {
             );
 
             return new GapAnalysisResponse(
-                    "Cached analysis",  // Could store executive summary separately
+                    cache.getExecutiveSummary(),
                     features,
                     technical,
                     unique,
-                    "See full analysis"
+                    cache.getRecommendation()
             );
 
         } catch (Exception e) {
