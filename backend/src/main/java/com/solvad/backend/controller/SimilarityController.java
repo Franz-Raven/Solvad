@@ -20,7 +20,7 @@ public class SimilarityController {
     @GetMapping("/{id}/similarity")
     public ResponseEntity<?> getSimilarityInsights(@PathVariable UUID id) {
         try {
-            List<SimilarityResultDTO> similar = vectorSimilarityService.findSimilarProblems(id, 0.75);
+            List<SimilarityResultDTO> similar = vectorSimilarityService.findSimilarProblems(id, 0.60);
 
             Map<String, Object> response = new HashMap<>();
             response.put("hasDuplicates", !similar.isEmpty());
