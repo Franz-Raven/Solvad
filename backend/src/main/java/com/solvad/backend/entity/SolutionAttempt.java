@@ -43,6 +43,14 @@ public class SolutionAttempt {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "target_subtask_id", nullable = true)
+    private ProblemSubtask targetSubtask;
+
+    // getter + setter
+    public ProblemSubtask getTargetSubtask() { return targetSubtask; }
+    public void setTargetSubtask(ProblemSubtask targetSubtask) { this.targetSubtask = targetSubtask; }
+
     // Add this below your other @ManyToOne relationships
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_attempt_id")

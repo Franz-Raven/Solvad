@@ -60,6 +60,7 @@ public class SeekerProfileService {
 
         profile.setOrganizationName(request.getOrganizationName());
         profile.setContactPerson(request.getContactPerson());
+        profile.setContactNumber(request.getContactNumber());
 
         profile = seekerProfileRepository.save(profile);
 
@@ -86,7 +87,9 @@ public class SeekerProfileService {
                 profile.getUser().getId(),
                 profile.getUser().getEmail(),
                 profile.getOrganizationName(),
-                profile.getContactPerson()
+                profile.getContactPerson(),
+                profile.getContactNumber(),
+                profile.getUser().getProfileUrl()
         );
     }
 }

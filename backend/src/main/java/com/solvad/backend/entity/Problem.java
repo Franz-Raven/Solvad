@@ -1,9 +1,7 @@
 package com.solvad.backend.entity;
 
-import com.solvad.backend.converter.FloatArrayVectorConverter;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
-
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -59,11 +57,11 @@ public class Problem {
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
-//
-//    @Convert(converter = FloatArrayVectorConverter.class)
-//    @Column(columnDefinition = "vector(384)")
-//    @Transient
-//    private float[] embedding;
+
+    @Column(name = "max_concurrent_solvers", nullable = false)
+    private int maxConcurrentSolvers = 3;
+
+
 
     public Problem() {
     }
@@ -184,6 +182,6 @@ public class Problem {
         this.tags = tags != null ? tags : new ArrayList<>();
     }
 
-//    public float[] getEmbedding() { return embedding; }
-//    public void setEmbedding(float[] embedding) { this.embedding = embedding; }
+    public int getMaxConcurrentSolvers() { return maxConcurrentSolvers; }
+    public void setMaxConcurrentSolvers(int maxConcurrentSolvers) { this.maxConcurrentSolvers = maxConcurrentSolvers; }
 }

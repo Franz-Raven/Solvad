@@ -37,6 +37,14 @@ public class ClaimRequest {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "target_subtask_id", nullable = true)
+    private ProblemSubtask targetSubtask;
+
+    // getter + setter
+    public ProblemSubtask getTargetSubtask() { return targetSubtask; }
+    public void setTargetSubtask(ProblemSubtask targetSubtask) { this.targetSubtask = targetSubtask; }
+
     public ClaimRequest() {
     }
 
@@ -119,4 +127,6 @@ public class ClaimRequest {
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
+
+
 }

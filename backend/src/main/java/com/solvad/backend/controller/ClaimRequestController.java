@@ -1,6 +1,7 @@
 package com.solvad.backend.controller;
 
 import com.solvad.backend.dto.ProposalDTO;
+import com.solvad.backend.dto.SolutionAttemptResponse;
 import com.solvad.backend.entity.ClaimRequest;
 import com.solvad.backend.entity.ClaimRequestStatus;
 import com.solvad.backend.security.JwtService;
@@ -9,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -27,32 +29,38 @@ public class ClaimRequestController {
     @Autowired
     private JwtService jwtService;
 
+
+
     // -------------------------------------------------------------------------
     // SUBMIT PROPOSAL (Solver Action)
     // POST /api/problems/{problemId}/proposals
-    // -------------------------------------------------------------------------
     @PostMapping("/problems/{problemId}/proposals")
     @PreAuthorize("hasRole('SOLVER')")
     public ResponseEntity<?> submitProposal(
             @RequestHeader("Authorization") String authHeader,
             @PathVariable UUID problemId,
-            @RequestBody ProposalDTO proposalDTO) {
+            @RequestParam("proposedApproach") String proposedApproach,
+            @RequestParam(value = "subtaskId") UUID subtaskId,          // ADD THIS
+            @RequestParam(value = "parentAttemptId", required = false) UUID parentAttemptId,
+            @RequestParam(value = "files", required = false) List<MultipartFile> files) {
         try {
             UUID solverUserId = extractUserId(authHeader);
+
+            ProposalDTO proposalDTO = new ProposalDTO();
             proposalDTO.setProblemId(problemId);
             proposalDTO.setSolverId(solverUserId);
+            proposalDTO.setProposedApproach(proposedApproach);
+            proposalDTO.setParentAttemptId(parentAttemptId);
+            proposalDTO.setSubtaskId(subtaskId);                        // ADD THIS
 
-            ClaimRequest request = claimRequestService.submitProposal(solverUserId, proposalDTO);
+            ClaimRequest request = claimRequestService.submitProposal(solverUserId, proposalDTO, files);
             return ResponseEntity.ok(mapToDTO(request));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
-
     // -------------------------------------------------------------------------
     // GET MY PROPOSAL STATUS (Solver Action)
-    // GET /api/problems/{problemId}/proposals/my-status
-    // Returns { "status": "PENDING" | "APPROVED" | "REJECTED" | "NONE" }
     // -------------------------------------------------------------------------
     @GetMapping("/problems/{problemId}/proposals/my-status")
     @PreAuthorize("hasRole('SOLVER')")
@@ -62,7 +70,7 @@ public class ClaimRequestController {
         try {
             UUID solverUserId = extractUserId(authHeader);
             Optional<ClaimRequestStatus> status =
-                    claimRequestService.getMyProposalStatus(solverUserId, problemId);
+                    claimRequestService.getMyProposalStatusForProblem(solverUserId, problemId); // legacy whole-problem method
             String statusStr = status.map(Enum::name).orElse("NONE");
             return ResponseEntity.ok(Map.of("status", statusStr));
         } catch (RuntimeException e) {
@@ -70,9 +78,27 @@ public class ClaimRequestController {
         }
     }
 
+    @GetMapping("/problems/{problemId}/subtasks/{subtaskId}/proposals/my-status")
+    @PreAuthorize("hasRole('SOLVER')")
+    public ResponseEntity<?> getMyProposalStatusForSubtask(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable UUID problemId,
+            @PathVariable UUID subtaskId) {
+        try {
+            UUID solverUserId = extractUserId(authHeader);
+
+            // FIX: Call getMyProposalStatus instead of getMyProposalStatusForProblem
+            Optional<ClaimRequestStatus> status =
+                    claimRequestService.getMyProposalStatus(solverUserId, problemId, subtaskId);
+
+            String statusStr = status.map(Enum::name).orElse("NONE");
+            return ResponseEntity.ok(Map.of("status", statusStr));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
     // -------------------------------------------------------------------------
     // EVALUATE PROPOSAL (Seeker Action)
-    // POST /api/proposals/{proposalId}/evaluate
     // -------------------------------------------------------------------------
     @PostMapping("/proposals/{proposalId}/evaluate")
     @PreAuthorize("hasRole('SEEKER')")
@@ -92,15 +118,12 @@ public class ClaimRequestController {
 
     // -------------------------------------------------------------------------
     // GET PENDING PROPOSALS (Seeker Action)
-    // GET /api/problems/{problemId}/proposals/pending
-    // Returns a clean DTO list — no raw entity serialization
     // -------------------------------------------------------------------------
     @GetMapping("/problems/{problemId}/proposals/pending")
     @PreAuthorize("hasAnyRole('SEEKER', 'ADMIN')")
     public ResponseEntity<?> getPendingProposals(@PathVariable UUID problemId) {
         try {
-            List<ClaimRequest> pendingRequests =
-                    claimRequestService.getPendingProposalsForProblem(problemId);
+            List<ClaimRequest> pendingRequests = claimRequestService.getPendingProposalsForProblem(problemId);
             List<Map<String, Object>> dtos = pendingRequests.stream()
                     .map(this::mapToDTO)
                     .collect(Collectors.toList());
@@ -114,25 +137,30 @@ public class ClaimRequestController {
     // Helper — map ClaimRequest entity → safe serializable map
     // -------------------------------------------------------------------------
     private Map<String, Object> mapToDTO(ClaimRequest r) {
-        return Map.of(
-                "id",               r.getId(),
-                "proposedApproach", r.getProposedApproach() != null ? r.getProposedApproach() : "",
-                "status",           r.getStatus().name(),
-                "createdAt",        r.getCreatedAt() != null ? r.getCreatedAt().toString() : "",
-                "parentAttemptId",  r.getParentAttempt() != null ? r.getParentAttempt().getId().toString() : "",
-                "solver", Map.of(
-                        "id",        r.getSolver().getId(),
-                        "firstName", r.getSolver().getFirstName(),
-                        "lastName",  r.getSolver().getLastName()
-                ),
-                "problem", Map.of(
-                        "id", r.getProblem().getId()
-                )
-        );
+        Map<String, Object> dto = new java.util.HashMap<>();
+        dto.put("id",                  r.getId());
+        dto.put("proposedApproach",    r.getProposedApproach() != null ? r.getProposedApproach() : "");
+        dto.put("supportingDocuments", r.getSupportingDocuments() != null ? r.getSupportingDocuments() : "");
+        dto.put("status",              r.getStatus().name());
+        dto.put("createdAt",           r.getCreatedAt() != null ? r.getCreatedAt().toString() : "");
+        dto.put("parentAttemptId",     r.getParentAttempt() != null ? r.getParentAttempt().getId().toString() : "");
+        dto.put("targetSubtaskId",     r.getTargetSubtask() != null ? r.getTargetSubtask().getId().toString() : "");
+        dto.put("targetSubtaskTitle",  r.getTargetSubtask() != null ? r.getTargetSubtask().getTitle() : "");
+        dto.put("solver", Map.of(
+                "id",          r.getSolver().getId(),
+                "firstName",   r.getSolver().getFirstName(),
+                "lastName",    r.getSolver().getLastName(),
+                "institution", r.getSolver().getInstitution() != null ? r.getSolver().getInstitution() : ""
+        ));
+        dto.put("problem", Map.of("id", r.getProblem().getId()));
+        return dto;
     }
 
     private UUID extractUserId(String authHeader) {
         String token = authHeader.substring(7);
         return jwtService.extractUserId(token);
     }
+
+
+
 }

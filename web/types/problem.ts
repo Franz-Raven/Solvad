@@ -68,10 +68,13 @@ export interface ProblemResponse {
   seekerId: string;
   organizationName: string;
   createdAt: string;
+  problemDocumentUrl?: string;
   subtasks: SubProblem[];
   tags?: string[];
   matchScore?: number;
   courseMatch?: boolean;
+  maxConcurrentSolvers?: number; 
+  
 }
 
 export interface DiscoveryDashboardResponse {
@@ -99,3 +102,12 @@ export interface PaginatedProblemsResponse {
   totalElements: number;
   pageSize: number;
 }
+
+export interface SubtaskResponse {
+  id: string;
+  title: string;
+  departmentFocus: string;
+  sdgFocus?: string;
+  description: string;
+}
+

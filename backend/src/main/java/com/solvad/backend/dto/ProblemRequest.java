@@ -21,6 +21,7 @@ public class ProblemRequest {
     private String preferredProgram;
     
     private String sdgFocus;
+    private int maxConcurrentSolvers = 3;
     
     @NotNull(message = "Subtasks are required")
     private List<SubtaskRequest> subtasks;
@@ -40,6 +41,9 @@ public class ProblemRequest {
         this.sdgFocus = sdgFocus;
         this.subtasks = subtasks;
     }
+
+    public int getMaxConcurrentSolvers() { return maxConcurrentSolvers; }
+    public void setMaxConcurrentSolvers(int maxConcurrentSolvers) { this.maxConcurrentSolvers = maxConcurrentSolvers; }
 
     public String getTitle() {
         return title;

@@ -1,7 +1,6 @@
 package com.solvad.backend.dto;
 
-// Files are handled as MultipartFile separately in the controller.
-// This DTO carries the text fields only.
+
 public class SubtaskSubmissionRequest {
 
     private String description;

@@ -22,6 +22,9 @@ public class SeekerProfile {
     @Column(name = "contact_person", nullable = false)
     private String contactPerson;
 
+    @Column(name = "contact_number")
+    private String contactNumber;
+
     public SeekerProfile() {
     }
 
@@ -29,6 +32,13 @@ public class SeekerProfile {
         this.user = user;
         this.organizationName = organizationName;
         this.contactPerson = contactPerson;
+    }
+
+    public SeekerProfile(User user, String organizationName, String contactPerson, String contactNumber) {
+        this.user = user;
+        this.organizationName = organizationName;
+        this.contactPerson = contactPerson;
+        this.contactNumber = contactNumber;
     }
 
     public UUID getId() {
@@ -61,5 +71,13 @@ public class SeekerProfile {
 
     public void setContactPerson(String contactPerson) {
         this.contactPerson = contactPerson;
+    }
+
+    public String getContactNumber() {
+        return contactNumber;
+    }
+
+    public void setContactNumber(String contactNumber) {
+        this.contactNumber = contactNumber;
     }
 }

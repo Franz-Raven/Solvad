@@ -190,4 +190,20 @@ public class ProblemController {
         }
     }
 
+    // PUT /api/problems/{problemId}/max-solvers
+    @PutMapping("/problems/{problemId}/max-solvers")
+    @PreAuthorize("hasRole('SEEKER')")
+    public ResponseEntity<?> updateMaxConcurrentSolvers(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable UUID problemId,
+            @RequestParam int maxSolvers) {
+        try {
+            UUID seekerUserId = jwtService.extractUserId(authHeader.substring(7));
+            problemService.updateMaxConcurrentSolvers(seekerUserId, problemId, maxSolvers);
+            return ResponseEntity.ok("Limit updated successfully");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
 }

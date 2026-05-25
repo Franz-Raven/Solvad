@@ -6,7 +6,9 @@ import com.solvad.backend.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -20,6 +22,9 @@ public class ClaimRequestService {
 
     @Autowired
     private ProblemRepository problemRepository;
+
+    @Autowired
+    private ProblemSubtaskRepository subtaskRepository;
 
     @Autowired
     private SolverProfileRepository solverProfileRepository;
@@ -36,46 +41,107 @@ public class ClaimRequestService {
     @Autowired
     private AuditService auditService;
 
-    // Concurrency limit defined in SRS 3.5
-    private static final int MAX_CONCURRENT_SOLVERS = 3;
+    @Autowired
+    private CloudinaryService cloudinaryService;
 
+    // -------------------------------------------------------------------------
+    // SUBMIT PROPOSAL (Solver Action)
+    // Now scoped to a specific subtask instead of the whole problem.
+    // -------------------------------------------------------------------------
     @Transactional
-    public ClaimRequest submitProposal(UUID solverUserId, ProposalDTO proposalDTO) {
+    public ClaimRequest submitProposal(UUID solverUserId, ProposalDTO proposalDTO, List<MultipartFile> files) {
         Problem problem = problemRepository.findById(proposalDTO.getProblemId())
                 .orElseThrow(() -> new RuntimeException("Problem not found"));
 
+        // Validate subtaskId is provided
+        if (proposalDTO.getSubtaskId() == null) {
+            throw new RuntimeException("A specific sub-problem must be selected to submit a proposal.");
+        }
+
+        ProblemSubtask targetSubtask = subtaskRepository.findById(proposalDTO.getSubtaskId())
+                .orElseThrow(() -> new RuntimeException("Sub-problem not found"));
+
+        // Ensure subtask belongs to this problem
+        if (!targetSubtask.getProblem().getId().equals(problem.getId())) {
+            throw new RuntimeException("Sub-problem does not belong to this problem.");
+        }
+
         boolean isFork = proposalDTO.getParentAttemptId() != null;
+
+        // Validate problem status allows proposals
         if (isFork) {
             if (problem.getStatus() != ProblemStatus.OPEN
-                    && problem.getStatus() != ProblemStatus.SOLVED_OPEN_FOR_IMPROVEMENT) {
-                throw new RuntimeException("Problem is not available for forking");
+                    && problem.getStatus() != ProblemStatus.SOLVED_OPEN_FOR_IMPROVEMENT
+                    && problem.getStatus() != ProblemStatus.IN_PROGRESS
+                    && problem.getStatus() != ProblemStatus.CLAIMED) {
+                throw new RuntimeException("Problem is not available for forking.");
             }
-        } else if (problem.getStatus() != ProblemStatus.OPEN) {
-            throw new RuntimeException("Only OPEN problems can accept new proposals");
+        } else {
+            if (problem.getStatus() != ProblemStatus.OPEN
+                    && problem.getStatus() != ProblemStatus.SOLVED_OPEN_FOR_IMPROVEMENT
+                    && problem.getStatus() != ProblemStatus.IN_PROGRESS
+                    && problem.getStatus() != ProblemStatus.CLAIMED) {
+                throw new RuntimeException("This problem is not currently accepting proposals.");
+            }
         }
 
         SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
                 .orElseThrow(() -> new RuntimeException("Solver profile not found"));
 
-        if (claimRequestRepository.existsByProblemIdAndSolverIdAndStatusIn(
-                problem.getId(), solver.getId(), Arrays.asList(ClaimRequestStatus.PENDING, ClaimRequestStatus.APPROVED))) {
-            throw new RuntimeException("You already have a pending or approved proposal for this problem.");
+
+        // Check if solver already has a pending proposal for this specific subtask
+        if (claimRequestRepository.existsByProblemIdAndTargetSubtaskIdAndSolverIdAndStatusIn(
+                problem.getId(),
+                targetSubtask.getId(),
+                solver.getId(),
+                Arrays.asList(ClaimRequestStatus.PENDING))) {
+            throw new RuntimeException("You already have a pending proposal for this sub-problem.");
         }
 
-        if (attemptRepository.existsByProblemAndSolverAndStatus(problem, solver, SolutionAttemptStatus.ACTIVE)) {
-            throw new RuntimeException("You are already actively solving this problem.");
+        // Check if solver already has an active attempt on this specific subtask
+        if (attemptRepository.existsByProblemAndTargetSubtaskAndSolverAndStatus(
+                problem, targetSubtask, solver, SolutionAttemptStatus.ACTIVE)) {
+            throw new RuntimeException("You are already actively working on this sub-problem.");
         }
 
+        // Validate parent attempt if forking
         SolutionAttempt parentAttempt = null;
         if (isFork) {
             parentAttempt = attemptRepository.findById(proposalDTO.getParentAttemptId())
                     .orElseThrow(() -> new RuntimeException("Parent attempt not found"));
+
+            // Ensure the parent attempt was working on the same subtask
+            if (parentAttempt.getTargetSubtask() == null ||
+                    !parentAttempt.getTargetSubtask().getId().equals(targetSubtask.getId())) {
+                throw new RuntimeException("Parent attempt does not belong to the selected sub-problem.");
+            }
         }
 
-        String docs = proposalDTO.getSupportingDocuments() != null && !proposalDTO.getSupportingDocuments().isEmpty() ?
-                String.join(",", proposalDTO.getSupportingDocuments()) : null;
+        // Upload supporting documents to Cloudinary
+        List<String> fileUrls = new ArrayList<>();
+        if (files != null && !files.isEmpty()) {
+            for (MultipartFile file : files) {
+                if (!file.isEmpty()) {
+                    String url = cloudinaryService.uploadFile(
+                            file,
+                            "proposals/" + problem.getId() + "/" + targetSubtask.getId()
+                    );
+                    fileUrls.add(url);
+                }
+            }
+        }
 
-        ClaimRequest request = new ClaimRequest(problem, solver, proposalDTO.getProposedApproach(), docs, parentAttempt);
+        String docs = fileUrls.isEmpty() ? null : String.join(",", fileUrls);
+
+        ClaimRequest request = new ClaimRequest(
+                problem,
+                solver,
+                proposalDTO.getProposedApproach(),
+                docs,
+                parentAttempt
+        );
+        request.setTargetSubtask(targetSubtask);
+
         ClaimRequest savedRequest = claimRequestRepository.save(request);
 
         String solverFullName = solver.getFirstName() + " " + solver.getLastName();
@@ -86,27 +152,40 @@ public class ClaimRequestService {
                 solverFullName,
                 "SOLVER",
                 AuditEventType.PROPOSAL_SUBMITTED,
-                solverFullName + " submitted a proposal to solve this problem."
+                solverFullName + " submitted a proposal for sub-problem \""
+                        + targetSubtask.getTitle() + "\"."
         );
 
         return savedRequest;
     }
 
+    // -------------------------------------------------------------------------
+    // EVALUATE PROPOSAL (Seeker Action)
+    // Concurrency limit is now per-subtask and uses the problem's
+    // seeker-configured maxConcurrentSolvers value.
+    // -------------------------------------------------------------------------
     @Transactional
     public void evaluateProposal(UUID seekerUserId, UUID requestId, boolean isApproved) {
         ClaimRequest request = claimRequestRepository.findById(requestId)
                 .orElseThrow(() -> new RuntimeException("Claim request not found"));
 
         if (request.getStatus() != ClaimRequestStatus.PENDING) {
-            throw new RuntimeException("This proposal has already been evaluated");
+            throw new RuntimeException("This proposal has already been evaluated.");
         }
 
         Problem problem = request.getProblem();
+
         SeekerProfile seeker = seekerProfileRepository.findByUserId(seekerUserId)
                 .orElseThrow(() -> new RuntimeException("Seeker profile not found"));
 
         if (!problem.getSeeker().getId().equals(seeker.getId())) {
-            throw new RuntimeException("You do not own this problem");
+            throw new RuntimeException("You do not own this problem.");
+        }
+
+        // Ensure the proposal has a target subtask
+        ProblemSubtask targetSubtask = request.getTargetSubtask();
+        if (targetSubtask == null) {
+            throw new RuntimeException("This proposal has no associated sub-problem.");
         }
 
         String seekerName = seeker.getOrganizationName();
@@ -121,20 +200,30 @@ public class ClaimRequestService {
                     seekerName,
                     "SEEKER",
                     AuditEventType.PROPOSAL_REJECTED,
-                    seekerName + " rejected the proposal from " + request.getSolver().getFirstName()
+                    seekerName + " rejected the proposal from "
+                            + request.getSolver().getFirstName()
+                            + " for sub-problem \"" + targetSubtask.getTitle() + "\"."
             );
             return;
         }
 
-        int currentActiveSolvers = attemptRepository.countActiveSolversByProblemId(problem.getId());
-        if (currentActiveSolvers >= MAX_CONCURRENT_SOLVERS) {
-            throw new RuntimeException("Maximum concurrent solvers limit (" + MAX_CONCURRENT_SOLVERS + ") reached for this problem.");
+        // Check active solvers for this specific subtask against the problem's configured limit
+        int currentActiveSolvers = attemptRepository.countActiveSolversBySubtaskId(
+                problem.getId(), targetSubtask.getId());
+
+        int maxAllowed = problem.getMaxConcurrentSolvers();
+
+        if (currentActiveSolvers >= maxAllowed) {
+            throw new RuntimeException(
+                    "Maximum concurrent solvers (" + maxAllowed + ") already reached for sub-problem \""
+                            + targetSubtask.getTitle() + "\"."
+            );
         }
 
         request.setStatus(ClaimRequestStatus.APPROVED);
         claimRequestRepository.save(request);
 
-        // Delegate workspace generation to the SolutionAttemptService
+        // Delegate workspace generation to SolutionAttemptService
         solutionAttemptService.initializeApprovedAttempt(request);
 
         auditService.log(
@@ -143,11 +232,15 @@ public class ClaimRequestService {
                 seekerName,
                 "SEEKER",
                 AuditEventType.PROPOSAL_APPROVED,
-                seekerName + " approved the proposal from " + request.getSolver().getFirstName()
+                seekerName + " approved the proposal from "
+                        + request.getSolver().getFirstName()
+                        + " for sub-problem \"" + targetSubtask.getTitle() + "\"."
         );
 
-        if (currentActiveSolvers + 1 >= MAX_CONCURRENT_SOLVERS) {
-            claimRequestRepository.cancelRemainingPendingRequests(problem.getId());
+        // If capacity is now full for this subtask, cancel remaining pending proposals for it
+        if (currentActiveSolvers + 1 >= maxAllowed) {
+            claimRequestRepository.cancelRemainingPendingRequestsForSubtask(
+                    problem.getId(), targetSubtask.getId());
 
             auditService.log(
                     problem.getId(),
@@ -155,28 +248,64 @@ public class ClaimRequestService {
                     "SYSTEM",
                     "SYSTEM",
                     AuditEventType.CAPACITY_REACHED,
-                    "Max solver capacity (3) reached. Remaining pending proposals have been automatically cancelled."
+                    "Max solver capacity (" + maxAllowed + ") reached for sub-problem \""
+                            + targetSubtask.getTitle()
+                            + "\". Remaining pending proposals automatically cancelled."
             );
         }
     }
 
+    // -------------------------------------------------------------------------
+    // GET PENDING PROPOSALS FOR A PROBLEM (Seeker Action)
+    // Returns all pending proposals across all subtasks for a problem.
+    // -------------------------------------------------------------------------
     @Transactional(readOnly = true)
     public List<ClaimRequest> getPendingProposalsForProblem(UUID problemId) {
         Problem problem = problemRepository.findById(problemId)
                 .orElseThrow(() -> new RuntimeException("Problem not found"));
+
         return claimRequestRepository.findByProblemAndStatus(problem, ClaimRequestStatus.PENDING);
     }
 
-
+    // -------------------------------------------------------------------------
+    // GET PENDING PROPOSALS FOR A SPECIFIC SUBTASK (Seeker Action)
+    // -------------------------------------------------------------------------
     @Transactional(readOnly = true)
-    public Optional<ClaimRequestStatus> getMyProposalStatus(UUID solverUserId, UUID problemId) {
+    public List<ClaimRequest> getPendingProposalsForSubtask(UUID problemId, UUID subtaskId) {
+        Problem problem = problemRepository.findById(problemId)
+                .orElseThrow(() -> new RuntimeException("Problem not found"));
+
+        ProblemSubtask subtask = subtaskRepository.findById(subtaskId)
+                .orElseThrow(() -> new RuntimeException("Sub-problem not found"));
+
+        return claimRequestRepository.findByProblemAndTargetSubtaskAndStatus(
+                problem, subtask, ClaimRequestStatus.PENDING);
+    }
+
+    // -------------------------------------------------------------------------
+    // GET MY PROPOSAL STATUS FOR A SPECIFIC SUBTASK (Solver Action)
+    // -------------------------------------------------------------------------
+    @Transactional(readOnly = true)
+    public Optional<ClaimRequestStatus> getMyProposalStatus(UUID solverUserId, UUID problemId, UUID subtaskId) {
         SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
                 .orElseThrow(() -> new RuntimeException("Solver profile not found"));
 
-        // Only return PENDING or APPROVED — anything else means the solver can resubmit
+        return claimRequestRepository
+                .findTopByProblemIdAndTargetSubtaskIdAndSolverIdOrderByCreatedAtDesc(
+                        problemId, subtaskId, solver.getId())
+                .map(ClaimRequest::getStatus)
+                .filter(s -> s == ClaimRequestStatus.PENDING);
+    }
+
+    // LEGACY: GET MY PROPOSAL STATUS FOR A WHOLE PROBLEM
+    @Transactional(readOnly = true)
+    public Optional<ClaimRequestStatus> getMyProposalStatusForProblem(UUID solverUserId, UUID problemId) {
+        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
+                .orElseThrow(() -> new RuntimeException("Solver profile not found"));
+
         return claimRequestRepository
                 .findTopByProblemIdAndSolverIdOrderByCreatedAtDesc(problemId, solver.getId())
                 .map(ClaimRequest::getStatus)
-                .filter(s -> s == ClaimRequestStatus.PENDING || s == ClaimRequestStatus.APPROVED);
+                .filter(s -> s == ClaimRequestStatus.PENDING); // Removed the APPROVED check
     }
 }

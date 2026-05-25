@@ -59,7 +59,7 @@ public class AuthService {
 
         String token = jwtService.generateToken(user.getId(), user.getEmail(), user.getRole().name());
 
-        return new AuthResponse(token, user.getId(), user.getEmail(), user.getRole());
+        return new AuthResponse(token, user.getId(), user.getEmail(), user.getRole(), user.getProfileUrl());
     }
 
     @Transactional
@@ -79,11 +79,12 @@ public class AuthService {
         profile.setUser(user);
         profile.setOrganizationName(request.getOrganizationName());
         profile.setContactPerson(request.getContactPerson());
+        profile.setContactNumber(request.getContactNumber());
         seekerProfileRepository.save(profile);
 
         String token = jwtService.generateToken(user.getId(), user.getEmail(), user.getRole().name());
 
-        return new AuthResponse(token, user.getId(), user.getEmail(), user.getRole());
+        return new AuthResponse(token, user.getId(), user.getEmail(), user.getRole(), user.getProfileUrl());
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -96,7 +97,7 @@ public class AuthService {
 
         String token = jwtService.generateToken(user.getId(), user.getEmail(), user.getRole().name());
 
-        return new AuthResponse(token, user.getId(), user.getEmail(), user.getRole());
+        return new AuthResponse(token, user.getId(), user.getEmail(), user.getRole(), user.getProfileUrl());
     }
 
     private String resolveRegistrationSkills(String skills, String degreeProgram) {

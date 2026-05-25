@@ -9,6 +9,7 @@ public class AuthResponse {
     private UUID userId;
     private String email;
     private Role role;
+    private String profileUrl;
 
     public AuthResponse() {
     }
@@ -18,6 +19,14 @@ public class AuthResponse {
         this.userId = userId;
         this.email = email;
         this.role = role;
+    }
+
+    public AuthResponse(String token, UUID userId, String email, Role role, String profileUrl) {
+        this.token = token;
+        this.userId = userId;
+        this.email = email;
+        this.role = role;
+        this.profileUrl = profileUrl;
     }
 
     public String getToken() {
@@ -50,5 +59,13 @@ public class AuthResponse {
 
     public void setRole(Role role) {
         this.role = role;
+    }
+
+    public String getProfileUrl() {
+        return profileUrl;
+    }
+
+    public void setProfileUrl(String profileUrl) {
+        this.profileUrl = profileUrl;
     }
 }
