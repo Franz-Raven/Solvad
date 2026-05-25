@@ -20,6 +20,7 @@ export interface SolutionAttemptResponse {
   solverFirstName: string;
   solverLastName: string;
   institution: string;
+  profilePictureUrl?: string;
   parentSubmissions?: SubtaskSubmissionResponse[];
   degreeProgram: string;
   status: string;
@@ -74,7 +75,7 @@ export interface ProposalRequest {
 export interface ClaimRequestResponse {
   id: string;
   problem: { id: string };
-  solver: { id: string; firstName: string; lastName: string; institution?: string; };
+  solver: { id: string; firstName: string; lastName: string; institution?: string; profilePictureUrl?: string;};
   proposedApproach: string;
   supportingDocuments?: string;
   status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";

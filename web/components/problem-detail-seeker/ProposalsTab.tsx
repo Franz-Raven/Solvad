@@ -101,7 +101,7 @@ export function ProposalsTab({ problem, onLocateInTree }: ProposalsTabProps) {
 
   if (hasImage) {
     return (
-      <div className={`${sizeClass} rounded-full overflow-hidden bg-gray-100 flex-shrink-0 border border-secondary/10 shadow-inner`}>
+      <div className={`${sizeClass} rounded-full overflow-hidden bg-gray-100 shrink-0 border border-secondary/10 shadow-inner`}>
         <img
           src={solver.profilePictureUrl}
           alt={`${solver.firstName} ${solver.lastName}`}
@@ -114,7 +114,7 @@ export function ProposalsTab({ problem, onLocateInTree }: ProposalsTabProps) {
 
   // Fallback: show initials
   return (
-    <div className={`${sizeClass} rounded-full bg-gradient-to-br from-secondary/20 to-accent/20 flex items-center justify-center text-secondary font-bold ${textSize} shadow-inner border border-secondary/10 flex-shrink-0`}>
+    <div className={`${sizeClass} rounded-full bg-linear-to-br from-secondary/20 to-accent/20 flex items-center justify-center text-secondary font-bold ${textSize} shadow-inner border border-secondary/10 shrink-0`}>
       {initials}
     </div>
   );
@@ -319,9 +319,9 @@ export function ProposalsTab({ problem, onLocateInTree }: ProposalsTabProps) {
 
       {/* ─── REVIEW MODAL ─── */}
       {selectedProposal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto" onClick={(e) => { if (e.target === e.currentTarget && !actionLoading) setSelectedProposal(null); }}>
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto" onClick={(e) => { if (e.target === e.currentTarget && !actionLoading) setSelectedProposal(null); }}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200 border border-gray-200">
-            <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between flex-shrink-0 bg-gray-50/50 rounded-t-2xl">
+            <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between shrink-0 bg-gray-50/50 rounded-t-2xl">
               <div className="flex items-center gap-4">
                 {renderAvatar(selectedProposal.solver, `modal-${selectedProposal.id}`, 48)}
                 <div>
@@ -365,7 +365,7 @@ export function ProposalsTab({ problem, onLocateInTree }: ProposalsTabProps) {
               )}
             </div>
 
-            <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex justify-end gap-3 rounded-b-2xl flex-shrink-0">
+            <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex justify-end gap-3 rounded-b-2xl shrink-0">
               <button onClick={() => handleEvaluation(selectedProposal.id, false)} disabled={actionLoading !== null} className="px-6 py-2.5 text-red-600 bg-white hover:bg-red-50 border border-red-200 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 shadow-sm">
                 {actionLoading === selectedProposal.id ? "Rejecting..." : "Reject Proposal"}
               </button>
@@ -393,7 +393,7 @@ export function ProposalsTab({ problem, onLocateInTree }: ProposalsTabProps) {
 
       {/* ─── NOTIFICATION MODAL ─── */}
       {notification && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setNotification(null)}>
+        <div className="fixed inset-0 z-200 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setNotification(null)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center border border-gray-100 animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
             <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner ${notification.type === "success" ? "bg-green-50 text-green-500 border border-green-100" : "bg-red-50 text-red-500 border border-red-100"}`}>
               {notification.type === "success" 

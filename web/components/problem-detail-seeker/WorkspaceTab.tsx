@@ -22,6 +22,8 @@ export function WorkspaceTab({ problem, onProblemUpdate, onLocateInTree }: Works
   const [isSavingLimit, setIsSavingLimit] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
+  const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
+
   // Notification Modal State
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
@@ -65,6 +67,37 @@ export function WorkspaceTab({ problem, onProblemUpdate, onLocateInTree }: Works
     });
   };
 
+  const renderAvatar = (
+    solver: { firstName: string; lastName: string; profilePictureUrl?: string },
+    id: string,
+    size: number = 40
+  ) => {
+    const hasImage = solver.profilePictureUrl && !imgErrors[id];
+    const initials = `${solver.firstName.charAt(0)}${solver.lastName.charAt(0)}`;
+    const sizeClass = size === 40 ? "w-10 h-10" : "w-8 h-8";
+    const textSize = size === 40 ? "text-sm" : "text-[10px]";
+
+    if (hasImage) {
+      return (
+        <div className={`${sizeClass} rounded-full overflow-hidden bg-gray-100 shrink-0 border border-secondary/10 shadow-inner`}>
+          <img
+            src={solver.profilePictureUrl}
+            alt={`${solver.firstName} ${solver.lastName}`}
+            className="w-full h-full object-cover"
+            onError={() => setImgErrors(prev => ({ ...prev, [id]: true }))}
+          />
+        </div>
+      );
+    }
+
+    // Fallback initials
+    return (
+      <div className={`${sizeClass} rounded-full bg-linear-to-br from-secondary/20 to-accent/20 flex items-center justify-center text-secondary font-bold ${textSize} shadow-inner border border-secondary/10 shrink-0`}>
+        {initials}
+      </div>
+    );
+  };
+
   const groupedData = useMemo(() => {
     const map = new Map<string, { id: string; title: string; active: SolutionAttemptResponse[] }>();
     
@@ -101,7 +134,7 @@ export function WorkspaceTab({ problem, onProblemUpdate, onLocateInTree }: Works
   return (
     <div className="space-y-6">
       {/* ── Settings Banner: Max Concurrent Solvers ── */}
-      <div className="bg-gradient-to-r from-accent/10 to-secondary/10 rounded-xl border border-accent/20 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-linear-to-r from-accent/10 to-secondary/10 rounded-xl border border-accent/20 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h3 className="font-bold text-gray-900 flex items-center gap-2">
             <svg className="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
@@ -169,11 +202,18 @@ export function WorkspaceTab({ problem, onProblemUpdate, onLocateInTree }: Works
                 <div className="flex items-center gap-4">
                   {group.active.length > 0 && (
                     <div className="flex -space-x-2">
-                      {group.active.map((solver, idx) => (
-                        <div key={idx} title={`${solver.solverFirstName} ${solver.solverLastName}`} className="w-8 h-8 rounded-full border-2 border-white bg-gradient-to-br from-secondary to-accent flex items-center justify-center text-white text-[10px] font-bold shadow-sm">
-                          {solver.solverFirstName.charAt(0)}{solver.solverLastName.charAt(0)}
-                        </div>
-                      ))}
+                      {group.active.map((solver, idx) => {
+                        const avatarId = `header-${group.id}-${solver.id}`;
+                        return (
+                          <div key={idx} title={`${solver.solverFirstName} ${solver.solverLastName}`}>
+                            {renderAvatar(
+                              { firstName: solver.solverFirstName, lastName: solver.solverLastName, profilePictureUrl: solver.profilePictureUrl },
+                              avatarId,
+                              32
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                   <svg className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${isCollapsed ? "" : "rotate-180"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
@@ -220,7 +260,7 @@ export function WorkspaceTab({ problem, onProblemUpdate, onLocateInTree }: Works
 
       {/* ─── NOTIFICATION MODAL ─── */}
       {notification && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setNotification(null)}>
+        <div className="fixed inset-0 z-200 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setNotification(null)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center border border-gray-100 animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
             <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner ${notification.type === "success" ? "bg-green-50 text-green-500 border border-green-100" : "bg-red-50 text-red-500 border border-red-100"}`}>
               {notification.type === "success" 
