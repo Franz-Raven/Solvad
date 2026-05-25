@@ -13,7 +13,7 @@ export async function fetchGapAnalysis(
   historicalProblemId: string
 ): Promise<GapAnalysisResponse> {
   return apiRequest<GapAnalysisResponse>(
-    `/problems/${newProblemId}/gap-analysis?historicalId=${historicalProblemId}`,
+    `/gap-analysis?newProblemId=${newProblemId}&historicalProblemId=${historicalProblemId}`,
     { method: "GET" }
   );
 }

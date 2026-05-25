@@ -4,15 +4,26 @@ interface SimilarityWarningCardProps {
   HistoricalProblemId: string;
   HistoricalTitle: string;
   SimilarityPercentage: number;
+  isSelected: boolean;
+  onSelect: (id: string) => void;
 }
 
 export default function SimilarityWarningCard({
   HistoricalProblemId,
   HistoricalTitle,
   SimilarityPercentage,
+  isSelected,
+  onSelect,
 }: SimilarityWarningCardProps) {
   return (
-    <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 hover:shadow-lg transition-shadow">
+    <div
+      onClick={() => onSelect(HistoricalProblemId)}
+      className={`bg-white rounded-xl shadow-md border p-6 hover:shadow-lg transition-all cursor-pointer ${
+        isSelected
+          ? "border-accent ring-2 ring-accent/20"
+          : "border-gray-200"
+      }`}
+    >
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-3">
@@ -29,11 +40,12 @@ export default function SimilarityWarningCard({
             {HistoricalTitle}
           </h4>
         </div>
-        <button
-          onClick={() =>
-            window.open(`/seeker/problem/${HistoricalProblemId}`, "_blank")
-          }
-          className="px-4 py-2 bg-accent hover:bg-secondary text-white font-semibold rounded-lg transition-colors flex-shrink-0 ml-4"
+       <button
+          onClick={(e) => {
+            e.stopPropagation();
+            window.open(`/seeker/problem/${HistoricalProblemId}`, "_blank");
+          }}
+          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-lg transition-colors flex-shrink-0 ml-4"
         >
           View Details
         </button>
