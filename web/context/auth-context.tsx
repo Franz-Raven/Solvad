@@ -4,6 +4,8 @@ import { createContext, useContext, useEffect, useState, useCallback } from "rea
 import { useRouter } from "next/navigation";
 import type { User, UserRole } from "@/types/auth";
 import { performLogout } from "@/lib/auth-utils";
+import { getMyProfile as getSeekerProfile } from "@/lib/api/seeker";
+import { getMyProfile as getSolverProfile } from "@/lib/api/solver";
 
 type AuthContextValue = {
   user: User | null;
@@ -37,15 +39,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const userRole = localStorage.getItem("userRole") as UserRole | null;
 
         if (token && userId && userEmail && userRole) {
-          // Set user from localStorage
-          // In a production app, you'd want to validate the token with the backend
-          setUser({
+          // Set basic user info first
+          const basicUser: User = {
             id: userId,
             email: userEmail,
-            firstName: "", // You can fetch full profile from backend
+            firstName: "",
             lastName: "",
             role: userRole,
-          });
+          };
+          
+          setUser(basicUser);
+
+          // Fetch full profile based on role
+          try {
+            if (userRole === "SEEKER") {
+              const seekerProfile = await getSeekerProfile();
+              setUser({
+                ...basicUser,
+                organizationName: seekerProfile.organizationName,
+                profileUrl: seekerProfile.profileUrl,
+              });
+            } else if (userRole === "SOLVER") {
+              const solverProfile = await getSolverProfile();
+              setUser({
+                ...basicUser,
+                firstName: solverProfile.firstName,
+                lastName: solverProfile.lastName,
+                institution: solverProfile.institution,
+                degreeProgram: solverProfile.degreeProgram,
+                profileUrl: solverProfile.profileUrl,
+              });
+            }
+          } catch (profileErr) {
+            console.error("Failed to fetch profile", profileErr);
+            // Keep basic user info even if profile fetch fails
+          }
         } else {
           setUser(null);
         }
