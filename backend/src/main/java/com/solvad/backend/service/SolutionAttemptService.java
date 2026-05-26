@@ -588,6 +588,7 @@ public class SolutionAttemptService {
                 .collect(Collectors.toList());
 
         SolverProfile solver = attempt.getSolver();
+        String profilePictureUrl = solver.getUser().getProfileUrl();
 
         UUID parentId = attempt.getParentAttempt() != null ? attempt.getParentAttempt().getId() : null;
         String parentName = attempt.getParentAttempt() != null ? attempt.getParentAttempt().getSolver().getFirstName() + " " + attempt.getParentAttempt().getSolver().getLastName() : null;
@@ -614,6 +615,7 @@ public class SolutionAttemptService {
                 solver.getId(),
                 solver.getFirstName(),
                 solver.getLastName(),
+                profilePictureUrl,
                 solver.getInstitution(),
                 solver.getDegreeProgram(),
                 attempt.getStatus().name(),
