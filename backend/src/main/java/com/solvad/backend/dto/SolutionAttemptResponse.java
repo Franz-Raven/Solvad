@@ -12,6 +12,7 @@ public class SolutionAttemptResponse {
     private UUID solverId;
     private String solverFirstName;
     private String solverLastName;
+    private String profilePictureUrl;
     private String solverInstitution;
     private String solverDegreeProgram;
     private String status;
@@ -37,7 +38,7 @@ public class SolutionAttemptResponse {
     }
 
     public SolutionAttemptResponse(UUID id, UUID problemId, String problemTitle,
-                                   UUID solverId, String solverFirstName, String solverLastName,
+                                   UUID solverId, String solverFirstName, String solverLastName, String profilePictureUrl,
                                    String solverInstitution, String solverDegreeProgram,
                                    String status, List<SubtaskSubmissionResponse> submissions,
                                    LocalDateTime claimedAt, LocalDateTime updatedAt,
@@ -51,6 +52,7 @@ public class SolutionAttemptResponse {
         this.solverId = solverId;
         this.solverFirstName = solverFirstName;
         this.solverLastName = solverLastName;
+        this.profilePictureUrl = profilePictureUrl;
         this.solverInstitution = solverInstitution;
         this.solverDegreeProgram = solverDegreeProgram;
         this.status = status;
@@ -111,4 +113,7 @@ public class SolutionAttemptResponse {
 
     public String getDeltaDescription() { return deltaDescription; }
     public void setDeltaDescription(String deltaDescription) { this.deltaDescription = deltaDescription; }
+
+    public String getProfilePictureUrl() { return profilePictureUrl; }
+    public void setProfilePictureUrl(String profilePictureUrl) { this.profilePictureUrl = profilePictureUrl; }
 }

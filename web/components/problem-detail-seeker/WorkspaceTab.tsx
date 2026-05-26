@@ -229,9 +229,15 @@ export function WorkspaceTab({ problem, onProblemUpdate, onLocateInTree }: Works
                       {group.active.map((solver, idx) => (
                         <div key={idx} className="flex flex-col gap-4 bg-gray-50 border border-gray-200 p-4 rounded-xl hover:shadow-sm transition-all hover:border-accent/30">
                           <div className="flex items-start gap-3">
-                            <div className="w-10 h-10 rounded-full bg-secondary/10 text-secondary flex items-center justify-center text-xs font-bold border border-secondary/20 shrink-0">
-                              {solver.solverFirstName.charAt(0)}{solver.solverLastName.charAt(0)}
-                            </div>
+                            {renderAvatar(
+                              { 
+                                firstName: solver.solverFirstName, 
+                                lastName: solver.solverLastName, 
+                                profilePictureUrl: solver.profilePictureUrl 
+                              },
+                              `card-${solver.id}`,
+                              40
+                            )}
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-bold text-gray-900 truncate">{solver.solverFirstName} {solver.solverLastName}</p>
                               <p className="text-[11px] text-gray-500 truncate">{solver.institution}</p>
