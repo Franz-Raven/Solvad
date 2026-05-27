@@ -51,7 +51,7 @@ export function SeekerPostedProblems({ problems, loading, error }: SeekerPostedP
         sdgFilter !== "all" ? sdgFilter : undefined,
         dateSort,
         currentPage,
-        20
+        ITEMS_PER_PAGE
       );
       setPaginatedData(result);
     } catch (err) {
@@ -89,6 +89,7 @@ export function SeekerPostedProblems({ problems, loading, error }: SeekerPostedP
         return "bg-gray-100 text-gray-700";
     }
   };
+  const ITEMS_PER_PAGE = 5;
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -229,7 +230,7 @@ export function SeekerPostedProblems({ problems, loading, error }: SeekerPostedP
                 className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg hover:bg-accent/20 transition-colors border border-gray-200"
               >
                 <div className="w-12 h-12 bg-gradient-to-br from-accent to-secondary rounded-lg flex items-center justify-center text-white font-bold">
-                  {currentPage * 20 + index + 1}
+                  {currentPage * ITEMS_PER_PAGE + index + 1}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
