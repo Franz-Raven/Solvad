@@ -9,6 +9,7 @@ import {
   Lightbulb,
   AlertCircle,
   CheckCircle2,
+  RefreshCw,
 } from "lucide-react";
 
 function cleanMarkdown(text: string): string {
@@ -23,24 +24,47 @@ function cleanMarkdown(text: string): string {
 
 interface GapAnalysisViewProps {
   data: GapAnalysisResponse;
+  onRefresh?: () => Promise<void>;
+  isRefreshing?: boolean;         
 }
 
-export default function GapAnalysisView({ data }: GapAnalysisViewProps) {
+export default function GapAnalysisView({ data, onRefresh, isRefreshing = false }: GapAnalysisViewProps) {
   const isUnique = data.recommendation.toLowerCase().includes("yes");
+
+  if (isRefreshing) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <RefreshCw className="w-8 h-8 text-accent animate-spin mb-3" />
+        <p className="text-sm text-gray-500">Refreshing analysis...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="bg-linear-to-r from-accent/10 to-primary-foreground/5 rounded-xl p-6 border border-accent/20">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-accent/20 rounded-lg">
-            <FileText className="w-6 h-6 text-accent" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-accent/20 rounded-lg">
+              <FileText className="w-6 h-6 text-accent" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-gray-900">Gap Analysis Report</h3>
+              <p className="text-sm text-gray-600 mt-0.5">
+                Comparative analysis between your problem and historical capstone
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-xl font-bold text-gray-900">Gap Analysis Report</h3>
-            <p className="text-sm text-gray-600 mt-0.5">
-              Comparative analysis between your problem and historical capstone
-            </p>
-          </div>
+          {onRefresh && (
+            <button
+              onClick={onRefresh}
+              disabled={isRefreshing}
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:text-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+              {isRefreshing ? "Refreshing..." : "Refresh Analysis"}
+            </button>
+          )}
         </div>
       </div>
 
@@ -160,6 +184,7 @@ function ListCard({
           ))}
         </ul>
       </div>
+      
     </div>
   );
 }

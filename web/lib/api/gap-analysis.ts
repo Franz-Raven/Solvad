@@ -10,10 +10,9 @@ export interface GapAnalysisResponse {
 
 export async function fetchGapAnalysis(
   newProblemId: string,
-  historicalProblemId: string
+  historicalProblemId: string,
+  refresh = false
 ): Promise<GapAnalysisResponse> {
-  return apiRequest<GapAnalysisResponse>(
-    `/gap-analysis?newProblemId=${newProblemId}&historicalProblemId=${historicalProblemId}`,
-    { method: "GET" }
-  );
+  const url = `/gap-analysis?newProblemId=${newProblemId}&historicalProblemId=${historicalProblemId}${refresh ? '&refresh=true' : ''}`;
+  return apiRequest<GapAnalysisResponse>(url, { method: "GET" });
 }
