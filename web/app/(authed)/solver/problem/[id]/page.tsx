@@ -228,7 +228,7 @@ export default function SolverProblemDetailPage() {
       )}
 
       {/* ── Sticky header ── */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-60 shadow-sm">
         <div className="max-w-7xl mx-auto px-8 py-6">
           <Link
             href="/solver/dashboard"

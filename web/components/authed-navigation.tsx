@@ -39,7 +39,7 @@ export default function AuthedNavigation() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur ...">
+    <header className="sticky top-0 z-100 w-full bg-white/95 backdrop-blur ...">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}

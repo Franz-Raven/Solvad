@@ -143,7 +143,7 @@ export default function SolverWorkspacePage() {
       
       {/* ── Custom Confirmation Modals ── */}
       {activeModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-6">
               <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 ${activeModal === 'abandon' ? 'bg-red-100 text-red-600' : 'bg-accent/10 text-accent'}`}>
