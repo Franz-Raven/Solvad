@@ -200,7 +200,7 @@ function DayGroup({
                 <div
                   className={`
                     w-10 h-10 rounded-full flex items-center justify-center
-                    flex-shrink-0 z-50 isolate
+                    flex-shrink-0 relative z-0
                     ring-2 ring-white ring-offset-0
                     shadow-md
                     ${config.dotColor}
