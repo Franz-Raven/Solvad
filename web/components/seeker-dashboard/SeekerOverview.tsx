@@ -5,8 +5,8 @@ import {AreaChart, Area, BarChart as ReBarChart, Bar, XAxis, YAxis, CartesianGri
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import type { ProblemResponse } from "@/types/problem";
 import type { ProblemStatusGroupDto, SdgDistributionDto } from "@/types/dashboard.types";
-import { BarChart as SdgBarChart } from "@/components/charts/BarChart";      // recharts version
-import { DonutChart } from "@/components/charts/DonutChart";                   // recharts version
+import { BarChart as SdgBarChart } from "@/components/charts/BarChart";
+import { DonutChart } from "@/components/charts/DonutChart";
 import { apiRequest } from "@/lib/api";
 
 interface SeekerOverviewProps {
@@ -28,7 +28,7 @@ function buildMonthlyTimeline(problems: ProblemResponse[]): { month: string; pos
   });
 }
 
-/** by department / preferredProgram, count how many are COMPLETED. */
+/** by preferredProgram, count how many are COMPLETED. */
 function buildDeptData(problems: ProblemResponse[]): { dept: string; completed: number }[] {
   const map: Record<string, number> = {};
   problems.forEach((p) => {
@@ -44,18 +44,6 @@ function buildDeptData(problems: ProblemResponse[]): { dept: string; completed: 
 
 const timelineConfig: ChartConfig = { posted: { label: "Problems posted", color: "#6366f1" } };
 const deptConfig: ChartConfig = { completed: { label: "Completed", color: "#6366f1" } };
-
-function StatCard({ label, value, sub, accentClass }: { label: string; value: string | number; sub: string; accentClass: string }) {
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3 hover:shadow-md transition-shadow duration-200">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">{label}</span>
-      </div>
-      <p className={`text-4xl font-bold leading-none ${accentClass}`}>{value}</p>
-      <p className="text-xs text-gray-400">{sub}</p>
-    </div>
-  );
-}
 
 function SectionCard({ title, subtitle, badge, children }: { title: string; subtitle?: string; badge?: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -143,15 +131,23 @@ export function SeekerOverview({ problems, loading = false }: SeekerOverviewProp
 
   return (
     <div className="space-y-6">
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total Posted" value={stats.total} sub="All problems you have submitted" accentClass="text-gray-900" />
-        <StatCard label="Open / Active" value={stats.open + stats.inProgress} sub={`${stats.open} open · ${stats.inProgress} in progress`} accentClass="text-indigo-600" />
-        <StatCard label="Completed" value={stats.completed} sub="Successfully solved" accentClass="text-emerald-600" />
-        <StatCard label="Success Rate" value={`${stats.successRate}%`} sub="Completed ÷ eligible problems" accentClass={stats.successRate >= 70 ? "text-emerald-600" : stats.successRate >= 40 ? "text-amber-500" : "text-rose-500"} />
+
+      {/* SDG Bar Chart + Status Donut Chart */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {chartLoading ? (
+          <>
+            <div className="bg-white rounded-xl border border-gray-200 h-80 animate-pulse" />
+            <div className="bg-white rounded-xl border border-gray-200 h-80 animate-pulse" />
+          </>
+        ) : (
+          <>
+            <SdgBarChart sdgData={sdgData} title="Problems by SDG Focus" />
+            <DonutChart statusData={statusData} title="Problem Status Distribution" />
+          </>
+        )}
       </div>
 
-      {/* Timeline + Department charts */}
+      {/* Timeline + Program charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* problems posted over time */}
         <SectionCard title="Problems Posted Over Time" subtitle="Monthly · last 6 months" badge={<span className="text-xs font-semibold bg-indigo-50 text-indigo-600 px-2.5 py-1 rounded-full">{totalPosted} total</span>}>
@@ -176,8 +172,8 @@ export function SeekerOverview({ problems, loading = false }: SeekerOverviewProp
           )}
         </SectionCard>
 
-        {/* completed by department */}
-        <SectionCard title="Completed by Department" subtitle="Problems solved · grouped by target course">
+        {/* completed by Program */}
+        <SectionCard title="Completed by Program" subtitle="Problems solved · grouped by preferred program">
           {deptData.length > 0 ? (
             <ChartContainer config={deptConfig} className="h-52 w-full">
               <ReBarChart data={deptData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }} barSize={28}>
@@ -193,47 +189,6 @@ export function SeekerOverview({ problems, loading = false }: SeekerOverviewProp
           )}
         </SectionCard>
       </div>
-
-      {/* SDG Bar Chart + Status Donut Chart */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {chartLoading ? (
-          <>
-            <div className="bg-white rounded-xl border border-gray-200 h-80 animate-pulse" />
-            <div className="bg-white rounded-xl border border-gray-200 h-80 animate-pulse" />
-          </>
-        ) : (
-          <>
-            <SdgBarChart sdgData={sdgData} title="Problems by SDG Focus" />
-            <DonutChart statusData={statusData} title="Problem Status Distribution" />
-          </>
-        )}
-      </div>
-
-      {/* Status breakdown  */}
-      <SectionCard title="Problem Status Breakdown">
-        <div className="space-y-3">
-          {(
-            [
-              { label: "Total", count: stats.total, color: "bg-sky-400" },
-              { label: "In Progress / Claimed", count: stats.inProgress, color: "bg-indigo-500" },
-              { label: "Completed", count: stats.completed, color: "bg-emerald-500" },
-              { label: "Open", count: stats.open, color: "bg-gray-400" },
-            ] as const
-          ).map(({ label, count, color }) => {
-            const pct = stats.total > 0 ? Math.round((count / stats.total) * 100) : 0;
-            return (
-              <div key={label} className="flex items-center gap-3">
-                <span className="w-44 text-sm text-gray-500 shrink-0">{label}</span>
-                <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
-                  <div className={`${color} h-2 rounded-full transition-all duration-700`} style={{ width: `${pct}%` }} />
-                </div>
-                <span className="text-sm font-semibold text-gray-700 w-6 text-right tabular-nums">{count}</span>
-                <span className="text-xs text-gray-300 w-9 tabular-nums">{pct}%</span>
-              </div>
-            );
-          })}
-        </div>
-      </SectionCard>
     </div>
   );
 }

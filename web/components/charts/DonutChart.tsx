@@ -9,12 +9,12 @@ interface DonutChartProps {
   title?: string;
 }
 
-const COLORS = {
-  open: "#4CAF50",
-  active: "#FF9800",
-  solvedNeedsImprovement: "#2196F3",
-  completed: "#9C27B0",
-  closed: "#F44336",
+const STATUS_COLORS: Record<keyof ProblemStatusGroupDto, string> = {
+  open: "#3b82f6",
+  active: "#f97316",
+  solvedNeedsImprovement: "#8b5cf6",
+  completed: "#ef4444",
+  closed: "#fbbf24",
 };
 
 const STATUS_LABELS: Record<keyof ProblemStatusGroupDto, string> = {
@@ -33,21 +33,21 @@ export function DonutChart({ statusData, title }: DonutChartProps) {
       .map(([key, value]) => ({
         name: STATUS_LABELS[key as keyof ProblemStatusGroupDto],
         value,
-        color: COLORS[key as keyof typeof COLORS],
+        color: STATUS_COLORS[key as keyof typeof STATUS_COLORS],
       }));
   }, [statusData]);
 
   if (!statusData || chartData.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-6 flex items-center justify-center h-80">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex items-center justify-center h-80">
         <p className="text-gray-400 text-sm">No status data available</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6">
-      {title && <h3 className="text-center font-semibold text-gray-900 mb-4">{title}</h3>}
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+      {title && <h3 className="font-semibold text-gray-900 mb-4 text-center">{title}</h3>}
       <div className="h-80 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -56,7 +56,7 @@ export function DonutChart({ statusData, title }: DonutChartProps) {
               cx="50%"
               cy="50%"
               innerRadius={60}
-              outerRadius={80}
+              outerRadius={90}
               paddingAngle={2}
               dataKey="value"
               label={({ name, percent }) => {
@@ -70,8 +70,13 @@ export function DonutChart({ statusData, title }: DonutChartProps) {
               ))}
             </Pie>
             <Tooltip
-              formatter={(value: number, name: string) => [`${value} problems`, name]}
-              contentStyle={{ backgroundColor: "#fff", borderRadius: "8px", border: "1px solid #e5e7eb" }}
+                formatter={(value, name) => [`${value} problems`, name]}
+                contentStyle={{
+                    backgroundColor: "#fff",
+                    borderRadius: "0.5rem",
+                    border: "1px solid #e5e7eb",
+                    boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+                }}
             />
             <Legend
               layout="horizontal"
