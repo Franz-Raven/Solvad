@@ -60,9 +60,8 @@ export default function SeekerDashboardPage() {
         
         {activeTab === "overview" && (
           <SeekerOverview
-            totalProblems={stats.total}
-            inProgress={stats.inProgress}
-            solved={stats.solved}
+            problems={problems}
+            loading={loading}
           />
         )}
         
