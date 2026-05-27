@@ -10,7 +10,9 @@ import com.solvad.backend.repository.ProblemRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.Optional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -184,15 +186,30 @@ public class GapAnalysisService {
             String technical = objectMapper.writeValueAsString(response.technicalDeviations());
             String unique = objectMapper.writeValueAsString(response.uniqueContributions());
 
-            GapAnalysisCache cache = new GapAnalysisCache(
-                    newProblemId,
-                    historicalProblemId,
-                    features,
-                    technical,
-                    unique,
-                    response.executiveSummary(),
-                    response.recommendation()
-            );
+            Optional<GapAnalysisCache> existing = gapAnalysisRepository
+                    .findBySourceProblemIdAndMatchedHistoricalProblemId(newProblemId, historicalProblemId);
+
+            GapAnalysisCache cache;
+            if (existing.isPresent()) {
+                cache = existing.get();
+                // Update
+                cache.setFeatureDifferences(features);
+                cache.setTechnicalDeviations(technical);
+                cache.setUniqueContributions(unique);
+                cache.setExecutiveSummary(response.executiveSummary());
+                cache.setRecommendation(response.recommendation());
+            } else {
+                // Create new
+                cache = new GapAnalysisCache(
+                        newProblemId,
+                        historicalProblemId,
+                        features,
+                        technical,
+                        unique,
+                        response.executiveSummary(),
+                        response.recommendation()
+                );
+            }
 
             gapAnalysisRepository.save(cache);
 
