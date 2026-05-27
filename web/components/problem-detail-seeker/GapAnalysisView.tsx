@@ -31,6 +31,15 @@ interface GapAnalysisViewProps {
 export default function GapAnalysisView({ data, onRefresh, isRefreshing = false }: GapAnalysisViewProps) {
   const isUnique = data.recommendation.toLowerCase().includes("yes");
 
+  if (isRefreshing) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <RefreshCw className="w-8 h-8 text-accent animate-spin mb-3" />
+        <p className="text-sm text-gray-500">Refreshing analysis...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="bg-linear-to-r from-accent/10 to-primary-foreground/5 rounded-xl p-6 border border-accent/20">

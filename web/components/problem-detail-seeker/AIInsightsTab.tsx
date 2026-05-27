@@ -67,17 +67,18 @@ export default function AIInsightsTab({ problemId }: AIInsightsTabProps) {
   };
 
   const handleRefreshAnalysis = async () => {
-    if (!selectedHistoricalId) return;
-    setGapLoading(true);
-    try {
-      const result = await fetchGapAnalysis(problemId, selectedHistoricalId, true); // refresh=true
-      setGapAnalysis(result);
-    } catch (err) {
-      setGapError(err instanceof Error ? err.message : "Failed to load gap analysis");
-    } finally {
-      setGapLoading(false);
-    }
-  };
+  if (!selectedHistoricalId) return;
+  setGapRefreshing(true);
+  setGapError(null);
+  try {
+    const result = await fetchGapAnalysis(problemId, selectedHistoricalId, true);
+    setGapAnalysis(result);
+  } catch (err) {
+    setGapError(err instanceof Error ? err.message : "Failed to refresh analysis");
+  } finally {
+    setGapRefreshing(false);
+  }
+};
 
   if (loading) {
     return (
