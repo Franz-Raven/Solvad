@@ -24,15 +24,22 @@ export default function AuthedNavigation() {
   const isActive = (path: string) => pathname === path;
   
   // Check if tab is active for seeker dashboard
-  const isTabActive = (tab: string) => {
+  const isSeekerTabActive = (tab: string) => {
     if (pathname !== "/seeker/dashboard") return false;
     const currentTab = searchParams.get("tab");
     if (!currentTab && tab === "home") return true;
     return currentTab === tab;
   };
 
+  const isSolverTabActive = (tab: string) => {
+    if (pathname !== "/solver/dashboard") return false;
+    const currentTab = searchParams.get("tab");
+    if (!currentTab && tab === "home") return true;
+    return currentTab === tab;
+  };
+
   return (
-    <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-b border-gray-200">
+    <header className="sticky top-0 z-100 w-full bg-white/95 backdrop-blur ...">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
@@ -43,14 +50,14 @@ export default function AuthedNavigation() {
             <span className="text-2xl font-bold text-gray-900">Solvad</span>
           </Link>
 
-          {/* Tabs */}
+          {/* Navigation Tabs */}
           <nav className="flex items-center gap-8">
             {user?.role === "SEEKER" ? (
               <>
                 <Link
                   href="/seeker/dashboard"
                   className={`text-gray-900 font-medium hover:text-primary-foreground transition-colors ${
-                    isTabActive("home") ? "border-b-2 border-accent pb-1" : ""
+                    isSeekerTabActive("home") ? "border-b-2 border-accent pb-1" : ""
                   }`}
                 >
                   Home
@@ -58,7 +65,7 @@ export default function AuthedNavigation() {
                 <Link
                   href="/seeker/dashboard?tab=activity"
                   className={`text-gray-900 font-medium hover:text-primary-foreground transition-colors ${
-                    isTabActive("activity") ? "border-b-2 border-accent pb-1" : ""
+                    isSeekerTabActive("activity") ? "border-b-2 border-accent pb-1" : ""
                   }`}
                 >
                   Recent Activity
@@ -66,7 +73,26 @@ export default function AuthedNavigation() {
                 <Link
                   href="/seeker/dashboard?tab=overview"
                   className={`text-gray-900 font-medium hover:text-primary-foreground transition-colors ${
-                    isTabActive("overview") ? "border-b-2 border-accent pb-1" : ""
+                    isSeekerTabActive("overview") ? "border-b-2 border-accent pb-1" : ""
+                  }`}
+                >
+                  Overview
+                </Link>
+              </>
+            ) : user?.role === "SOLVER" ? (
+              <>
+                <Link
+                  href="/solver/dashboard"
+                  className={`text-gray-900 font-medium hover:text-primary-foreground transition-colors ${
+                    isSolverTabActive("home") ? "border-b-2 border-accent pb-1" : ""
+                  }`}
+                >
+                  Home
+                </Link>
+                <Link
+                  href="/solver/dashboard?tab=overview"
+                  className={`text-gray-900 font-medium hover:text-primary-foreground transition-colors ${
+                    isSolverTabActive("overview") ? "border-b-2 border-accent pb-1" : ""
                   }`}
                 >
                   Overview
@@ -82,7 +108,7 @@ export default function AuthedNavigation() {
                 Home
               </Link>
             )}
-            
+
             {/* Admin-specific tabs */}
             {user?.role === "ADMIN" && (
               <Link

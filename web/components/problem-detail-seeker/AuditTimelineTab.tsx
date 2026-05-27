@@ -148,7 +148,7 @@ function DayGroup({
         className="relative flex items-center gap-3 mb-2 mt-6 first:mt-0 w-full text-left group overflow-visible"
       >
         {/* Node on the spine */}
-        <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 z-50 isolate ring-2 ring-white ring-offset-0 shadow-md bg-white group-hover:shadow-lg transition-all">
+        <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0  relative z-0 ring-2 ring-white ring-offset-0 shadow-md bg-white group-hover:shadow-lg transition-all">
           <div className={`w-2.5 h-2.5 rounded-full transition-colors ${isToday ? "bg-accent" : "bg-gray-300"}`} />
         </div>
 
@@ -192,15 +192,10 @@ function DayGroup({
 
             return (
               <div key={entry.id} className="relative flex items-start gap-3">
-                {/*
-                  FIX: Icon dot — use `ring` instead of `border-white` so the dot
-                  always looks correct regardless of scroll position / background.
-                  Also `isolate` + explicit z-index ensures it paints above the spine.
-                */}
                 <div
                   className={`
                     w-10 h-10 rounded-full flex items-center justify-center
-                    flex-shrink-0 z-50 isolate
+                    flex-shrink-0 relative z-0
                     ring-2 ring-white ring-offset-0
                     shadow-md
                     ${config.dotColor}
