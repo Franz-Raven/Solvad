@@ -33,10 +33,15 @@ public class GapAnalysisService {
     private ObjectMapper objectMapper;  // For JSON serialization/deserialization
 
     public GapAnalysisResponse generateGapAnalysis(UUID newProblemId, UUID historicalProblemId) {
+        return generateGapAnalysis(newProblemId, historicalProblemId, false);
+    }
+
+    public GapAnalysisResponse generateGapAnalysis(UUID newProblemId, UUID historicalProblemId, boolean refresh) {
         // Check cache
-        if (gapAnalysisRepository.existsBySourceProblemIdAndMatchedHistoricalProblemId(
-                newProblemId, historicalProblemId)) {
-            return getCachedGapAnalysis(newProblemId, historicalProblemId);
+        if (!refresh) {
+            if (gapAnalysisRepository.existsBySourceProblemIdAndMatchedHistoricalProblemId(newProblemId, historicalProblemId)) {
+                return getCachedGapAnalysis(newProblemId, historicalProblemId);
+            }
         }
 
         Problem newProblem = problemRepository.findById(newProblemId)
