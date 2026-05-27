@@ -26,8 +26,28 @@ const BarChart = ({ sdgData, title }: BarChartProps) => {
         );
     }
 
-    const labels = sdgData.map((item) => item.sdgFocus);
-    const counts = sdgData.map((item) => item.problemCount);
+    const normalizeAndMerge = (data: SdgDistributionDto[]) => {
+        const merged = data.reduce((acc, curr) => {
+            const cleanName = curr.sdgFocus.replace(/^\d+\.\s*/, "");
+            
+            if (acc[cleanName]) {
+                acc[cleanName] += curr.problemCount;
+            } else {
+                acc[cleanName] = curr.problemCount;
+            }
+            return acc;
+        }, {} as Record<string, number>);
+        
+        return Object.entries(merged).map(([sdgFocus, problemCount]) => ({
+            sdgFocus,
+            problemCount
+        }));
+    };
+
+    const normalizedData = normalizeAndMerge(sdgData);
+    
+    const labels = normalizedData.map((item) => item.sdgFocus);
+    const counts = normalizedData.map((item) => item.problemCount);
 
     const data = {
         labels,
@@ -48,7 +68,7 @@ const BarChart = ({ sdgData, title }: BarChartProps) => {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-            legend: { position: "top" as const },
+            legend: { display: false },
             tooltip: {
                 callbacks: {
                     label: (context: any) => `Problems: ${context.raw}`,
@@ -81,7 +101,7 @@ const BarChart = ({ sdgData, title }: BarChartProps) => {
             {title && (
                 <h3 className="text-center font-semibold text-gray-900 mb-4">{title}</h3>
             )}
-            <div style={{ position: "relative", height: "500px" }}>
+            <div style={{ position: "relative", height: "400px" }}>
                 <Bar data={data} options={options} />
             </div>
         </div>

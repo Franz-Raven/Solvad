@@ -38,7 +38,7 @@ useEffect(() => {
 }, []);
   return (
     <div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Posted Problems</h3>
           <p className="text-3xl font-bold text-accent">{totalProblems}</p>
@@ -56,9 +56,9 @@ useEffect(() => {
           <p className="text-3xl font-bold text-primary-foreground">{solved}</p>
           <p className="text-sm text-gray-600 mt-2">Successfully completed</p>
         </div>
-      </div>
+      </div> */}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         {loading ? (
           <>
             <div className="bg-white rounded-xl shadow-md border border-gray-200 h-80 animate-pulse" />
@@ -66,8 +66,8 @@ useEffect(() => {
           </>
         ) : (
           <>
-            <DonutChart statusData={statusData} title="Problem Status Distribution" />
             <BarChart sdgData={sdgData} title="Problems by SDG Focus" />
+            <DonutChart statusData={statusData} title="Problem Status Distribution" />
           </>
         )}
       </div>

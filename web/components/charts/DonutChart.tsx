@@ -51,9 +51,11 @@ const DonutChart = ({ statusData, title }: DonutChartProps) => {
     };
 
     return (
-<div style={{ height: "400px", width: "100%", padding: "1rem" }}>
-            {title && <h3 style={{ textAlign: "center", marginBottom: "1rem" }}>{title}</h3>}
-            <Doughnut data={data} options={options} />
+        <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
+            {title && <h3 className="text-center font-semibold text-gray-900 mb-4">{title}</h3>}
+            <div style={{ height: "400px", width: "100%" }}>
+                <Doughnut data={data} options={options} />
+            </div>
         </div>
     );
 };
