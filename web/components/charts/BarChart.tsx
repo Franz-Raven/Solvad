@@ -35,8 +35,8 @@ const BarChart = ({ sdgData, title }: BarChartProps) => {
             {
                 label: "Number of Problems",
                 data: counts,
-                backgroundColor: "rgba(33, 150, 243, 0.6)",
-                borderColor: "rgba(33, 150, 243, 1)",
+                backgroundColor: "rgba(20, 172, 65, 0.6)",
+                borderColor: "rgb(0, 0, 0)",
                 borderWidth: 1,
                 borderRadius: 8,
                 barPercentage: 0.7,
@@ -67,11 +67,6 @@ const BarChart = ({ sdgData, title }: BarChartProps) => {
                 grid: { color: "#e0e0e0" },
             },
             x: {
-                title: {
-                    display: true,
-                    text: "Sustainable Development Goals",
-                    font: { weight: "bold" as const },
-                },
                 ticks: {
                     maxRotation: 45,
                     minRotation: 45,
@@ -86,7 +81,7 @@ const BarChart = ({ sdgData, title }: BarChartProps) => {
             {title && (
                 <h3 className="text-center font-semibold text-gray-900 mb-4">{title}</h3>
             )}
-            <div style={{ position: "relative", height: "300px" }}>
+            <div style={{ position: "relative", height: "500px" }}>
                 <Bar data={data} options={options} />
             </div>
         </div>

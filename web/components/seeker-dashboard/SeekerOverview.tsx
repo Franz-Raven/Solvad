@@ -31,7 +31,7 @@ useEffect(() => {
     } catch (err) {
       console.error("Failed to fetch chart data:", err);
     } finally {
-      setLoading(false); // ← stays here, fires after setters in try
+      setLoading(false); 
     }
   };
   fetchChartData();
