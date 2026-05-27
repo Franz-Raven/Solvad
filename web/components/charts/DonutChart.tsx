@@ -51,7 +51,7 @@ const DonutChart = ({ statusData, title }: DonutChartProps) => {
     };
 
     return (
-        <div style={{ minHeight: "300px", width: "100%", padding: "1rem" }}>
+<div style={{ height: "400px", width: "100%", padding: "1rem" }}>
             {title && <h3 style={{ textAlign: "center", marginBottom: "1rem" }}>{title}</h3>}
             <Doughnut data={data} options={options} />
         </div>

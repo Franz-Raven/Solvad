@@ -1,4 +1,3 @@
-
 import { Bar } from "react-chartjs-2";
 import {
     Chart as ChartJS,
@@ -19,8 +18,16 @@ interface BarChartProps {
 }
 
 const BarChart = ({ sdgData, title }: BarChartProps) => {
-    const labels = sdgData?.map((item) => item.sdgFocus) || [];
-    const counts = sdgData?.map((item) => item.problemCount) || [];
+    if (!sdgData || sdgData.length === 0) {
+        return (
+            <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 flex items-center justify-center h-80">
+                <p className="text-gray-400 text-sm">No SDG data available</p>
+            </div>
+        );
+    }
+
+    const labels = sdgData.map((item) => item.sdgFocus);
+    const counts = sdgData.map((item) => item.problemCount);
 
     const data = {
         labels,
@@ -51,12 +58,13 @@ const BarChart = ({ sdgData, title }: BarChartProps) => {
         scales: {
             y: {
                 beginAtZero: true,
+                ticks: { precision: 0 },
                 title: {
                     display: true,
                     text: "Number of Problems",
                     font: { weight: "bold" as const },
                 },
-                grid: { display: true, color: "#e0e0e0" },
+                grid: { color: "#e0e0e0" },
             },
             x: {
                 title: {
@@ -65,19 +73,22 @@ const BarChart = ({ sdgData, title }: BarChartProps) => {
                     font: { weight: "bold" as const },
                 },
                 ticks: {
-                    rotation: 45,
-                    autoSkip: true,
                     maxRotation: 45,
                     minRotation: 45,
+                    autoSkip: true,
                 },
             },
         },
     };
 
     return (
-        <div style={{ minHeight: "400px", width: "100%", padding: "1rem" }}>
-            {title && <h3 style={{ textAlign: "center", marginBottom: "1rem" }}>{title}</h3>}
-            <Bar data={data} options={options} />
+        <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
+            {title && (
+                <h3 className="text-center font-semibold text-gray-900 mb-4">{title}</h3>
+            )}
+            <div style={{ position: "relative", height: "300px" }}>
+                <Bar data={data} options={options} />
+            </div>
         </div>
     );
 };
