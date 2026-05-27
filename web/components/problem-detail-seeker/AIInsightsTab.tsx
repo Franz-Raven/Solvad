@@ -21,6 +21,8 @@ export default function AIInsightsTab({ problemId }: AIInsightsTabProps) {
   const [gapAnalysis, setGapAnalysis] = useState<GapAnalysisResponse | null>(null);
   const [gapLoading, setGapLoading] = useState(false);
   const [gapError, setGapError] = useState<string | null>(null);
+  const [gapRefreshing, setGapRefreshing] = useState(false);
+
 
   useEffect(() => {
     fetchSimilarity();
@@ -56,6 +58,19 @@ export default function AIInsightsTab({ problemId }: AIInsightsTabProps) {
     setGapError(null);
     try {
       const result = await fetchGapAnalysis(problemId, selectedHistoricalId);
+      setGapAnalysis(result);
+    } catch (err) {
+      setGapError(err instanceof Error ? err.message : "Failed to load gap analysis");
+    } finally {
+      setGapLoading(false);
+    }
+  };
+
+  const handleRefreshAnalysis = async () => {
+    if (!selectedHistoricalId) return;
+    setGapLoading(true);
+    try {
+      const result = await fetchGapAnalysis(problemId, selectedHistoricalId, true); // refresh=true
       setGapAnalysis(result);
     } catch (err) {
       setGapError(err instanceof Error ? err.message : "Failed to load gap analysis");
@@ -198,7 +213,11 @@ export default function AIInsightsTab({ problemId }: AIInsightsTabProps) {
 
         {gapAnalysis && (
           <div className="mt-8 border-t pt-6">
-            <GapAnalysisView data={gapAnalysis} />
+            <GapAnalysisView
+              data={gapAnalysis}
+              onRefresh={handleRefreshAnalysis}
+              isRefreshing={gapRefreshing}
+            />
           </div>
         )}
     </div>

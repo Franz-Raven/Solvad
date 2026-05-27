@@ -131,7 +131,7 @@ public class GapAnalysisService {
             2. FEATURE_DIFFERENCES: List of functional features present in one but not the other
             3. TECHNICAL_DEVIATIONS: List of technology stack and architecture differences
             4. UNIQUE_CONTRIBUTIONS: List of novel aspects in the NEW problem
-            5. RECOMMENDATION: Whether the new problem is sufficiently unique (YES/NO with brief justification)
+            5. RECOMMENDATION: Whether the new problem is sufficiently unique (YES/NO with brief justification 2-4 sentences)
             
             NEW PROBLEM:
             Title: %s
