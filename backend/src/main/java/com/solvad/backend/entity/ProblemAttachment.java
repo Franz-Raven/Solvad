@@ -1,7 +1,6 @@
 package com.solvad.backend.entity;
 
 import jakarta.persistence.*;
-
 import java.util.UUID;
 
 @Entity
@@ -12,19 +11,27 @@ public class ProblemAttachment {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @ManyToOne
-    @JoinColumn(name = "problem_id", nullable = false)
-    private Problem problem;
+    @Column(name = "attachment_title", nullable = false)
+    private String attachmentTitle;
 
-    @Column(name = "file_url", nullable = false)
-    private String fileUrl;
+    @Column(name = "attachment_type", nullable = false)
+    private String attachmentType;
+
+    @Column(name = "attachment_link")
+    private String attachmentLink;
+
+    @ManyToOne
+    @JoinColumn(name = "problem_subtask_id", nullable = false)
+    private ProblemSubtask subtask;
 
     public ProblemAttachment() {
     }
 
-    public ProblemAttachment(Problem problem, String fileUrl) {
-        this.problem = problem;
-        this.fileUrl = fileUrl;
+    public ProblemAttachment(String attachmentTitle, String attachmentType, ProblemSubtask subtask) {
+        this.attachmentTitle = attachmentTitle;
+        this.attachmentType = attachmentType;
+        this.subtask = subtask;
+        this.attachmentLink = null; // To be filled by the solver later
     }
 
     public UUID getId() {
@@ -35,19 +42,35 @@ public class ProblemAttachment {
         this.id = id;
     }
 
-    public Problem getProblem() {
-        return problem;
+    public String getAttachmentTitle() {
+        return attachmentTitle;
     }
 
-    public void setProblem(Problem problem) {
-        this.problem = problem;
+    public void setAttachmentTitle(String attachmentTitle) {
+        this.attachmentTitle = attachmentTitle;
     }
 
-    public String getFileUrl() {
-        return fileUrl;
+    public String getAttachmentType() {
+        return attachmentType;
     }
 
-    public void setFileUrl(String fileUrl) {
-        this.fileUrl = fileUrl;
+    public void setAttachmentType(String attachmentType) {
+        this.attachmentType = attachmentType;
+    }
+
+    public String getAttachmentLink() {
+        return attachmentLink;
+    }
+
+    public void setAttachmentLink(String attachmentLink) {
+        this.attachmentLink = attachmentLink;
+    }
+
+    public ProblemSubtask getSubtask() {
+        return subtask;
+    }
+
+    public void setSubtask(ProblemSubtask subtask) {
+        this.subtask = subtask;
     }
 }
