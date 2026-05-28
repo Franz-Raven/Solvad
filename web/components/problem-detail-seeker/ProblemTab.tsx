@@ -3,7 +3,8 @@
 import type { ProblemResponse } from "@/types/problem";
 
 function parseList(raw: string): string[] {
-  try { return JSON.parse(raw); } catch { return [raw]; }
+  try { return JSON.parse(raw).map((s: string) => s.trim()).filter(Boolean); }
+  catch { return [raw.trim()].filter(Boolean); }
 }
 
 export function ProblemTab({ problem }: { problem: ProblemResponse }) {
