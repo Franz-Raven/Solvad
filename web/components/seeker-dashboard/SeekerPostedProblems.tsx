@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
-import type { ProblemResponse, PaginatedProblemsResponse } from "@/types/problem";
-import { searchMyProblems } from "@/lib/api/problem";
+import type { ProblemSummaryResponse, SeekerProblemListResponse } from "@/types/problem";
+import { getSeekerProblemList } from "@/lib/api/problem";
 import { getAllSDGs } from "@/lib/data/sdgs";
 import {
   Pagination,
@@ -24,16 +24,15 @@ import {
 } from "@/components/ui/select";
 
 interface SeekerPostedProblemsProps {
-  problems: ProblemResponse[];
-  loading: boolean;
-  error: string | null;
+  onTotalChange?: (total: number) => void;
 }
 
-export function SeekerPostedProblems({ problems, loading, error }: SeekerPostedProblemsProps) {
+export function SeekerPostedProblems({ onTotalChange }: SeekerPostedProblemsProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
-  const [paginatedData, setPaginatedData] = useState<PaginatedProblemsResponse | null>(null);
-  const [searchLoading, setSearchLoading] = useState(false);
+  const [paginatedData, setPaginatedData] = useState<SeekerProblemListResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [sdgFilter, setSdgFilter] = useState<string>("all");
   const [dateSort, setDateSort] = useState<string>("newest");
@@ -41,12 +40,13 @@ export function SeekerPostedProblems({ problems, loading, error }: SeekerPostedP
 
   useEffect(() => {
     loadProblems();
-  }, [searchQuery, currentPage, statusFilter, sdgFilter, dateSort]);
+  }, [searchQuery, currentPage, sdgFilter, dateSort]);
 
   const loadProblems = async () => {
     try {
-      setSearchLoading(true);
-      const result = await searchMyProblems(
+      setLoading(true);
+      setError(null);
+      const result = await getSeekerProblemList(
         searchQuery || undefined,
         sdgFilter !== "all" ? sdgFilter : undefined,
         dateSort,
@@ -54,10 +54,11 @@ export function SeekerPostedProblems({ problems, loading, error }: SeekerPostedP
         ITEMS_PER_PAGE
       );
       setPaginatedData(result);
+      onTotalChange?.(result.totalElements);
     } catch (err) {
-      console.error("Search failed:", err);
+      setError(err instanceof Error ? err.message : "Search failed");
     } finally {
-      setSearchLoading(false);
+      setLoading(false);
     }
   };
 
@@ -105,7 +106,7 @@ export function SeekerPostedProblems({ problems, loading, error }: SeekerPostedP
   };
 
   const displayProblems = paginatedData?.problems || [];
-  const isLoading = loading || searchLoading;
+  const isLoading = loading;
   const filteredProblems = statusFilter === "all" 
     ? displayProblems 
     : displayProblems.filter(p => p.status === statusFilter);
@@ -173,6 +174,20 @@ export function SeekerPostedProblems({ problems, loading, error }: SeekerPostedP
             <SelectItem value="CLOSED" className="py-2.5">Closed</SelectItem>
           </SelectContent>
         </Select>
+        {(searchQuery || sdgFilter !== "all" || dateSort !== "newest" || statusFilter !== "all") && (
+          <button
+            onClick={() => {
+              setSearchQuery("");
+              setSdgFilter("all");
+              setDateSort("newest");
+              setStatusFilter("all");
+              setCurrentPage(0);
+            }}
+            className="px-3 py-2.5 text-sm text-gray-600 hover:text-red-600 border border-gray-300 rounded-lg hover:border-red-300 transition-colors whitespace-nowrap"
+          >
+            Clear All
+          </button>
+        )}
       </div>
 
       {isLoading && (
@@ -246,7 +261,7 @@ export function SeekerPostedProblems({ problems, loading, error }: SeekerPostedP
                     </span>
                   </div>
                   <p className="text-xs text-gray-600">
-                    Posted {formatDate(problem.createdAt)} • {problem.subtasks.length}{" "}
+                    Posted {formatDate(problem.createdAt)} • {problem.subtaskCount}{" "}
                     sub-tasks • {problem.preferredProgram}
                     {problem.sdgFocus && (
                       <> • <span className="text-secondary font-medium">{problem.sdgFocus}</span></>
