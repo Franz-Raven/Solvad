@@ -7,13 +7,12 @@ import com.solvad.backend.repository.ProblemRepository;
 import com.solvad.backend.repository.ProblemSubtaskRepository;
 import com.solvad.backend.repository.SeekerProfileRepository;
 import com.solvad.backend.repository.SolutionAttemptRepository;
+import com.solvad.backend.repository.ProblemAttachmentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-import com.solvad.backend.entity.SolutionAttempt;
-import com.solvad.backend.entity.SolutionAttemptStatus;
 
 import java.util.List;
 import java.util.Map;
@@ -35,6 +34,9 @@ public class ProblemService {
     @Autowired
     private SolutionAttemptRepository attemptRepository;
 
+    @Autowired
+    private ProblemAttachmentRepository attachmentRepository;
+    
     @Autowired
     private GeminiService geminiService;
 
@@ -106,9 +108,25 @@ public class ProblemService {
 
         List<ProblemSubtask> savedSubtasks = subtaskRepository.saveAll(subtasks);
 
+        // SAVE ATTACHMENTS PER SUBTASK
+        for (int i = 0; i < request.getSubtasks().size(); i++) {
+            SubtaskRequest subtaskReq = request.getSubtasks().get(i);
+            ProblemSubtask savedSubtask = savedSubtasks.get(i);
+            
+            if (subtaskReq.getAttachments() != null && !subtaskReq.getAttachments().isEmpty()) {
+                List<ProblemAttachment> attachmentsToSave = subtaskReq.getAttachments().stream()
+                        .map(att -> new ProblemAttachment(
+                                att.getAttachmentTitle(),
+                                att.getAttachmentType(),
+                                savedSubtask
+                        ))
+                        .collect(Collectors.toList());
+                attachmentRepository.saveAll(attachmentsToSave);
+            }
+        }
+
         savedProblem.setTags(MatchmakingService.buildTagsForProblem(savedProblem, savedSubtasks));
         problemRepository.save(savedProblem);
-//        vectorSimilarityService.updateProblemEmbedding(savedProblem.getId());
 
         auditService.log(
                 savedProblem.getId(),
@@ -119,10 +137,8 @@ public class ProblemService {
                 "Problem \"" + savedProblem.getTitle() + "\" was created and published."
         );
 
-        // Map to response DTO
         eventPublisher.publishEvent(new ProblemCreatedEvent(savedProblem.getId()));
         return mapToResponse(savedProblem, savedSubtasks, seeker);
-
     }
 
     public List<ProblemResponse> getMyProblems(UUID seekerUserId) {
