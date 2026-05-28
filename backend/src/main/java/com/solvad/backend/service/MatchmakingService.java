@@ -6,6 +6,7 @@ import com.solvad.backend.dto.SubtaskResponse;
 import com.solvad.backend.entity.*;
 import com.solvad.backend.repository.ProblemRepository;
 import com.solvad.backend.repository.ProblemSubtaskRepository;
+import com.solvad.backend.repository.SolutionAttemptRepository;
 import com.solvad.backend.repository.SolverProfileRepository;
 import com.solvad.backend.util.KeywordUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +34,9 @@ public class MatchmakingService {
     @Autowired
     private SolverProfileRepository solverProfileRepository;
 
+    @Autowired
+    private SolutionAttemptRepository attemptRepository;
+
     @Transactional(readOnly = true)
     public DiscoveryDashboardResponse getDiscoveryDashboard(
             UUID solverUserId,
@@ -47,6 +51,7 @@ public class MatchmakingService {
 
         List<ProblemStatus> visibleStatuses = Arrays.asList(
                 ProblemStatus.OPEN,
+                ProblemStatus.IN_PROGRESS,
                 ProblemStatus.SOLVED_OPEN_FOR_IMPROVEMENT
         );
 
@@ -59,6 +64,13 @@ public class MatchmakingService {
         for (Problem problem : openProblems) {
             List<ProblemSubtask> subtasks = subtaskRepository.findByProblem(problem);
             Set<String> problemTags = resolveProblemTags(problem, subtasks);
+
+            long activeSolvers = attemptRepository.countByProblemAndStatus(problem, SolutionAttemptStatus.ACTIVE);
+            if (activeSolvers >= problem.getMaxConcurrentSolvers()) {
+                continue; // Skip this problem because all slots are filled
+            }
+
+
 
             if (!filterTags.isEmpty() && filterTags.stream().noneMatch(problemTags::contains)) {
                 continue;

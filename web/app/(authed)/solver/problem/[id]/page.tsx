@@ -119,19 +119,24 @@ export default function SolverProblemDetailPage() {
       </div>
     );
   }
+const isAlreadyClaimed = myAttempt?.status === "ACTIVE";
+  const isCompleted = myAttempt?.status === "COMPLETED";
 
-  const isAlreadyClaimed = myAttempt?.status === "ACTIVE";
-  const isCompleted = myAttempt?.status === "COMPLETED";  // ADD
-  const canClaimFresh = problem.status === "OPEN";
+  // Check how many solvers are currently active
+  const activeSolversCount = attempts.filter((a) => a.status === "ACTIVE").length;
+ const isAtCapacity = activeSolversCount >= (problem.maxConcurrentSolvers ?? 3);
+
+  const canClaimFresh = (problem.status === "OPEN" || problem.status === "IN_PROGRESS") && !isAtCapacity;
+
   const isUnavailable =
     !isAlreadyClaimed &&
     !canClaimFresh &&
     problem.status !== "SOLVED_OPEN_FOR_IMPROVEMENT";
 
-    const canPropose =
-  !isAlreadyClaimed &&
-  !isUnavailable &&
-  myProposalStatus !== "PENDING";
+  const canPropose =
+    !isAlreadyClaimed &&
+    !isUnavailable &&
+    myProposalStatus !== "PENDING";
   
   const tabs: { id: TabType; label: string }[] = [
     { id: "blueprint", label: "Problem Blueprint" },
@@ -202,7 +207,7 @@ export default function SolverProblemDetailPage() {
     if (isUnavailable) {
       return (
         <span className="px-6 py-2.5 bg-gray-200 text-gray-500 rounded-lg font-medium cursor-not-allowed inline-block">
-          Not Available
+          {isAtCapacity ? "Capacity Reached" : "Not Available"}
         </span>
       );
     }
