@@ -1,5 +1,6 @@
 package com.solvad.backend.dto;
 
+import java.util.List;
 import java.util.UUID;
 
 public class SubtaskResponse {
@@ -8,6 +9,7 @@ public class SubtaskResponse {
     private String departmentFocus;
     private String sdgFocus;
     private String description;
+    private List<AttachmentRequirementResponse> attachments;
 
     public SubtaskResponse() {
     }
@@ -18,6 +20,16 @@ public class SubtaskResponse {
         this.departmentFocus = departmentFocus;
         this.sdgFocus = sdgFocus;
         this.description = description;
+        this.attachments = null;
+    }
+
+    public SubtaskResponse(UUID id, String title, String departmentFocus, String sdgFocus, String description, List<AttachmentRequirementResponse> attachments) {
+        this.id = id;
+        this.title = title;
+        this.departmentFocus = departmentFocus;
+        this.sdgFocus = sdgFocus;
+        this.description = description;
+        this.attachments = attachments;
     }
 
     public UUID getId() {
@@ -58,5 +70,13 @@ public class SubtaskResponse {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public List<AttachmentRequirementResponse> getAttachments() {
+        return attachments;
+    }
+
+    public void setAttachments(List<AttachmentRequirementResponse> attachments) {
+        this.attachments = attachments;
     }
 }

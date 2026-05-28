@@ -53,6 +53,21 @@ public final class KeywordUtils {
         }
         String a = solverCourse.trim().toLowerCase(Locale.ROOT);
         String b = preferredProgram.trim().toLowerCase(Locale.ROOT);
+        if (a.isEmpty() || b.isEmpty()) {
+            return false;
+        }
         return a.equals(b) || a.contains(b) || b.contains(a);
+    }
+
+    /**
+     * Course alignment in [0, 1]: exact/substring match scores 1.0; otherwise token overlap (Jaccard).
+     */
+    public static double programAlignment(String solverCourse, String preferredProgram) {
+        if (courseMatches(solverCourse, preferredProgram)) {
+            return 1.0;
+        }
+        Set<String> solverTokens = tokenize(solverCourse);
+        Set<String> programTokens = tokenize(preferredProgram);
+        return jaccard(solverTokens, programTokens);
     }
 }

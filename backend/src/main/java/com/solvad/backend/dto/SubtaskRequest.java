@@ -1,6 +1,7 @@
 package com.solvad.backend.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import java.util.List;
 
 public class SubtaskRequest {
     @NotBlank(message = "Title is required")
@@ -14,14 +15,17 @@ public class SubtaskRequest {
     @NotBlank(message = "Description is required")
     private String description;
 
+    private List<AttachmentRequirementRequest> attachments;
+
     public SubtaskRequest() {
     }
 
-    public SubtaskRequest(String title, String departmentFocus, String sdgFocus, String description) {
+    public SubtaskRequest(String title, String departmentFocus, String sdgFocus, String description, List<AttachmentRequirementRequest> attachments) {
         this.title = title;
         this.departmentFocus = departmentFocus;
         this.sdgFocus = sdgFocus;
         this.description = description;
+        this.attachments = attachments;
     }
 
     public String getTitle() {
@@ -54,5 +58,13 @@ public class SubtaskRequest {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public List<AttachmentRequirementRequest> getAttachments() {
+        return attachments;
+    }
+
+    public void setAttachments(List<AttachmentRequirementRequest> attachments) {
+        this.attachments = attachments;
     }
 }

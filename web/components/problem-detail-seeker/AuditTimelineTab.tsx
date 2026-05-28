@@ -108,6 +108,56 @@ const AUDIT_EVENT_CONFIG: Record<
     color: "bg-orange-50 text-orange-700 border-orange-200",
     dotColor: "bg-orange-400",
   },
+  PROPOSAL_SUBMITTED: {
+    label: "Proposal Submitted",
+    icon: (
+      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+      </svg>
+    ),
+    color: "bg-amber-50 text-amber-700 border-amber-200",
+    dotColor: "bg-amber-500",
+  },
+  PROPOSAL_APPROVED: {
+    label: "Proposal Approved",
+    icon: (
+      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+      </svg>
+    ),
+    color: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    dotColor: "bg-emerald-500",
+  },
+  PROPOSAL_REJECTED: {
+    label: "Proposal Rejected",
+    icon: (
+      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+    color: "bg-rose-50 text-rose-700 border-rose-200",
+    dotColor: "bg-rose-500",
+  },
+  CAPACITY_REACHED: {
+    label: "Capacity Reached",
+    icon: (
+      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+      </svg>
+    ),
+    color: "bg-slate-50 text-slate-700 border-slate-200",
+    dotColor: "bg-slate-600",
+  },
+  PROBLEM_UPDATED: {
+    label: "Problem Updated",
+    icon: (
+      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+      </svg>
+    ),
+    color: "bg-teal-50 text-teal-700 border-teal-200",
+    dotColor: "bg-teal-500",
+  },
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -148,7 +198,7 @@ function DayGroup({
         className="relative flex items-center gap-3 mb-2 mt-6 first:mt-0 w-full text-left group overflow-visible"
       >
         {/* Node on the spine */}
-        <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 z-50 isolate ring-2 ring-white ring-offset-0 shadow-md bg-white group-hover:shadow-lg transition-all">
+        <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0  relative z-0 ring-2 ring-white ring-offset-0 shadow-md bg-white group-hover:shadow-lg transition-all">
           <div className={`w-2.5 h-2.5 rounded-full transition-colors ${isToday ? "bg-accent" : "bg-gray-300"}`} />
         </div>
 
@@ -192,15 +242,10 @@ function DayGroup({
 
             return (
               <div key={entry.id} className="relative flex items-start gap-3">
-                {/*
-                  FIX: Icon dot — use `ring` instead of `border-white` so the dot
-                  always looks correct regardless of scroll position / background.
-                  Also `isolate` + explicit z-index ensures it paints above the spine.
-                */}
                 <div
                   className={`
                     w-10 h-10 rounded-full flex items-center justify-center
-                    flex-shrink-0 z-50 isolate
+                    flex-shrink-0 relative z-0
                     ring-2 ring-white ring-offset-0
                     shadow-md
                     ${config.dotColor}

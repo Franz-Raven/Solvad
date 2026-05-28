@@ -34,6 +34,9 @@ public class SolutionAttemptService {
     private SeekerProfileRepository seekerProfileRepository;
 
     @Autowired
+    private ProblemAttachmentRepository attachmentRepository;
+
+    @Autowired
     private CloudinaryService storageService;
 
     @Autowired
@@ -651,9 +654,24 @@ public class SolutionAttemptService {
     private ProblemResponse mapProblemToResponse(Problem problem,
                                                  List<ProblemSubtask> subtasks) {
         List<SubtaskResponse> subtaskResponses = subtasks.stream()
-                .map(s -> new SubtaskResponse(
-                        s.getId(), s.getTitle(), s.getDepartmentFocus(),
-                        s.getSdgFocus(), s.getDescription()))
+                .map(s -> {
+                    List<AttachmentRequirementResponse> attachments = attachmentRepository.findBySubtask(s)
+                            .stream()
+                            .map(att -> new AttachmentRequirementResponse(
+                                    att.getId(),
+                                    att.getAttachmentTitle(),
+                                    att.getAttachmentType()
+                            ))
+                            .collect(Collectors.toList());
+                    return new SubtaskResponse(
+                            s.getId(), 
+                            s.getTitle(), 
+                            s.getDepartmentFocus(),
+                            s.getSdgFocus(), 
+                            s.getDescription(), 
+                            attachments
+                    );
+                })
                 .collect(Collectors.toList());
 
         List<String> tags = problem.getTags() != null

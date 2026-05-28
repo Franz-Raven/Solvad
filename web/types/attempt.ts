@@ -53,7 +53,12 @@ export type AuditEventType =
   | "SUBTASK_DRAFT_SAVED"
   | "ATTEMPT_ABANDONED"
   | "ATTEMPT_COMPLETED"
-  | "FILE_UPLOADED";
+  | "FILE_UPLOADED"
+  | "PROPOSAL_SUBMITTED" // <-- ADDED
+  | "PROPOSAL_APPROVED"  // <-- ADDED
+  | "PROPOSAL_REJECTED"  // <-- ADDED
+  | "CAPACITY_REACHED"   // <-- ADDED
+  | "PROBLEM_UPDATED";   // <-- ADDED
 
 export interface AuditLogEntry {
   id: string;

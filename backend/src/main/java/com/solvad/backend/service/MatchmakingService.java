@@ -6,6 +6,7 @@ import com.solvad.backend.dto.SubtaskResponse;
 import com.solvad.backend.entity.*;
 import com.solvad.backend.repository.ProblemRepository;
 import com.solvad.backend.repository.ProblemSubtaskRepository;
+import com.solvad.backend.repository.SolutionAttemptRepository;
 import com.solvad.backend.repository.SolverProfileRepository;
 import com.solvad.backend.util.KeywordUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,7 +19,11 @@ import java.util.stream.Collectors;
 @Service
 public class MatchmakingService {
 
-    private static final int RECOMMENDATION_LIMIT = 5;
+    private static final int RECOMMENDATION_LIMIT = 3;
+    /** Minimum composite match score (0–1) to appear in "Recommended for You". */
+    private static final double MIN_RECOMMENDATION_SCORE = 0.05;
+    private static final double SKILL_WEIGHT = 0.7;
+    private static final double COURSE_WEIGHT = 0.3;
 
     @Autowired
     private ProblemRepository problemRepository;
@@ -29,12 +34,14 @@ public class MatchmakingService {
     @Autowired
     private SolverProfileRepository solverProfileRepository;
 
+    @Autowired
+    private SolutionAttemptRepository attemptRepository;
+
     @Transactional(readOnly = true)
     public DiscoveryDashboardResponse getDiscoveryDashboard(
             UUID solverUserId,
             String search,
-            String tagFilter,
-            String sortOrder) {
+            String tagFilter) {
 
         SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
                 .orElseThrow(() -> new RuntimeException("Solver profile not found"));
@@ -44,6 +51,7 @@ public class MatchmakingService {
 
         List<ProblemStatus> visibleStatuses = Arrays.asList(
                 ProblemStatus.OPEN,
+                ProblemStatus.IN_PROGRESS,
                 ProblemStatus.SOLVED_OPEN_FOR_IMPROVEMENT
         );
 
@@ -57,6 +65,13 @@ public class MatchmakingService {
             List<ProblemSubtask> subtasks = subtaskRepository.findByProblem(problem);
             Set<String> problemTags = resolveProblemTags(problem, subtasks);
 
+            long activeSolvers = attemptRepository.countByProblemAndStatus(problem, SolutionAttemptStatus.ACTIVE);
+            if (activeSolvers >= problem.getMaxConcurrentSolvers()) {
+                continue; // Skip this problem because all slots are filled
+            }
+
+
+
             if (!filterTags.isEmpty() && filterTags.stream().noneMatch(problemTags::contains)) {
                 continue;
             }
@@ -65,26 +80,33 @@ public class MatchmakingService {
                 continue;
             }
 
-            double jaccard = KeywordUtils.jaccard(solverSkills, problemTags);
-            boolean courseMatch = KeywordUtils.courseMatches(solverCourse, problem.getPreferredProgram());
-            double score = jaccard + (courseMatch ? 0.25 : 0.0);
+            double skillSimilarity = KeywordUtils.jaccard(solverSkills, problemTags);
+            double courseAlignment = KeywordUtils.programAlignment(solverCourse, problem.getPreferredProgram());
+            boolean courseMatch = courseAlignment >= 1.0;
+            double score = SKILL_WEIGHT * skillSimilarity + COURSE_WEIGHT * courseAlignment;
+            score = Math.round(score * 100.0) / 100.0;
 
             ProblemResponse response = mapProblem(problem, subtasks, problemTags);
-            response.setMatchScore(Math.round(score * 100.0) / 100.0);
+            response.setMatchScore(score);
             response.setCourseMatch(courseMatch);
 
             scored.add(new ScoredProblem(response, score, courseMatch, problem.getCreatedAt()));
         }
 
+        Comparator<ScoredProblem> byBestMatch = Comparator
+                .comparingDouble(ScoredProblem::score).reversed()
+                .thenComparing(ScoredProblem::courseMatch).reversed()
+                .thenComparing(ScoredProblem::createdAt).reversed();
+
         List<ProblemResponse> recommended = scored.stream()
-                .sorted(Comparator.comparingDouble(ScoredProblem::score).reversed())
+                .filter(sp -> sp.score() >= MIN_RECOMMENDATION_SCORE)
+                .sorted(byBestMatch)
                 .limit(RECOMMENDATION_LIMIT)
                 .map(ScoredProblem::response)
                 .collect(Collectors.toList());
 
-        Comparator<ScoredProblem> listComparator = buildListComparator(sortOrder);
         List<ProblemResponse> problems = scored.stream()
-                .sorted(listComparator)
+                .sorted(buildExploreListComparator())
                 .map(ScoredProblem::response)
                 .collect(Collectors.toList());
 
@@ -106,7 +128,9 @@ public class MatchmakingService {
     public static List<String> buildTagsForProblem(Problem problem, List<ProblemSubtask> subtasks) {
         LinkedHashSet<String> tags = new LinkedHashSet<>();
         tags.addAll(KeywordUtils.tokenize(problem.getPreferredProgram()));
+        tags.addAll(KeywordUtils.tokenize(problem.getSdgFocus()));
         tags.addAll(KeywordUtils.tokenize(problem.getTitle()));
+        tags.addAll(KeywordUtils.tokenize(problem.getBackgroundContext()));
         tags.addAll(KeywordUtils.tokenize(problem.getObjectives()));
         tags.addAll(KeywordUtils.tokenize(problem.getConstraints()));
 
@@ -152,14 +176,12 @@ public class MatchmakingService {
         return tags.stream().anyMatch(t -> t.contains(searchLower));
     }
 
-    private Comparator<ScoredProblem> buildListComparator(String sortOrder) {
-        Comparator<ScoredProblem> byCourse = Comparator
+    /** Explore list: course matches first, then highest match score. */
+    private Comparator<ScoredProblem> buildExploreListComparator() {
+        return Comparator
                 .comparing(ScoredProblem::courseMatch)
-                .reversed();
-        Comparator<ScoredProblem> byDate = "oldest".equalsIgnoreCase(sortOrder)
-                ? Comparator.comparing(ScoredProblem::createdAt)
-                : Comparator.comparing(ScoredProblem::createdAt).reversed();
-        return byCourse.thenComparing(byDate).thenComparing(ScoredProblem::score, Comparator.reverseOrder());
+                .reversed()
+                .thenComparing(ScoredProblem::score, Comparator.reverseOrder());
     }
 
     private ProblemResponse mapProblem(Problem problem, List<ProblemSubtask> subtasks, Set<String> tagSet) {

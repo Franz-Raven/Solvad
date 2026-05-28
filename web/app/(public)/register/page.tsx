@@ -13,6 +13,8 @@ export default function RegisterPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   const [step1Data, setStep1Data] = useState({
     email: "",
@@ -143,8 +145,10 @@ export default function RegisterPage() {
               data={step1Data}
               onChange={handleStep1Change}
               onSubmit={handleStep1Submit}
-              isLoading={isLoading}
-            />
+              isLoading={isLoading}              showPassword={showPassword}
+              setShowPassword={setShowPassword}
+              showConfirmPassword={showConfirmPassword}
+              setShowConfirmPassword={setShowConfirmPassword}            />
           ) : (
             <Step2
               data={step2Data}

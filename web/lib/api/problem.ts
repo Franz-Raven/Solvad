@@ -111,7 +111,6 @@ export async function getOpenProblems(): Promise<ProblemResponse[]> {
 export interface DiscoveryQuery {
   search?: string;
   tags?: string;
-  sort?: "newest" | "oldest";
 }
 
 /**
@@ -123,7 +122,6 @@ export async function getDiscoveryDashboard(
   const params = new URLSearchParams();
   if (query.search) params.set("search", query.search);
   if (query.tags) params.set("tags", query.tags);
-  if (query.sort) params.set("sort", query.sort);
   const qs = params.toString();
   return apiRequest<DiscoveryDashboardResponse>(
     `/problems/discovery${qs ? `?${qs}` : ""}`,

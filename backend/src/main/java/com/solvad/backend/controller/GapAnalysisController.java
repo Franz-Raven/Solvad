@@ -38,12 +38,14 @@ public class GapAnalysisController {
     @PreAuthorize("hasAnyRole('SEEKER', 'SOLVER', 'ADMIN')")
     public ResponseEntity<GapAnalysisResponse> getGapAnalysis(
             @RequestParam("newProblemId") String newProblemId,
-            @RequestParam("historicalProblemId") String historicalProblemId
+            @RequestParam("historicalProblemId") String historicalProblemId,
+            @RequestParam(value = "refresh", defaultValue = "false") boolean refresh
     ) {
         try {
             GapAnalysisResponse response = gapAnalysisService.generateGapAnalysis(
                     java.util.UUID.fromString(newProblemId),
-                    java.util.UUID.fromString(historicalProblemId)
+                    java.util.UUID.fromString(historicalProblemId),
+                    refresh
             );
             return ResponseEntity.ok(response);
 

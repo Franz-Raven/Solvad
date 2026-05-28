@@ -4,11 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { generateScope, createProblem } from "@/lib/api/problem";
-import type { ProblemPayload, SubProblem, EnhancedProblem } from "@/types/problem";
+import type { ProblemPayload, SubProblem, EnhancedProblem, AttachmentRequirement } from "@/types/problem";
 import ProblemFormFields from "@/components/add-problem/ProblemFormFields";
 import FileAttachmentUploader from "@/components/add-problem/FileAttachmentUploader";
 import EnhancedProblemPreview from "@/components/add-problem/EnhancedProblemPreview";
 import SubproblemsList from "@/components/add-problem/SubproblemsList";
+import SubmissionRequirements from "@/components/add-problem/SubmissionRequirements";
 
 type ViewState = "FORM_VIEW" | "LOADING_VIEW" | "PREVIEW_VIEW" | "SUCCESS_VIEW";
 
@@ -39,6 +40,7 @@ export default function SubmitProblemPage() {
 
   const [enhancedProblem, setEnhancedProblem] = useState<EnhancedProblem | null>(null);
   const [subProblems, setSubProblems] = useState<SubProblem[]>([]);
+  const [globalRequirements, setGlobalRequirements] = useState<AttachmentRequirement[]>([]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -48,7 +50,6 @@ export default function SubmitProblemPage() {
       ...formData,
       [name]: value,
     });
-    // Clear validation error when user starts typing
     if (validationErrors[name as keyof typeof validationErrors]) {
       setValidationErrors({
         ...validationErrors,
@@ -61,7 +62,6 @@ export default function SubmitProblemPage() {
     e.preventDefault();
     setError(null);
 
-    // Validate required fields
     const errors = {
       title: !formData.title.trim(),
       backgroundContext: !formData.backgroundContext.trim(),
@@ -72,7 +72,6 @@ export default function SubmitProblemPage() {
 
     setValidationErrors(errors);
 
-    // Check if there are any errors
     if (Object.values(errors).some(hasError => hasError)) {
       setError("Please fill in all required fields.");
       return;
@@ -144,6 +143,14 @@ export default function SubmitProblemPage() {
     setAttachments(attachments.filter((_, i) => i !== index));
   };
 
+  const handleSubProblemAttachmentsUpdate = (id: string, attachments: AttachmentRequirement[]) => {
+    setSubProblems(
+      subProblems.map((sp) =>
+        sp.id === id ? { ...sp, attachments } : sp
+      )
+    );
+  };
+
   const handleConfirmAndPublish = async () => {
     if (!enhancedProblem) return;
     
@@ -159,12 +166,23 @@ export default function SubmitProblemPage() {
         constraints: JSON.stringify(enhancedProblem.constraints),
         preferredProgram: formData.preferredProgram,
         sdgFocus: enhancedProblem.sdgFocus,
-        subtasks: subProblems.map((sp) => ({
-          title: sp.title,
-          departmentFocus: sp.departmentFocus,
-          sdgFocus: sp.sdgFocus,
-          description: sp.description,
-        })),
+        subtasks: subProblems.map((sp) => {
+          const combinedAttachments = [
+            ...globalRequirements,
+            ...(sp.attachments || [])
+          ].map(req => ({
+            attachmentTitle: req.attachmentTitle,
+            attachmentType: req.attachmentType
+          }));
+
+          return {
+            title: sp.title,
+            departmentFocus: sp.departmentFocus,
+            sdgFocus: sp.sdgFocus,
+            description: sp.description,
+            attachments: combinedAttachments,
+          };
+        }),
       });
 
       setProblemId(response.id);
@@ -183,7 +201,6 @@ export default function SubmitProblemPage() {
     }
 
     try {
-      // Fetch the PDF from Cloudinary
       const response = await fetch(problemDocumentUrl);
       if (!response.ok) {
         throw new Error("Failed to download PDF");
@@ -207,7 +224,6 @@ export default function SubmitProblemPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-secondary/10 via-background to-accent/10 p-4 py-12">
       <div className="container mx-auto px-4">
-        {/* FORM_VIEW */}
         {currentView === "FORM_VIEW" && (
           <>
             <div className="text-center mb-8">
@@ -274,7 +290,6 @@ export default function SubmitProblemPage() {
           </>
         )}
 
-        {/* LOADING_VIEW */}
         {currentView === "LOADING_VIEW" && (
           <div className="flex flex-col items-center justify-center min-h-[60vh]">
             <div className="w-16 h-16 border-4 border-secondary border-t-transparent rounded-full animate-spin mb-6"></div>
@@ -287,7 +302,6 @@ export default function SubmitProblemPage() {
           </div>
         )}
 
-        {/* PREVIEW_VIEW */}
         {currentView === "PREVIEW_VIEW" && enhancedProblem && (
           <>
             <div className="text-center mb-8">
@@ -321,6 +335,13 @@ export default function SubmitProblemPage() {
                 onAddSubProblem={handleAddSubProblem}
               />
 
+              <SubmissionRequirements
+                subProblems={subProblems}
+                globalRequirements={globalRequirements}
+                setGlobalRequirements={setGlobalRequirements}
+                onSubProblemUpdate={handleSubProblemAttachmentsUpdate}
+              />
+
               <div className="flex gap-4 pt-4 mt-6">
                 <button
                   onClick={() => setCurrentView("FORM_VIEW")}
@@ -339,7 +360,6 @@ export default function SubmitProblemPage() {
           </>
         )}
 
-        {/* SUCCESS_VIEW */}
         {currentView === "SUCCESS_VIEW" && (
           <div className="flex flex-col items-center justify-center min-h-[60vh]">
             <div className="w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center mb-6">

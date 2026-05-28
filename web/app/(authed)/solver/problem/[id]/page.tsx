@@ -119,19 +119,27 @@ export default function SolverProblemDetailPage() {
       </div>
     );
   }
+const isAlreadyClaimed = myAttempt?.status === "ACTIVE";
+  const isCompleted = myAttempt?.status === "COMPLETED";
+// 1. Check how many solvers are currently active across ALL subtasks
+  const activeSolversCount = attempts.filter((a) => a.status === "ACTIVE").length;
+  
+  // 2. The backend enforces limit PER SUBTASK, so total problem capacity is (limit * subtask count)
+  const totalProblemCapacity = (problem.maxConcurrentSolvers ?? 3) * (problem.subtasks?.length || 1);
+  const isAtCapacity = activeSolversCount >= totalProblemCapacity;
 
-  const isAlreadyClaimed = myAttempt?.status === "ACTIVE";
-  const isCompleted = myAttempt?.status === "COMPLETED";  // ADD
-  const canClaimFresh = problem.status === "OPEN";
+  // 3. Match backend logic: Allow claims if OPEN, IN_PROGRESS, or CLAIMED
+  const canClaimFresh = ["OPEN", "IN_PROGRESS", "CLAIMED"].includes(problem.status) && !isAtCapacity;
+
   const isUnavailable =
     !isAlreadyClaimed &&
     !canClaimFresh &&
     problem.status !== "SOLVED_OPEN_FOR_IMPROVEMENT";
 
-    const canPropose =
-  !isAlreadyClaimed &&
-  !isUnavailable &&
-  myProposalStatus !== "PENDING";
+  const canPropose =
+    !isAlreadyClaimed &&
+    !isUnavailable &&
+    myProposalStatus !== "PENDING";
   
   const tabs: { id: TabType; label: string }[] = [
     { id: "blueprint", label: "Problem Blueprint" },
@@ -202,7 +210,7 @@ export default function SolverProblemDetailPage() {
     if (isUnavailable) {
       return (
         <span className="px-6 py-2.5 bg-gray-200 text-gray-500 rounded-lg font-medium cursor-not-allowed inline-block">
-          Not Available
+          {isAtCapacity ? "Capacity Reached" : "Not Available"}
         </span>
       );
     }
@@ -228,7 +236,7 @@ export default function SolverProblemDetailPage() {
       )}
 
       {/* ── Sticky header ── */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-60 shadow-sm">
         <div className="max-w-7xl mx-auto px-8 py-6">
           <Link
             href="/solver/dashboard"
@@ -332,6 +340,7 @@ export default function SolverProblemDetailPage() {
         {activeTab === "subtasks" && (
           <SubtasksTab
             problem={problem}
+            attempts={attempts} // <-- Added this line
             canPropose={canPropose}
             onPropose={(subtaskId) => openProposalModal(subtaskId)}
           />

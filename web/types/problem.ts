@@ -4,6 +4,7 @@ export interface SubProblem {
   departmentFocus: string;
   sdgFocus?: string;
   description: string;
+  attachments?: AttachmentRequirement[];
 }
 
 export interface ProblemPayload {
@@ -22,7 +23,7 @@ export interface GenerateScopeRequest {
   objectives: string;
   constraints: string;
   preferredProgram: string;
-  attachments?: File[]; // Optional file attachments
+  attachments?: File[];
 }
 
 export interface EnhancedProblem {
@@ -39,6 +40,12 @@ export interface GenerateScopeResponse {
   generatedSubtasks: SubProblem[];
 }
 
+export interface AttachmentRequirement {
+  id: string; 
+  attachmentTitle: string;
+  attachmentType: string; 
+}
+
 export interface ProblemRequest {
   title: string;
   backgroundContext: string;
@@ -52,6 +59,7 @@ export interface ProblemRequest {
     departmentFocus: string;
     sdgFocus?: string;
     description: string;
+    attachments: Omit<AttachmentRequirement, 'id'>[];
   }[];
 }
 
@@ -129,5 +137,6 @@ export interface SubtaskResponse {
   departmentFocus: string;
   sdgFocus?: string;
   description: string;
+  attachments?: AttachmentRequirement[];
 }
 

@@ -21,6 +21,8 @@ export default function AIInsightsTab({ problemId }: AIInsightsTabProps) {
   const [gapAnalysis, setGapAnalysis] = useState<GapAnalysisResponse | null>(null);
   const [gapLoading, setGapLoading] = useState(false);
   const [gapError, setGapError] = useState<string | null>(null);
+  const [gapRefreshing, setGapRefreshing] = useState(false);
+
 
   useEffect(() => {
     fetchSimilarity();
@@ -63,6 +65,20 @@ export default function AIInsightsTab({ problemId }: AIInsightsTabProps) {
       setGapLoading(false);
     }
   };
+
+  const handleRefreshAnalysis = async () => {
+  if (!selectedHistoricalId) return;
+  setGapRefreshing(true);
+  setGapError(null);
+  try {
+    const result = await fetchGapAnalysis(problemId, selectedHistoricalId, true);
+    setGapAnalysis(result);
+  } catch (err) {
+    setGapError(err instanceof Error ? err.message : "Failed to refresh analysis");
+  } finally {
+    setGapRefreshing(false);
+  }
+};
 
   if (loading) {
     return (
@@ -198,7 +214,11 @@ export default function AIInsightsTab({ problemId }: AIInsightsTabProps) {
 
         {gapAnalysis && (
           <div className="mt-8 border-t pt-6">
-            <GapAnalysisView data={gapAnalysis} />
+            <GapAnalysisView
+              data={gapAnalysis}
+              onRefresh={handleRefreshAnalysis}
+              isRefreshing={gapRefreshing}
+            />
           </div>
         )}
     </div>
