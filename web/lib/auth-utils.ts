@@ -1,5 +1,39 @@
 import type { UserRole } from "@/types/auth";
 
+export function isTokenExpired(token: string): boolean {
+  try {
+    const payload = token.split(".")[1];
+    if (!payload) return true;
+    
+    const decodedPayload = JSON.parse(atob(payload));
+    const expirationTime = decodedPayload.exp;
+    
+    if (!expirationTime) return false;
+    
+    // exp is in seconds, convert to milliseconds and compare with current time
+    return Date.now() >= expirationTime * 1000;
+  } catch (err) {
+    console.error("Error checking token expiration:", err);
+    return true; // Treat malformed tokens as expired
+  }
+}
+
+export function getValidToken(): string | null {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return null;
+    if (isTokenExpired(token)) {
+      clearAuthStorage();
+      clearAuthCookies();
+      return null;
+    }
+    return token;
+  } catch (err) {
+    console.error("Error validating token:", err);
+    return null;
+  }
+}
+
 export function setAuthCookies(token: string, role: UserRole): void {
   const maxAge = 60 * 60 * 24 * 7;
   document.cookie = `authToken=${token}; path=/; max-age=${maxAge}; SameSite=Lax`;

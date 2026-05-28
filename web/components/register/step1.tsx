@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Eye, EyeOff } from "lucide-react";
 import { useMemo } from "react";
 
 interface Step1Props {
@@ -10,6 +11,10 @@ interface Step1Props {
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSubmit: (e: React.FormEvent) => void;
   isLoading: boolean;
+  showPassword: boolean;
+  setShowPassword: (value: boolean) => void;
+  showConfirmPassword: boolean;
+  setShowConfirmPassword: (value: boolean) => void;
 }
 
 interface PasswordRequirement {
@@ -32,7 +37,16 @@ const passwordRequirements: PasswordRequirement[] = [
   },
 ];
 
-export default function Step1({ data, onChange, onSubmit, isLoading }: Step1Props) {
+export default function Step1({ 
+  data, 
+  onChange, 
+  onSubmit, 
+  isLoading,
+  showPassword,
+  setShowPassword,
+  showConfirmPassword,
+  setShowConfirmPassword,
+}: Step1Props) {
   const passwordValidation = useMemo(() => {
     return passwordRequirements.map((req) => ({
       label: req.label,
@@ -83,16 +97,30 @@ export default function Step1({ data, onChange, onSubmit, isLoading }: Step1Prop
         >
           Password
         </label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          value={data.password}
-          onChange={onChange}
-          className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all"
-          placeholder="••••••••"
-          required
-        />
+        <div className="relative">
+          <input
+            id="password"
+            name="password"
+            type={showPassword ? "text" : "password"}
+            value={data.password}
+            onChange={onChange}
+            className="w-full px-4 py-3 pr-12 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all"
+            placeholder="••••••••"
+            required
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label={showPassword ? "Hide password" : "Show password"}
+          >
+            {showPassword ? (
+              <EyeOff className="w-5 h-5" />
+            ) : (
+              <Eye className="w-5 h-5" />
+            )}
+          </button>
+        </div>
         
         {data.password && (
           <div className="mt-3 space-y-2 p-3 rounded-lg bg-muted/50 border border-border animate-in fade-in slide-in-from-top-2 duration-300">
@@ -158,16 +186,30 @@ export default function Step1({ data, onChange, onSubmit, isLoading }: Step1Prop
         >
           Confirm Password
         </label>
-        <input
-          id="confirmPassword"
-          name="confirmPassword"
-          type="password"
-          value={data.confirmPassword}
-          onChange={onChange}
-          className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all"
-          placeholder="••••••••"
-          required
-        />
+        <div className="relative">
+          <input
+            id="confirmPassword"
+            name="confirmPassword"
+            type={showConfirmPassword ? "text" : "password"}
+            value={data.confirmPassword}
+            onChange={onChange}
+            className="w-full px-4 py-3 pr-12 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all"
+            placeholder="••••••••"
+            required
+          />
+          <button
+            type="button"
+            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+          >
+            {showConfirmPassword ? (
+              <EyeOff className="w-5 h-5" />
+            ) : (
+              <Eye className="w-5 h-5" />
+            )}
+          </button>
+        </div>
         {data.confirmPassword && data.password !== data.confirmPassword && (
           <p className="text-xs text-red-600 flex items-center gap-1">
             <svg
