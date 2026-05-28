@@ -103,6 +103,26 @@ export interface PaginatedProblemsResponse {
   pageSize: number;
 }
 
+export interface ProblemSummaryResponse {
+  id: string;
+  title: string;
+  status: string;
+  createdAt: string;
+  subtaskCount: number;
+  preferredProgram: string;
+  sdgFocus?: string;
+  organizationName: string;
+  tags?: string[];
+}
+
+export interface SeekerProblemListResponse {
+  problems: ProblemSummaryResponse[];
+  currentPage: number;
+  totalPages: number;
+  totalElements: number;
+  pageSize: number;
+}
+
 export interface SubtaskResponse {
   id: string;
   title: string;

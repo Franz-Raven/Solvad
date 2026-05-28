@@ -190,6 +190,24 @@ public class ProblemController {
         }
     }
 
+    @GetMapping("/seeker/list")
+    @PreAuthorize("hasRole('SEEKER')")
+    public ResponseEntity<?> getSeekerProblemList(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String sdgFilter,
+            @RequestParam(required = false) String dateSort,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        try {
+            String token = authHeader.substring(7);
+            UUID seekerUserId = jwtService.extractUserId(token);
+            return ResponseEntity.ok(problemService.getSeekerProblemList(seekerUserId, query, sdgFilter, dateSort, page, size));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     // PUT /api/problems/{problemId}/max-solvers
     @PutMapping("/problems/{problemId}/max-solvers")
     @PreAuthorize("hasRole('SEEKER')")

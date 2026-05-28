@@ -12,4 +12,5 @@ import java.util.UUID;
 public interface ProblemSubtaskRepository extends JpaRepository<ProblemSubtask, UUID> {
     List<ProblemSubtask> findByProblem(Problem problem);
     List<ProblemSubtask> findByProblemId(UUID problemId);
+    List<ProblemSubtask> findByProblemIn(List<Problem> problems);
 }

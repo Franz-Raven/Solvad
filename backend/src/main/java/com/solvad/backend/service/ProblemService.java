@@ -9,6 +9,10 @@ import com.solvad.backend.repository.SeekerProfileRepository;
 import com.solvad.backend.repository.SolutionAttemptRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -430,5 +434,52 @@ public class ProblemService {
                 AuditEventType.PROBLEM_UPDATED,
                 "Updated concurrent solver limit to " + maxSolvers
         );
+    }
+
+    @Transactional(readOnly = true)
+    public SeekerProblemListResponse getSeekerProblemList(UUID seekerUserId, String searchQuery, String sdgFilter, String dateSort, int page, int size) {
+        SeekerProfile seeker = seekerProfileRepository.findByUserId(seekerUserId)
+                .orElseThrow(() -> new RuntimeException("Seeker profile not found"));
+
+        String orgName = seeker.getOrganizationName();
+        boolean hasSearch = searchQuery != null && !searchQuery.trim().isEmpty();
+        boolean hasSdg = sdgFilter != null && !sdgFilter.trim().isEmpty();
+
+        Sort sort = "oldest".equalsIgnoreCase(dateSort)
+                ? Sort.by(Sort.Direction.ASC, "createdAt")
+                : Sort.by(Sort.Direction.DESC, "createdAt");
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Page<Problem> problemPage;
+        if (hasSdg) {
+            problemPage = problemRepository.findBySeekerAndSdgFocus(seeker, sdgFilter, pageable);
+        } else {
+            problemPage = problemRepository.findBySeeker(seeker, pageable);
+        }
+
+        if (!problemPage.hasContent()) {
+            return new SeekerProblemListResponse(List.of(), page, 0, 0, size);
+        }
+
+        List<Problem> pageProblems = problemPage.getContent();
+        Map<UUID, Integer> subtaskCounts = subtaskRepository.findByProblemIn(pageProblems)
+                .stream()
+                .collect(Collectors.groupingBy(
+                        s -> s.getProblem().getId(),
+                        Collectors.summingInt(s -> 1)
+                ));
+
+        List<ProblemSummaryResponse> responses = pageProblems.stream()
+                .map(p -> {
+                    List<String> tags = p.getTags() != null ? p.getTags() : List.of();
+                    return new ProblemSummaryResponse(
+                            p.getId(), p.getTitle(), p.getStatus().name(), p.getCreatedAt(),
+                            subtaskCounts.getOrDefault(p.getId(), 0),
+                            p.getPreferredProgram(), p.getSdgFocus(), orgName, tags
+                    );
+                })
+                .collect(Collectors.toList());
+
+        return new SeekerProblemListResponse(responses, page, problemPage.getTotalPages(), (int) problemPage.getTotalElements(), size);
     }
 }
