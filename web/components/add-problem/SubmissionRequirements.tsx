@@ -67,7 +67,7 @@ export default function SubmissionRequirements({
     const newReq: AttachmentRequirement = {
       id: `req-${Date.now()}`,
       attachmentTitle: "",
-      attachmentType: "",
+      attachmentType: "PDF",
     };
 
     if (isGlobal) {

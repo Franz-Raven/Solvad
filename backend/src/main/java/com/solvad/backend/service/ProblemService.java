@@ -251,13 +251,27 @@ public class ProblemService {
 
     private ProblemResponse mapToResponse(Problem problem, List<ProblemSubtask> subtasks, SeekerProfile seeker) {
         List<SubtaskResponse> subtaskResponses = subtasks.stream()
-                .map(subtask -> new SubtaskResponse(
-                        subtask.getId(),
-                        subtask.getTitle(),
-                        subtask.getDepartmentFocus(),
-                        subtask.getSdgFocus(),
-                        subtask.getDescription()
-                ))
+                .map(subtask -> {
+                    // 1. Fetch the attachments for this specific subtask
+                    List<AttachmentRequirementResponse> attachmentResponses = attachmentRepository.findBySubtask(subtask)
+                            .stream()
+                            .map(att -> new AttachmentRequirementResponse(
+                                    att.getId(),
+                                    att.getAttachmentTitle(),
+                                    att.getAttachmentType()
+                            ))
+                            .collect(Collectors.toList());
+
+                    // 2. Use the NEW constructor that includes attachmentResponses
+                    return new SubtaskResponse(
+                            subtask.getId(),
+                            subtask.getTitle(),
+                            subtask.getDepartmentFocus(),
+                            subtask.getSdgFocus(),
+                            subtask.getDescription(),
+                            attachmentResponses // <-- Now attached to the payload
+                    );
+                })
                 .collect(Collectors.toList());
 
         List<String> tags = problem.getTags() != null ? problem.getTags() : List.of();
