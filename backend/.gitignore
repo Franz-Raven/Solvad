@@ -32,5 +32,8 @@ build/
 ### VS Code ###
 .vscode/
 
+### Node dependencies ###
+node_modules/
+
 ### Environment Variables ###
 .env
