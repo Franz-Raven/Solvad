@@ -23,7 +23,7 @@ export interface GenerateScopeRequest {
   objectives: string;
   constraints: string;
   preferredProgram: string;
-  attachments?: File[]; // Optional file attachments
+  attachments?: File[];
 }
 
 export interface EnhancedProblem {
@@ -117,5 +117,6 @@ export interface SubtaskResponse {
   departmentFocus: string;
   sdgFocus?: string;
   description: string;
+  attachments?: AttachmentRequirement[];
 }
 
