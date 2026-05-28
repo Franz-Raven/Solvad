@@ -121,12 +121,15 @@ export default function SolverProblemDetailPage() {
   }
 const isAlreadyClaimed = myAttempt?.status === "ACTIVE";
   const isCompleted = myAttempt?.status === "COMPLETED";
-
-  // Check how many solvers are currently active
+// 1. Check how many solvers are currently active across ALL subtasks
   const activeSolversCount = attempts.filter((a) => a.status === "ACTIVE").length;
- const isAtCapacity = activeSolversCount >= (problem.maxConcurrentSolvers ?? 3);
+  
+  // 2. The backend enforces limit PER SUBTASK, so total problem capacity is (limit * subtask count)
+  const totalProblemCapacity = (problem.maxConcurrentSolvers ?? 3) * (problem.subtasks?.length || 1);
+  const isAtCapacity = activeSolversCount >= totalProblemCapacity;
 
-  const canClaimFresh = (problem.status === "OPEN" || problem.status === "IN_PROGRESS") && !isAtCapacity;
+  // 3. Match backend logic: Allow claims if OPEN, IN_PROGRESS, or CLAIMED
+  const canClaimFresh = ["OPEN", "IN_PROGRESS", "CLAIMED"].includes(problem.status) && !isAtCapacity;
 
   const isUnavailable =
     !isAlreadyClaimed &&
@@ -337,6 +340,7 @@ const isAlreadyClaimed = myAttempt?.status === "ACTIVE";
         {activeTab === "subtasks" && (
           <SubtasksTab
             problem={problem}
+            attempts={attempts} // <-- Added this line
             canPropose={canPropose}
             onPropose={(subtaskId) => openProposalModal(subtaskId)}
           />
