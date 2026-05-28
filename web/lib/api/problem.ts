@@ -55,6 +55,10 @@ export async function createProblem(
   });
 }
 
+export async function getMyProblems(): Promise<ProblemResponse[]> {
+  return apiRequest<ProblemResponse[]>("/problems/my-problems", { method: "GET" });
+}
+
 export async function searchMyProblems(
   query?: string,
   sdgFilter?: string,
