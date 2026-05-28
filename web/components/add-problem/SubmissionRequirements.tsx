@@ -16,6 +16,47 @@ interface Props {
   onSubProblemUpdate: (id: string, requirements: AttachmentRequirement[]) => void;
 }
 
+interface RequirementRowProps {
+  req: AttachmentRequirement;
+  isGlobal: boolean;
+  subtaskId?: string;
+  updateRequirement: (isGlobal: boolean, reqId: string, field: keyof AttachmentRequirement, value: string, subtaskId?: string) => void;
+  removeRequirement: (isGlobal: boolean, reqId: string, subtaskId?: string) => void;
+}
+
+const RequirementRow = ({ req, isGlobal, subtaskId, updateRequirement, removeRequirement }: RequirementRowProps) => (
+  <div className="flex gap-4 items-center mt-3">
+    <input
+      type="text"
+      placeholder="File Title (e.g., Financial Report)"
+      className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      value={req.attachmentTitle}
+      onChange={(e) => updateRequirement(isGlobal, req.id, "attachmentTitle", e.target.value, subtaskId)}
+    />
+    <Select
+      value={req.attachmentType}
+      onValueChange={(val) => updateRequirement(isGlobal, req.id, "attachmentType", val, subtaskId)}
+    >
+      <SelectTrigger className="w-[180px]">
+        <SelectValue placeholder="Select File Type" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="PDF">PDF</SelectItem>
+        <SelectItem value="EXCEL">Excel (.xlsx)</SelectItem>
+        <SelectItem value="GITHUB_LINK">GitHub Link</SelectItem>
+        <SelectItem value="PNG_JPG">Image (PNG/JPG)</SelectItem>
+      </SelectContent>
+    </Select>
+    <button
+      type="button"
+      onClick={() => removeRequirement(isGlobal, req.id, subtaskId)}
+      className="p-2 text-destructive hover:bg-destructive/10 rounded-md transition-colors"
+    >
+      <Trash2 className="w-4 h-4" />
+    </button>
+  </div>
+);
+
 export default function SubmissionRequirements({
   subProblems,
   globalRequirements,
@@ -74,39 +115,6 @@ export default function SubmissionRequirements({
     }
   };
 
-  const RequirementRow = ({ req, isGlobal, subtaskId }: { req: AttachmentRequirement, isGlobal: boolean, subtaskId?: string }) => (
-    <div className="flex gap-4 items-center mt-3">
-      <input
-        type="text"
-        placeholder="File Title (e.g., Financial Report)"
-        className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        value={req.attachmentTitle}
-        onChange={(e) => updateRequirement(isGlobal, req.id, "attachmentTitle", e.target.value, subtaskId)}
-      />
-      <Select
-        value={req.attachmentType}
-        onValueChange={(val) => updateRequirement(isGlobal, req.id, "attachmentType", val, subtaskId)}
-      >
-        <SelectTrigger className="w-[180px]">
-          <SelectValue placeholder="Select File Type" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="PDF">PDF</SelectItem>
-          <SelectItem value="EXCEL">Excel (.xlsx)</SelectItem>
-          <SelectItem value="GITHUB_LINK">GitHub Link</SelectItem>
-          <SelectItem value="PNG_JPG">Image (PNG/JPG)</SelectItem>
-        </SelectContent>
-      </Select>
-      <button
-        type="button"
-        onClick={() => removeRequirement(isGlobal, req.id, subtaskId)}
-        className="p-2 text-destructive hover:bg-destructive/10 rounded-md transition-colors"
-      >
-        <Trash2 className="w-4 h-4" />
-      </button>
-    </div>
-  );
-
   return (
     <div className="mt-8 space-y-6">
       <div className="border-b pb-4">
@@ -132,7 +140,14 @@ export default function SubmissionRequirements({
           <p className="text-sm text-muted-foreground italic">No global requirements added.</p>
         ) : (
           globalRequirements.map((req) => (
-            <RequirementRow key={req.id} req={req} isGlobal={true} />
+            // 3. Pass the new props down here
+            <RequirementRow 
+              key={req.id} 
+              req={req} 
+              isGlobal={true} 
+              updateRequirement={updateRequirement}
+              removeRequirement={removeRequirement}
+            />
           ))
         )}
       </div>
@@ -156,7 +171,14 @@ export default function SubmissionRequirements({
               <p className="text-sm text-muted-foreground italic mt-2">No specific files requested for this task.</p>
             ) : (
               sp.attachments.map((req) => (
-                <RequirementRow key={req.id} req={req} isGlobal={false} subtaskId={sp.id} />
+                <RequirementRow 
+                  key={req.id} 
+                  req={req} 
+                  isGlobal={false} 
+                  subtaskId={sp.id}
+                  updateRequirement={updateRequirement}
+                  removeRequirement={removeRequirement}
+                />
               ))
             )}
           </div>
