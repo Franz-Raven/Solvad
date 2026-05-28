@@ -8,6 +8,17 @@ import { getMyActiveAttempts } from "@/lib/api/attempts";
 import type { ProblemResponse } from "@/types/problem";
 import type { SolutionAttemptResponse } from "@/types/attempt";
 import { SolverOverview } from "@/components/solver-dashboard/SolverOverview";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+
+const EXPLORE_PAGE_SIZE = 5;
 
 const STATUS_LABELS: Record<string, string> = {
   OPEN: "Open",
@@ -17,7 +28,6 @@ const STATUS_LABELS: Record<string, string> = {
 export default function SolverDashboardPage() {
   const [recommended, setRecommended] = useState<ProblemResponse[]>([]);
   const [problems, setProblems] = useState<ProblemResponse[]>([]);
-  const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [solverCourse, setSolverCourse] = useState("");
   const [myAttempts, setMyAttempts] = useState<SolutionAttemptResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,8 +36,8 @@ export default function SolverDashboardPage() {
   const activeTab = searchParams.get("tab") || "home";
 
   const [search, setSearch] = useState("");
-  const [selectedTag, setSelectedTag] = useState("");
-  const [sort, setSort] = useState<"newest" | "oldest">("newest");
+  const [appliedSearch, setAppliedSearch] = useState("");
+  const [explorePage, setExplorePage] = useState(0);
 
   const loadDashboardData = useCallback(async () => {
     try {
@@ -35,15 +45,13 @@ export default function SolverDashboardPage() {
       setError(null);
       const [discovery, attemptsData] = await Promise.all([
         getDiscoveryDashboard({
-          search: search.trim() || undefined,
-          tags: selectedTag || undefined,
-          sort,
+          search: appliedSearch || undefined,
         }),
         getMyActiveAttempts().catch(() => []),
       ]);
       setRecommended(discovery.recommended);
       setProblems(discovery.problems);
-      setAvailableTags(discovery.availableTags);
+      setExplorePage(0);
       setSolverCourse(discovery.solverCourse);
       setMyAttempts(attemptsData);
     } catch (err) {
@@ -51,7 +59,7 @@ export default function SolverDashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, selectedTag, sort]);
+  }, [appliedSearch]);
 
   useEffect(() => {
     loadDashboardData();
@@ -73,7 +81,28 @@ export default function SolverDashboardPage() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    loadDashboardData();
+    setExplorePage(0);
+    setAppliedSearch(search.trim());
+  };
+
+  const exploreTotalPages = Math.max(
+    1,
+    Math.ceil(problems.length / EXPLORE_PAGE_SIZE)
+  );
+  const safeExplorePage = Math.min(explorePage, exploreTotalPages - 1);
+  const exploreStart = safeExplorePage * EXPLORE_PAGE_SIZE;
+  const paginatedProblems = problems.slice(
+    exploreStart,
+    exploreStart + EXPLORE_PAGE_SIZE
+  );
+  const exploreRangeStart = problems.length === 0 ? 0 : exploreStart + 1;
+  const exploreRangeEnd = Math.min(
+    exploreStart + EXPLORE_PAGE_SIZE,
+    problems.length
+  );
+
+  const handleExplorePageChange = (page: number) => {
+    setExplorePage(page);
   };
 
   return (
@@ -139,7 +168,7 @@ export default function SolverDashboardPage() {
               </div>
             )}
 
-            {/* Recommended for You — Module 2.1 */}
+            {/* Recommended for You — top 3 by skill + course match */}
             {!loading && recommended.length > 0 && (
               <div className="bg-white rounded-2xl shadow-xl border border-secondary/30 p-8 mb-8">
                 <div className="flex items-center justify-between mb-6">
@@ -147,17 +176,20 @@ export default function SolverDashboardPage() {
                     Recommended for You
                   </h2>
                   <span className="text-xs text-gray-500">
-                    Top matches via skill similarity
+                    Top 3 matches from your skills &amp; course
                   </span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {recommended.map((problem) => (
+                  {recommended.slice(0, 3).map((problem, rank) => (
                     <Link
                       key={problem.id}
                       href={`/solver/problem/${problem.id}`}
-                      className="block p-4 rounded-xl border border-secondary/20 bg-secondary/5 hover:border-secondary hover:shadow-md transition-all"
+                      className="block p-4 rounded-xl border border-secondary/20 bg-secondary/5 hover:border-secondary hover:shadow-md transition-all relative"
                     >
-                      <div className="flex items-start justify-between gap-2 mb-2">
+                      <span className="absolute top-3 left-3 w-6 h-6 rounded-full bg-secondary text-white text-xs font-bold flex items-center justify-center">
+                        {rank + 1}
+                      </span>
+                      <div className="flex items-start justify-between gap-2 mb-2 pl-8">
                         <h4 className="font-semibold text-gray-900 text-sm line-clamp-2">
                           {problem.title}
                         </h4>
@@ -195,31 +227,9 @@ export default function SolverDashboardPage() {
                   type="search"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search by title, organization, course, or tag..."
+                  placeholder="Search by title, organization, or course..."
                   className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
                 />
-                <select
-                  value={selectedTag}
-                  onChange={(e) => setSelectedTag(e.target.value)}
-                  className="px-4 py-2.5 rounded-lg border border-gray-300 text-sm bg-white"
-                >
-                  <option value="">All tags</option>
-                  {availableTags.map((tag) => (
-                    <option key={tag} value={tag}>
-                      {tag}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={sort}
-                  onChange={(e) =>
-                    setSort(e.target.value as "newest" | "oldest")
-                  }
-                  className="px-4 py-2.5 rounded-lg border border-gray-300 text-sm bg-white"
-                >
-                  <option value="newest">Newest first</option>
-                  <option value="oldest">Oldest first</option>
-                </select>
                 <button
                   type="submit"
                   className="px-6 py-2.5 bg-secondary hover:bg-accent text-white text-sm font-medium rounded-lg transition-colors"
@@ -229,8 +239,8 @@ export default function SolverDashboardPage() {
               </form>
 
               <p className="text-xs text-gray-500 mb-4">
-                Problems matching your course are listed first. Use search and
-                tag filters to narrow results.
+                Problems matching your course are listed first. Use search to
+                narrow results.
               </p>
 
               {loading ? (
@@ -239,17 +249,25 @@ export default function SolverDashboardPage() {
                 </div>
               ) : problems.length === 0 ? (
                 <p className="text-gray-500 text-center py-8">
-                  No problems match your filters. Try adjusting search or tags.
+                  No problems match your search. Try a different keyword.
                 </p>
               ) : (
+                <>
+                <p className="text-xs text-gray-500 mb-4">
+                  Showing {exploreRangeStart}–{exploreRangeEnd} of{" "}
+                  {problems.length} problem{problems.length === 1 ? "" : "s"}
+                  {exploreTotalPages > 1
+                    ? ` • Page ${safeExplorePage + 1} of ${exploreTotalPages}`
+                    : ""}
+                </p>
                 <div className="space-y-4">
-                  {problems.map((problem, index) => (
+                  {paginatedProblems.map((problem, index) => (
                     <div
                       key={problem.id}
                       className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg hover:bg-accent/10 transition-colors border border-gray-200"
                     >
                       <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center text-gray-600 font-bold shrink-0">
-                        {index + 1}
+                        {exploreStart + index + 1}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2 mb-1">
@@ -301,6 +319,87 @@ export default function SolverDashboardPage() {
                     </div>
                   ))}
                 </div>
+
+                {exploreTotalPages > 1 && (
+                  <div className="mt-8">
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              if (safeExplorePage > 0) {
+                                handleExplorePageChange(safeExplorePage - 1);
+                              }
+                            }}
+                            className={
+                              safeExplorePage === 0
+                                ? "pointer-events-none opacity-50"
+                                : ""
+                            }
+                          />
+                        </PaginationItem>
+
+                        {Array.from(
+                          { length: exploreTotalPages },
+                          (_, i) => i
+                        ).map((page) => {
+                          if (
+                            page === 0 ||
+                            page === exploreTotalPages - 1 ||
+                            (page >= safeExplorePage - 1 &&
+                              page <= safeExplorePage + 1)
+                          ) {
+                            return (
+                              <PaginationItem key={page}>
+                                <PaginationLink
+                                  href="#"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    handleExplorePageChange(page);
+                                  }}
+                                  isActive={safeExplorePage === page}
+                                >
+                                  {page + 1}
+                                </PaginationLink>
+                              </PaginationItem>
+                            );
+                          }
+                          if (
+                            page === safeExplorePage - 2 ||
+                            page === safeExplorePage + 2
+                          ) {
+                            return (
+                              <PaginationItem key={page}>
+                                <PaginationEllipsis />
+                              </PaginationItem>
+                            );
+                          }
+                          return null;
+                        })}
+
+                        <PaginationItem>
+                          <PaginationNext
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              if (safeExplorePage < exploreTotalPages - 1) {
+                                handleExplorePageChange(safeExplorePage + 1);
+                              }
+                            }}
+                            className={
+                              safeExplorePage === exploreTotalPages - 1
+                                ? "pointer-events-none opacity-50"
+                                : ""
+                            }
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  </div>
+                )}
+                </>
               )}
             </div>
           </>

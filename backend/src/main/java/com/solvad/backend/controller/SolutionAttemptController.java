@@ -53,12 +53,11 @@ public class SolutionAttemptController {
     public ResponseEntity<?> getDiscoveryDashboard(
             @RequestHeader("Authorization") String authHeader,
             @RequestParam(required = false) String search,
-            @RequestParam(required = false) String tags,
-            @RequestParam(required = false, defaultValue = "newest") String sort) {
+            @RequestParam(required = false) String tags) {
         try {
             UUID solverUserId = extractUserId(authHeader);
             DiscoveryDashboardResponse dashboard = matchmakingService.getDiscoveryDashboard(
-                    solverUserId, search, tags, sort);
+                    solverUserId, search, tags);
             return ResponseEntity.ok(dashboard);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
