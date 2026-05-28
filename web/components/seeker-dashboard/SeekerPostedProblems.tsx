@@ -174,6 +174,20 @@ export function SeekerPostedProblems({ onTotalChange }: SeekerPostedProblemsProp
             <SelectItem value="CLOSED" className="py-2.5">Closed</SelectItem>
           </SelectContent>
         </Select>
+        {(searchQuery || sdgFilter !== "all" || dateSort !== "newest" || statusFilter !== "all") && (
+          <button
+            onClick={() => {
+              setSearchQuery("");
+              setSdgFilter("all");
+              setDateSort("newest");
+              setStatusFilter("all");
+              setCurrentPage(0);
+            }}
+            className="px-3 py-2.5 text-sm text-gray-600 hover:text-red-600 border border-gray-300 rounded-lg hover:border-red-300 transition-colors whitespace-nowrap"
+          >
+            Clear All
+          </button>
+        )}
       </div>
 
       {isLoading && (
