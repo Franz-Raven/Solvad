@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -475,14 +476,40 @@ public class ProblemService {
         boolean hasSearch = searchQuery != null && !searchQuery.trim().isEmpty();
         boolean hasSdg = sdgFilter != null && !sdgFilter.trim().isEmpty();
 
-        Sort sort = "oldest".equalsIgnoreCase(dateSort)
+        LocalDateTime cutoff = null;
+        if (dateSort != null) {
+            cutoff = switch (dateSort.toLowerCase()) {
+                case "1day" -> LocalDateTime.now().minusDays(1);
+                case "1week" -> LocalDateTime.now().minusWeeks(1);
+                case "1month" -> LocalDateTime.now().minusMonths(1);
+                case "1year" -> LocalDateTime.now().minusYears(1);
+                default -> null;
+            };
+        }
+
+        boolean hasDateCutoff = cutoff != null;
+        boolean ascending = "oldest".equalsIgnoreCase(dateSort);
+
+        Sort sort = ascending
                 ? Sort.by(Sort.Direction.ASC, "createdAt")
                 : Sort.by(Sort.Direction.DESC, "createdAt");
         Pageable pageable = PageRequest.of(page, size, sort);
 
         Page<Problem> problemPage;
-        if (hasSdg) {
+        if (hasSearch && hasSdg && hasDateCutoff) {
+            problemPage = problemRepository.searchBySeekerAndSdgAfter(seeker, sdgFilter, cutoff, searchQuery, pageable);
+        } else if (hasSearch && hasSdg) {
+            problemPage = problemRepository.searchBySeekerAndSdg(seeker, sdgFilter, searchQuery, pageable);
+        } else if (hasSearch && hasDateCutoff) {
+            problemPage = problemRepository.searchBySeekerAfter(seeker, cutoff, searchQuery, pageable);
+        } else if (hasSearch) {
+            problemPage = problemRepository.searchBySeeker(seeker, searchQuery, pageable);
+        } else if (hasSdg && hasDateCutoff) {
+            problemPage = problemRepository.findBySeekerAndSdgFocusAndCreatedAtAfter(seeker, sdgFilter, cutoff, pageable);
+        } else if (hasSdg) {
             problemPage = problemRepository.findBySeekerAndSdgFocus(seeker, sdgFilter, pageable);
+        } else if (hasDateCutoff) {
+            problemPage = problemRepository.findBySeekerAndCreatedAtAfter(seeker, cutoff, pageable);
         } else {
             problemPage = problemRepository.findBySeeker(seeker, pageable);
         }
