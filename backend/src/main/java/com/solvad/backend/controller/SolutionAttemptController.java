@@ -30,17 +30,15 @@ public class SolutionAttemptController {
     private MatchmakingService matchmakingService;
 
     // -------------------------------------------------------------------------
-    // BROWSE — Solver sees all OPEN problems (paginated)
+    // BROWSE — Solver sees all OPEN problems
     // GET /api/problems/open
     // -------------------------------------------------------------------------
     @GetMapping("/api/problems/open")
     @PreAuthorize("hasRole('SOLVER')")
-    public ResponseEntity<?> getOpenProblems(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+    public ResponseEntity<?> getOpenProblems() {
         try {
-            PaginatedProblemsResponse response = attemptService.getOpenProblemsPaginated(page, size);
-            return ResponseEntity.ok(response);
+            List<ProblemResponse> problems = attemptService.getOpenProblems();
+            return ResponseEntity.ok(problems);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -55,13 +53,11 @@ public class SolutionAttemptController {
     public ResponseEntity<?> getDiscoveryDashboard(
             @RequestHeader("Authorization") String authHeader,
             @RequestParam(required = false) String search,
-            @RequestParam(required = false) String tags,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(required = false) String tags) {
         try {
             UUID solverUserId = extractUserId(authHeader);
-            DiscoveryDashboardResponse dashboard = matchmakingService.getDiscoveryDashboardPaginated(
-                    solverUserId, search, tags, page, size);
+            DiscoveryDashboardResponse dashboard = matchmakingService.getDiscoveryDashboard(
+                    solverUserId, search, tags);
             return ResponseEntity.ok(dashboard);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());

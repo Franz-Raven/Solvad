@@ -112,32 +112,13 @@ export async function getOpenProblems(): Promise<ProblemResponse[]> {
   });
 }
 
-/**
- * Get all OPEN problems with pagination (solver browse)
- */
-export async function getOpenProblemsPaginated(
-  page: number = 0,
-  size: number = 20
-): Promise<PaginatedProblemsResponse> {
-  const params = new URLSearchParams();
-  params.set("page", page.toString());
-  params.set("size", size.toString());
-
-  return apiRequest<PaginatedProblemsResponse>(
-    `/problems/open?${params.toString()}`,
-    { method: "GET" }
-  );
-}
-
 export interface DiscoveryQuery {
   search?: string;
   tags?: string;
-  page?: number;
-  size?: number;
 }
 
 /**
- * Module 2 — discovery dashboard with recommendations and filters (paginated)
+ * Module 2 — discovery dashboard with recommendations and filters
  */
 export async function getDiscoveryDashboard(
   query: DiscoveryQuery = {}
@@ -145,8 +126,6 @@ export async function getDiscoveryDashboard(
   const params = new URLSearchParams();
   if (query.search) params.set("search", query.search);
   if (query.tags) params.set("tags", query.tags);
-  params.set("page", (query.page ?? 0).toString());
-  params.set("size", (query.size ?? 20).toString());
   const qs = params.toString();
   return apiRequest<DiscoveryDashboardResponse>(
     `/problems/discovery${qs ? `?${qs}` : ""}`,
@@ -161,19 +140,6 @@ export async function getSeekerNotifications(): Promise<SeekerNotification[]> {
   return apiRequest<SeekerNotification[]>("/problems/notifications", {
     method: "GET",
   });
-}
-
-export async function getSeekerNotificationsPaginated(
-  page: number = 0,
-  size: number = 10
-): Promise<{ notifications: SeekerNotification[]; totalPages: number; currentPage: number; totalElements: number }> {
-  const params = new URLSearchParams();
-  params.set("page", page.toString());
-  params.set("size", size.toString());
-  return apiRequest(
-    `/problems/notifications/paginated?${params.toString()}`,
-    { method: "GET" }
-  );
 }
 
 export async function getPendingProposals(problemId: string): Promise<ClaimRequestResponse[]> {

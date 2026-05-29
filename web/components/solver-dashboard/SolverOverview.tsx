@@ -1,14 +1,12 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo } from "react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import type { SolutionAttemptResponse } from "@/types/attempt";
-import { getMyActiveAttemptsPaginated } from "@/lib/api/attempts";
-
-const PAGE_SIZE = 5;
 
 interface SolverOverviewProps {
+  attempts: SolutionAttemptResponse[];
   loading?: boolean;
 }
 
@@ -52,31 +50,7 @@ function SectionCard({ title, subtitle, children }: { title: string; subtitle?: 
   );
 }
 
-export function SolverOverview({ loading = false }: SolverOverviewProps) {
-  const [attempts, setAttempts] = useState<SolutionAttemptResponse[]>([]);
-  const [pageLoading, setPageLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    loadAttempts();
-  }, [currentPage]);
-
-  const loadAttempts = async () => {
-    try {
-      setPageLoading(true);
-      setError(null);
-      const result = await getMyActiveAttemptsPaginated(currentPage, PAGE_SIZE);
-      setAttempts(result.attempts);
-      setTotalPages(result.totalPages);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load attempts");
-      setAttempts([]);
-    } finally {
-      setPageLoading(false);
-    }
-  };
+export function SolverOverview({ attempts, loading = false }: SolverOverviewProps) {
   const stats = useMemo(() => {
     const total = attempts.length;
     const active = attempts.filter((a) => a.status === "ACTIVE").length;
@@ -88,7 +62,7 @@ export function SolverOverview({ loading = false }: SolverOverviewProps) {
   const timelineData = useMemo(() => buildWeeklyAttempts(attempts), [attempts]);
   const totalAttempts = timelineData.reduce((s, w) => s + w.count, 0);
 
-  if (loading || pageLoading) {
+  if (loading) {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
@@ -97,16 +71,6 @@ export function SolverOverview({ loading = false }: SolverOverviewProps) {
           ))}
         </div>
         <div className="animate-pulse bg-gray-100 rounded-2xl h-72" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-          {error}
-        </div>
       </div>
     );
   }

@@ -159,19 +159,6 @@ export async function getMyActiveAttempts(): Promise<SolutionAttemptResponse[]> 
   });
 }
 
-export async function getMyActiveAttemptsPaginated(
-  page: number = 0,
-  size: number = 5
-): Promise<{ attempts: SolutionAttemptResponse[]; totalPages: number; currentPage: number; totalElements: number }> {
-  const params = new URLSearchParams();
-  params.set("page", page.toString());
-  params.set("size", size.toString());
-  return apiRequest(
-    `/attempts/my-attempts/paginated?${params.toString()}`,
-    { method: "GET" }
-  );
-}
-
 /**
  * Submit the entire solution attempt (Solver)
  * Calls POST /api/attempts/{attemptId}/complete — the backend's finalize endpoint.

@@ -10,9 +10,6 @@ public class DiscoveryDashboardResponse {
     private List<String> availableTags = new ArrayList<>();
     private String solverCourse;
     private String solverSkills;
-    private int currentPage;
-    private int totalPages;
-    private long totalElements;
 
     public DiscoveryDashboardResponse() {
     }
@@ -55,29 +52,5 @@ public class DiscoveryDashboardResponse {
 
     public void setSolverSkills(String solverSkills) {
         this.solverSkills = solverSkills;
-    }
-
-    public int getCurrentPage() {
-        return currentPage;
-    }
-
-    public void setCurrentPage(int currentPage) {
-        this.currentPage = currentPage;
-    }
-
-    public int getTotalPages() {
-        return totalPages;
-    }
-
-    public void setTotalPages(int totalPages) {
-        this.totalPages = totalPages;
-    }
-
-    public long getTotalElements() {
-        return totalElements;
-    }
-
-    public void setTotalElements(long totalElements) {
-        this.totalElements = totalElements;
     }
 }
