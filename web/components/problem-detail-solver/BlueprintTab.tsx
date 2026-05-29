@@ -2,6 +2,14 @@
 
 import type { ProblemResponse } from "@/types/problem";
 
+function parseList(raw: string): string[] {
+  try {
+    return JSON.parse(raw).map((s: string) => s.trim()).filter(Boolean);
+  } catch {
+    return [raw.trim()].filter(Boolean);
+  }
+}
+
 export function BlueprintTab({ problem }: { problem: ProblemResponse }) {
   return (
     <div className="space-y-6">
@@ -27,22 +35,33 @@ export function BlueprintTab({ problem }: { problem: ProblemResponse }) {
               <p className="text-gray-800 leading-relaxed font-medium">{problem.primaryStatement}</p>
             </div>
           </div>
-          {problem.objectives && (
-            <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">Objectives</h3>
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <p className="text-gray-800 leading-relaxed">{problem.objectives}</p>
+          {problem.objectives && (() => {
+            const items = parseList(problem.objectives);
+            return items.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">Objectives</h3>
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <ul className="list-disc list-inside space-y-1 text-gray-800 leading-relaxed">
+                    {items.map((item, i) => <li key={i}>{item}</li>)}
+                  </ul>
+                </div>
               </div>
-            </div>
-          )}
-          {problem.constraints && (
-            <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">Constraints</h3>
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <p className="text-gray-800 leading-relaxed">{problem.constraints}</p>
+            );
+          })()}
+
+          {problem.constraints && (() => {
+            const items = parseList(problem.constraints);
+            return items.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">Constraints</h3>
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <ul className="list-disc list-inside space-y-1 text-gray-800 leading-relaxed">
+                    {items.map((item, i) => <li key={i}>{item}</li>)}
+                  </ul>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       </div>
 
