@@ -235,6 +235,33 @@ public class SolutionAttemptService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public PaginatedProblemsResponse getOpenProblemsPaginated(int page, int size) {
+        List<ProblemStatus> visibleStatuses = Arrays.asList(
+                ProblemStatus.OPEN,
+                ProblemStatus.CLAIMED,
+                ProblemStatus.IN_PROGRESS,
+                ProblemStatus.SOLVED_OPEN_FOR_IMPROVEMENT
+        );
+
+        List<Problem> openProblems = problemRepository.findByStatusIn(visibleStatuses);
+
+        long totalElements = openProblems.size();
+        int totalPages = (int) Math.ceil((double) totalElements / size);
+        int fromIndex = page * size;
+
+        List<ProblemResponse> paginatedProblems = openProblems.stream()
+                .skip(fromIndex)
+                .limit(size)
+                .map(problem -> {
+                    List<ProblemSubtask> subtasks = subtaskRepository.findByProblem(problem);
+                    return mapProblemToResponse(problem, subtasks);
+                })
+                .collect(Collectors.toList());
+
+        return new PaginatedProblemsResponse(paginatedProblems, page, totalPages, totalElements, size);
+    }
+
 
     @Transactional
     public SubtaskSubmissionResponse deleteFileFromSubmission(UUID solverUserId, UUID submissionId,

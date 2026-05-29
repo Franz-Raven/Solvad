@@ -4,9 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { getDiscoveryDashboard } from "@/lib/api/problem";
-import { getMyActiveAttempts } from "@/lib/api/attempts";
 import type { ProblemResponse } from "@/types/problem";
-import type { SolutionAttemptResponse } from "@/types/attempt";
 import { SolverOverview } from "@/components/solver-dashboard/SolverOverview";
 import {
   Pagination,
@@ -29,7 +27,6 @@ export default function SolverDashboardPage() {
   const [recommended, setRecommended] = useState<ProblemResponse[]>([]);
   const [problems, setProblems] = useState<ProblemResponse[]>([]);
   const [solverCourse, setSolverCourse] = useState("");
-  const [myAttempts, setMyAttempts] = useState<SolutionAttemptResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const searchParams = useSearchParams();
@@ -38,22 +35,24 @@ export default function SolverDashboardPage() {
   const [search, setSearch] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [explorePage, setExplorePage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
 
-  const loadDashboardData = useCallback(async () => {
+  const loadDashboardData = useCallback(async (page: number = 0) => {
     try {
       setLoading(true);
       setError(null);
-      const [discovery, attemptsData] = await Promise.all([
-        getDiscoveryDashboard({
-          search: appliedSearch || undefined,
-        }),
-        getMyActiveAttempts().catch(() => []),
-      ]);
+      const discovery = await getDiscoveryDashboard({
+        search: appliedSearch || undefined,
+        page,
+        size: EXPLORE_PAGE_SIZE,
+      });
       setRecommended(discovery.recommended);
       setProblems(discovery.problems);
-      setExplorePage(0);
+      setTotalPages(discovery.totalPages ?? 0);
+      setTotalElements(discovery.totalElements ?? 0);
+      setExplorePage(page);
       setSolverCourse(discovery.solverCourse);
-      setMyAttempts(attemptsData);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load dashboard");
     } finally {
@@ -62,11 +61,8 @@ export default function SolverDashboardPage() {
   }, [appliedSearch]);
 
   useEffect(() => {
-    loadDashboardData();
-  }, [loadDashboardData]);
-
-  const activeAttempts = myAttempts.filter((a) => a.status === "ACTIVE");
-  const completedAttempts = myAttempts.filter((a) => a.status === "COMPLETED");
+    loadDashboardData(0);
+  }, [appliedSearch, loadDashboardData]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -81,28 +77,21 @@ export default function SolverDashboardPage() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setExplorePage(0);
     setAppliedSearch(search.trim());
   };
 
-  const exploreTotalPages = Math.max(
-    1,
-    Math.ceil(problems.length / EXPLORE_PAGE_SIZE)
-  );
+  const exploreTotalPages = totalPages;
   const safeExplorePage = Math.min(explorePage, exploreTotalPages - 1);
   const exploreStart = safeExplorePage * EXPLORE_PAGE_SIZE;
-  const paginatedProblems = problems.slice(
-    exploreStart,
-    exploreStart + EXPLORE_PAGE_SIZE
-  );
-  const exploreRangeStart = problems.length === 0 ? 0 : exploreStart + 1;
+  const paginatedProblems = problems;
+  const exploreRangeStart = totalElements === 0 ? 0 : exploreStart + 1;
   const exploreRangeEnd = Math.min(
     exploreStart + EXPLORE_PAGE_SIZE,
-    problems.length
+    totalElements
   );
 
   const handleExplorePageChange = (page: number) => {
-    setExplorePage(page);
+    loadDashboardData(page);
   };
 
   return (
@@ -133,40 +122,7 @@ export default function SolverDashboardPage() {
               </p>
             </div>
 
-            {/* Active workspace */}
-            {activeAttempts.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8 mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                  Your Workspace
-                </h2>
-                <div className="space-y-4">
-                  {activeAttempts.map((attempt) => (
-                    <div
-                      key={attempt.id}
-                      className="flex items-center gap-4 p-4 bg-secondary/5 rounded-lg border border-secondary/20"
-                    >
-                      <div className="w-12 h-12 bg-secondary rounded-lg flex items-center justify-center text-white font-bold">
-                        🚀
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-gray-900 text-sm">
-                          {attempt.problemTitle}
-                        </h4>
-                        <p className="text-xs text-gray-600 mt-0.5">
-                          Claimed {formatDate(attempt.claimedAt)}
-                        </p>
-                      </div>
-                      <Link
-                        href={`/solver/problem/${attempt.problemId}/work`}
-                        className="px-4 py-2 bg-secondary hover:bg-accent text-white text-sm font-medium rounded-lg transition-colors shrink-0"
-                      >
-                        Continue Working
-                      </Link>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Active workspace is now shown in the Overview component */}
 
             {/* Recommended for You — top 3 by skill + course match */}
             {!loading && recommended.length > 0 && (
@@ -406,7 +362,7 @@ export default function SolverDashboardPage() {
         )}
 
         {activeTab === "overview" && (
-          <SolverOverview attempts={myAttempts} loading={loading} />
+          <SolverOverview loading={loading} />
         )}
 
       </div>

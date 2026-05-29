@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { getMyProblems, getSeekerNotifications } from "@/lib/api/problem";
-import type { ProblemResponse, SeekerNotification } from "@/types/problem";
+import { getMyProblems } from "@/lib/api/problem";
+import type { ProblemResponse } from "@/types/problem";
 import { SeekerOverview } from "@/components/seeker-dashboard/SeekerOverview";
 import { SeekerRecentActivity } from "@/components/seeker-dashboard/SeekerRecentActivity";
 import { SeekerPostedProblems } from "@/components/seeker-dashboard/SeekerPostedProblems";
@@ -13,14 +13,11 @@ export default function SeekerDashboardPage() {
   const activeTab = searchParams.get("tab") || "home";
   
   const [problems, setProblems] = useState<ProblemResponse[]>([]);
-  const [notifications, setNotifications] = useState<SeekerNotification[]>([]);
   const [totalProblems, setTotalProblems] = useState(0);
+  const [activityLoading, setActivityLoading] = useState(false);
 
   useEffect(() => {
-    Promise.all([
-      getMyProblems().then(setProblems).catch(() => {}),
-      getSeekerNotifications().then(setNotifications).catch(() => []),
-    ]);
+    getMyProblems().then(setProblems).catch(() => {});
   }, []);
 
   return (
@@ -35,7 +32,7 @@ export default function SeekerDashboardPage() {
         )}
 
         {activeTab === "activity" && (
-          <SeekerRecentActivity notifications={notifications} />
+          <SeekerRecentActivity onLoadingChange={setActivityLoading} />
         )}
       </div>
     </div>

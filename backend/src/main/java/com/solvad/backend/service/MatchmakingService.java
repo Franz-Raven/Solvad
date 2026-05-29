@@ -42,6 +42,16 @@ public class MatchmakingService {
             UUID solverUserId,
             String search,
             String tagFilter) {
+        return getDiscoveryDashboardPaginated(solverUserId, search, tagFilter, 0, 50);
+    }
+
+    @Transactional(readOnly = true)
+    public DiscoveryDashboardResponse getDiscoveryDashboardPaginated(
+            UUID solverUserId,
+            String search,
+            String tagFilter,
+            int page,
+            int size) {
 
         SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
                 .orElseThrow(() -> new RuntimeException("Solver profile not found"));
@@ -105,8 +115,18 @@ public class MatchmakingService {
                 .map(ScoredProblem::response)
                 .collect(Collectors.toList());
 
-        List<ProblemResponse> problems = scored.stream()
+        // Get all sorted problems for pagination
+        List<ScoredProblem> allSortedScored = scored.stream()
                 .sorted(buildExploreListComparator())
+                .collect(Collectors.toList());
+
+        long totalElements = allSortedScored.size();
+        int totalPages = (int) Math.ceil((double) totalElements / size);
+        int fromIndex = page * size;
+
+        List<ProblemResponse> problems = allSortedScored.stream()
+                .skip(fromIndex)
+                .limit(size)
                 .map(ScoredProblem::response)
                 .collect(Collectors.toList());
 
@@ -122,6 +142,9 @@ public class MatchmakingService {
         dashboard.setAvailableTags(availableTags);
         dashboard.setSolverCourse(solverCourse);
         dashboard.setSolverSkills(KeywordUtils.toCommaList(solverSkills));
+        dashboard.setCurrentPage(page);
+        dashboard.setTotalPages(totalPages);
+        dashboard.setTotalElements(totalElements);
         return dashboard;
     }
 
