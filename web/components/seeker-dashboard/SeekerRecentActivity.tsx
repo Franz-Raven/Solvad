@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import type { SeekerNotification } from "@/types/problem";
+import { getSeekerNotificationsPaginated } from "@/lib/api/problem";
 import {
   Select,
   SelectContent,
@@ -20,15 +21,47 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 
-interface SeekerRecentActivityProps {
-  notifications: SeekerNotification[];
-}
-
 const ITEMS_PER_PAGE = 10;
 
-export function SeekerRecentActivity({ notifications }: SeekerRecentActivityProps) {
+interface SeekerRecentActivityProps {
+  onLoadingChange?: (loading: boolean) => void;
+}
+
+export function SeekerRecentActivity({ onLoadingChange }: SeekerRecentActivityProps) {
   const [eventTypeFilter, setEventTypeFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(0);
+  const [notifications, setNotifications] = useState<SeekerNotification[]>([]);
+  const [totalPages, setTotalPages] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [eventTypes, setEventTypes] = useState<string[]>([]);
+
+  useEffect(() => {
+    loadNotifications();
+  }, [currentPage, eventTypeFilter]);
+
+  const loadNotifications = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      onLoadingChange?.(true);
+      const result = await getSeekerNotificationsPaginated(currentPage, ITEMS_PER_PAGE);
+      setNotifications(result.notifications);
+      setTotalPages(result.totalPages);
+      
+      // Extract unique event types for filter
+      if (currentPage === 0) {
+        const uniqueTypes = new Set(result.notifications.map(n => n.eventType));
+        setEventTypes(Array.from(uniqueTypes));
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load notifications");
+      setNotifications([]);
+    } finally {
+      setLoading(false);
+      onLoadingChange?.(false);
+    }
+  };
 
   const formatNotificationTime = (dateString: string) => {
     return new Date(dateString).toLocaleString(undefined, {
@@ -51,22 +84,12 @@ export function SeekerRecentActivity({ notifications }: SeekerRecentActivityProp
     return "Earlier";
   };
 
-  const getUniqueEventTypes = () => {
-    const types = new Set(notifications.map(n => n.eventType));
-    return Array.from(types);
-  };
+  // Filter by event type if a specific filter is selected
+  const filteredNotifications = eventTypeFilter === "all" 
+    ? notifications 
+    : notifications.filter(n => n.eventType === eventTypeFilter);
 
-  const filteredNotifications = notifications.filter(n => {
-    if (eventTypeFilter === "all") return true;
-    return n.eventType === eventTypeFilter;
-  });
-
-  const totalPages = Math.ceil(filteredNotifications.length / ITEMS_PER_PAGE);
-  const startIndex = currentPage * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const paginatedNotifications = filteredNotifications.slice(startIndex, endIndex);
-
-  const groupedNotifications = paginatedNotifications.reduce((acc, notification) => {
+  const groupedNotifications = filteredNotifications.reduce((acc, notification) => {
     const group = getTimelineGroup(notification.timestamp);
     if (!acc[group]) {
       acc[group] = [];
@@ -78,7 +101,34 @@ export function SeekerRecentActivity({ notifications }: SeekerRecentActivityProp
   const timelineOrder = ["Today", "Yesterday", "This Week", "Earlier"];
   const orderedGroups = timelineOrder.filter(group => groupedNotifications[group]);
 
-  const eventTypes = getUniqueEventTypes();
+  if (loading) {
+    return (
+      <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Recent Activity</h2>
+            <p className="text-sm text-gray-600 mt-1">
+              Updates when solvers claim your problems or statuses change.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">Recent Activity</h2>
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          {error}
+        </div>
+      </div>
+    );
+  }
 
   if (notifications.length === 0) {
     return (

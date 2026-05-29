@@ -23,6 +23,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+const ITEMS_PER_PAGE = 10;
+
 interface SeekerPostedProblemsProps {
   onTotalChange?: (total: number) => void;
 }
@@ -90,7 +92,6 @@ export function SeekerPostedProblems({ onTotalChange }: SeekerPostedProblemsProp
         return "bg-gray-100 text-gray-700";
     }
   };
-  const ITEMS_PER_PAGE = 10;
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);

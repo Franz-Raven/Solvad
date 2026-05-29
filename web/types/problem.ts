@@ -91,6 +91,9 @@ export interface DiscoveryDashboardResponse {
   availableTags: string[];
   solverCourse: string;
   solverSkills: string;
+  currentPage?: number;
+  totalPages?: number;
+  totalElements?: number;
 }
 
 export interface SeekerNotification {
