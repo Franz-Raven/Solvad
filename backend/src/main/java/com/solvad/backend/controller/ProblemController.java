@@ -1,9 +1,10 @@
 package com.solvad.backend.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.solvad.backend.audit.AuditLogResponse;
 import com.solvad.backend.dto.*;
 import com.solvad.backend.security.JwtService;
-import com.solvad.backend.service.AuditService;
+import com.solvad.backend.audit.AuditService;
 import com.solvad.backend.service.ProblemService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;

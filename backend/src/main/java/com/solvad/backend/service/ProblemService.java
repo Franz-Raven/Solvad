@@ -1,5 +1,7 @@
 package com.solvad.backend.service;
 
+import com.solvad.backend.audit.AuditEventType;
+import com.solvad.backend.audit.AuditService;
 import com.solvad.backend.dto.*;
 import com.solvad.backend.entity.*;
 import com.solvad.backend.event.ProblemCreatedEvent;

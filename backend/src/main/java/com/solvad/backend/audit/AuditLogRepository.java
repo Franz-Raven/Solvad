@@ -1,7 +1,5 @@
-package com.solvad.backend.repository;
+package com.solvad.backend.audit;
 
-import com.solvad.backend.entity.AuditEventType;
-import com.solvad.backend.entity.AuditLog;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

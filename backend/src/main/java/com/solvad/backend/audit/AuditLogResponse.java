@@ -1,6 +1,5 @@
-package com.solvad.backend.dto;
+package com.solvad.backend.audit;
 
-import com.solvad.backend.entity.AuditEventType;
 import java.time.LocalDateTime;
 import java.util.UUID;
 

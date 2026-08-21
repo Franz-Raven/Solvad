@@ -1,10 +1,6 @@
-package com.solvad.backend.service;
+package com.solvad.backend.audit;
 
-import com.solvad.backend.dto.AuditLogResponse;
 import com.solvad.backend.profile.seeker.SeekerNotificationResponse;
-import com.solvad.backend.entity.AuditEventType;
-import com.solvad.backend.entity.AuditLog;
-import com.solvad.backend.repository.AuditLogRepository;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

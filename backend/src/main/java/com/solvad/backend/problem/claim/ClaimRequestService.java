@@ -1,5 +1,6 @@
 package com.solvad.backend.problem.claim;
 
+import com.solvad.backend.audit.AuditEventType;
 import com.solvad.backend.dto.ProposalDTO;
 import com.solvad.backend.entity.*;
 import com.solvad.backend.profile.seeker.SeekerProfileRepository;
@@ -7,7 +8,7 @@ import com.solvad.backend.profile.seeker.SeekerProfile;
 import com.solvad.backend.profile.solver.SolverProfile;
 import com.solvad.backend.profile.solver.SolverProfileRepository;
 import com.solvad.backend.repository.*;
-import com.solvad.backend.service.AuditService;
+import com.solvad.backend.audit.AuditService;
 import com.solvad.backend.service.CloudinaryService;
 import com.solvad.backend.solution.attempt.SolutionAttemptService;
 import com.solvad.backend.solution.attempt.SolutionAttempt;

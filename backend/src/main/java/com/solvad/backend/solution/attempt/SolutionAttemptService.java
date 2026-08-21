@@ -1,5 +1,6 @@
 package com.solvad.backend.solution.attempt;
 
+import com.solvad.backend.audit.AuditEventType;
 import com.solvad.backend.dto.*;
 import com.solvad.backend.entity.*;
 import com.solvad.backend.problem.claim.ClaimRequest;
@@ -8,7 +9,7 @@ import com.solvad.backend.profile.seeker.SeekerProfile;
 import com.solvad.backend.profile.solver.SolverProfile;
 import com.solvad.backend.profile.solver.SolverProfileRepository;
 import com.solvad.backend.repository.*;
-import com.solvad.backend.service.AuditService;
+import com.solvad.backend.audit.AuditService;
 import com.solvad.backend.service.CloudinaryService;
 import com.solvad.backend.service.MatchmakingService;
 import org.springframework.beans.factory.annotation.Autowired;
