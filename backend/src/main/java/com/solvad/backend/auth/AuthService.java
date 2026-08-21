@@ -1,16 +1,14 @@
-package com.solvad.backend.service;
+package com.solvad.backend.auth;
 
-import com.solvad.backend.dto.AuthResponse;
-import com.solvad.backend.dto.LoginRequest;
 import com.solvad.backend.profile.seeker.SeekerRegisterRequest;
 import com.solvad.backend.profile.solver.SolverRegisterRequest;
-import com.solvad.backend.entity.Role;
+import com.solvad.backend.user.Role;
 import com.solvad.backend.profile.seeker.SeekerProfile;
 import com.solvad.backend.profile.solver.SolverProfile;
-import com.solvad.backend.entity.User;
+import com.solvad.backend.user.User;
 import com.solvad.backend.profile.seeker.SeekerProfileRepository;
 import com.solvad.backend.profile.solver.SolverProfileRepository;
-import com.solvad.backend.repository.UserRepository;
+import com.solvad.backend.user.UserRepository;
 import com.solvad.backend.security.JwtService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;

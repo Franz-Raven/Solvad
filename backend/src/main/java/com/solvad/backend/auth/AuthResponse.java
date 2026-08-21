@@ -1,6 +1,6 @@
-package com.solvad.backend.dto;
+package com.solvad.backend.auth;
 
-import com.solvad.backend.entity.Role;
+import com.solvad.backend.user.Role;
 
 import java.util.UUID;
 

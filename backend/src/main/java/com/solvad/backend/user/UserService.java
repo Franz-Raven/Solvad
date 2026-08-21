@@ -1,7 +1,5 @@
-package com.solvad.backend.service;
+package com.solvad.backend.user;
 
-import com.solvad.backend.entity.User;
-import com.solvad.backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;

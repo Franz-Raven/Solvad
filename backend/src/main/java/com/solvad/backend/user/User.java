@@ -1,4 +1,4 @@
-package com.solvad.backend.entity;
+package com.solvad.backend.user;
 
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;

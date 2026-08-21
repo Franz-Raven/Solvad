@@ -1,8 +1,8 @@
 package com.solvad.backend.profile.seeker;
 
-import com.solvad.backend.entity.Role;
-import com.solvad.backend.entity.User;
-import com.solvad.backend.repository.UserRepository;
+import com.solvad.backend.user.Role;
+import com.solvad.backend.user.User;
+import com.solvad.backend.user.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

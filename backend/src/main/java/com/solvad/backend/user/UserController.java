@@ -1,11 +1,8 @@
-package com.solvad.backend.controller;
+package com.solvad.backend.user;
 
 import com.solvad.backend.profile.solver.SolverProfile;
-import com.solvad.backend.entity.User;
 import com.solvad.backend.profile.solver.SolverProfileRepository;
-import com.solvad.backend.repository.UserRepository;
 import com.solvad.backend.service.CloudinaryService;
-import com.solvad.backend.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;

@@ -1,4 +1,4 @@
-package com.solvad.backend.dto;
+package com.solvad.backend.auth;
 
 public class LoginRequest {
     private String email;
