@@ -1,12 +1,8 @@
-package com.solvad.backend.controller;
+package com.solvad.backend.problem.claim;
 
 import com.solvad.backend.dto.ProposalDTO;
-import com.solvad.backend.dto.SolutionAttemptResponse;
-import com.solvad.backend.entity.ClaimRequest;
-import com.solvad.backend.entity.ClaimRequestStatus;
 import com.solvad.backend.entity.User;
 import com.solvad.backend.security.JwtService;
-import com.solvad.backend.service.ClaimRequestService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;

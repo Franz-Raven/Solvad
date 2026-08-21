@@ -1,5 +1,9 @@
-package com.solvad.backend.entity;
+package com.solvad.backend.problem.claim;
 
+import com.solvad.backend.entity.Problem;
+import com.solvad.backend.entity.ProblemSubtask;
+import com.solvad.backend.entity.SolutionAttempt;
+import com.solvad.backend.entity.SolverProfile;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.UUID;

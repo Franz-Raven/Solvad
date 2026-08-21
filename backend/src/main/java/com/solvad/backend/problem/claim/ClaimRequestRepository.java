@@ -1,7 +1,5 @@
-package com.solvad.backend.repository;
+package com.solvad.backend.problem.claim;
 
-import com.solvad.backend.entity.ClaimRequest;
-import com.solvad.backend.entity.ClaimRequestStatus;
 import com.solvad.backend.entity.Problem;
 import com.solvad.backend.entity.ProblemSubtask;
 import org.springframework.data.jpa.repository.JpaRepository;

@@ -1,8 +1,5 @@
-package com.solvad.backend.controller;
+package com.solvad.backend.problem.GapAnalysisCache;
 
-import com.solvad.backend.problem.GapAnalysisCache.GapAnalysisRequest;
-import com.solvad.backend.problem.GapAnalysisCache.GapAnalysisResponse;
-import com.solvad.backend.problem.GapAnalysisCache.GapAnalysisService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;

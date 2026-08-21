@@ -2,6 +2,7 @@ package com.solvad.backend.service;
 
 import com.solvad.backend.dto.*;
 import com.solvad.backend.entity.*;
+import com.solvad.backend.problem.claim.ClaimRequest;
 import com.solvad.backend.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

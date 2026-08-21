@@ -1,8 +1,11 @@
-package com.solvad.backend.service;
+package com.solvad.backend.problem.claim;
 
 import com.solvad.backend.dto.ProposalDTO;
 import com.solvad.backend.entity.*;
 import com.solvad.backend.repository.*;
+import com.solvad.backend.service.AuditService;
+import com.solvad.backend.service.CloudinaryService;
+import com.solvad.backend.service.SolutionAttemptService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
