@@ -1,7 +1,5 @@
-package com.solvad.backend.controller;
+package com.solvad.backend.problem.similarity;
 
-import com.solvad.backend.dto.SimilarityResultDTO;
-import com.solvad.backend.service.VectorSimilarityService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

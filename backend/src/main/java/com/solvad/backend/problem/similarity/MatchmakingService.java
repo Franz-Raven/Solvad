@@ -1,4 +1,4 @@
-package com.solvad.backend.service;
+package com.solvad.backend.problem.similarity;
 
 import com.solvad.backend.dashboard.DiscoveryDashboardResponse;
 import com.solvad.backend.problem.core.ProblemResponse;
@@ -9,9 +9,9 @@ import com.solvad.backend.problem.subtask.ProblemSubtask;
 import com.solvad.backend.profile.solver.SolverProfile;
 import com.solvad.backend.problem.core.ProblemRepository;
 import com.solvad.backend.problem.subtask.ProblemSubtaskRepository;
-import com.solvad.backend.solution.attempt.SolutionAttemptRepository;
+import com.solvad.backend.problem.solution_attempt.SolutionAttemptRepository;
 import com.solvad.backend.profile.solver.SolverProfileRepository;
-import com.solvad.backend.solution.attempt.SolutionAttemptStatus;
+import com.solvad.backend.problem.solution_attempt.SolutionAttemptStatus;
 import com.solvad.backend.util.KeywordUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

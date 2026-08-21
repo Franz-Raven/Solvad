@@ -1,4 +1,4 @@
-package com.solvad.backend.dto;
+package com.solvad.backend.problem.claim;
 
 import java.util.List;
 import java.util.UUID;

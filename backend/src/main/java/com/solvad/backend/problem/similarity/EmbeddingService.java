@@ -1,4 +1,4 @@
-package com.solvad.backend.service;
+package com.solvad.backend.problem.similarity;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;

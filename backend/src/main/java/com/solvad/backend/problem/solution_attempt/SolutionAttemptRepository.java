@@ -1,4 +1,4 @@
-package com.solvad.backend.solution.attempt;
+package com.solvad.backend.problem.solution_attempt;
 
 import com.solvad.backend.problem.core.Problem;
 import com.solvad.backend.problem.subtask.ProblemSubtask;

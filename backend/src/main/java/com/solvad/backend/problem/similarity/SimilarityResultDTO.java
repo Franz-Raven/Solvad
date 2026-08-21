@@ -1,4 +1,4 @@
-package com.solvad.backend.dto;
+package com.solvad.backend.problem.similarity;
 
 import java.util.UUID;
 

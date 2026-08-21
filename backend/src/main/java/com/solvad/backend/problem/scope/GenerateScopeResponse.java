@@ -1,4 +1,4 @@
-package com.solvad.backend.dto;
+package com.solvad.backend.problem.scope;
 
 import com.solvad.backend.problem.core.EnhancedProblemResponse;
 import com.solvad.backend.problem.subtask.SubtaskResponse;

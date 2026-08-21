@@ -1,6 +1,6 @@
 package com.solvad.backend.problem.event;
 
-import com.solvad.backend.service.VectorSimilarityService;
+import com.solvad.backend.problem.similarity.VectorSimilarityService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;

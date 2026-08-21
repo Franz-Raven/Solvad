@@ -1,6 +1,6 @@
 package com.solvad.backend.problem.subtask;
 
-import com.solvad.backend.solution.attempt.SolutionAttempt;
+import com.solvad.backend.problem.solution_attempt.SolutionAttempt;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

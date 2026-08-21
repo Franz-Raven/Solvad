@@ -1,4 +1,4 @@
-package com.solvad.backend.service;
+package com.solvad.backend.storage;
 
 public class CloudinaryUploadResult {
     private final String url;

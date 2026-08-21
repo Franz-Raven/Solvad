@@ -1,6 +1,5 @@
 package com.solvad.backend.problem.claim;
 
-import com.solvad.backend.dto.ProposalDTO;
 import com.solvad.backend.user.User;
 import com.solvad.backend.security.JwtService;
 import org.springframework.beans.factory.annotation.Autowired;

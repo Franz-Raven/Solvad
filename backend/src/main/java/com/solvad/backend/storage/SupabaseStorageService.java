@@ -1,4 +1,4 @@
-package com.solvad.backend.service;
+package com.solvad.backend.storage;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;

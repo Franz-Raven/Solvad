@@ -1,10 +1,10 @@
-package com.solvad.backend.solution.attempt;
+package com.solvad.backend.problem.solution_attempt;
 
 import com.solvad.backend.problem.core.ProblemResponse;
 import com.solvad.backend.problem.subtask.SubtaskSubmissionResponse;
 import com.solvad.backend.security.JwtService;
 import com.solvad.backend.dashboard.DiscoveryDashboardResponse;
-import com.solvad.backend.service.MatchmakingService;
+import com.solvad.backend.problem.similarity.MatchmakingService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;

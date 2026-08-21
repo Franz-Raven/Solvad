@@ -1,4 +1,4 @@
-package com.solvad.backend.solution.attempt;
+package com.solvad.backend.problem.solution_attempt;
 
 import com.solvad.backend.audit.AuditEventType;
 import com.solvad.backend.problem.attachment.ProblemAttachmentRepository;
@@ -14,8 +14,8 @@ import com.solvad.backend.profile.seeker.SeekerProfile;
 import com.solvad.backend.profile.solver.SolverProfile;
 import com.solvad.backend.profile.solver.SolverProfileRepository;
 import com.solvad.backend.audit.AuditService;
-import com.solvad.backend.service.CloudinaryService;
-import com.solvad.backend.service.MatchmakingService;
+import com.solvad.backend.storage.CloudinaryService;
+import com.solvad.backend.problem.similarity.MatchmakingService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

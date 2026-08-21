@@ -1,6 +1,5 @@
-package com.solvad.backend.repository;
+package com.solvad.backend.problem.similarity;
 
-import com.solvad.backend.dto.SimilarityResultDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;

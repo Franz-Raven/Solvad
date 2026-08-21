@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.solvad.backend.problem.core.Problem;
 import com.solvad.backend.problem.core.ProblemRepository;
-import com.solvad.backend.service.GeminiService;
+import com.solvad.backend.ai.GeminiService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

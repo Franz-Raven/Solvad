@@ -1,4 +1,4 @@
-package com.solvad.backend.service;
+package com.solvad.backend.storage;
 
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;

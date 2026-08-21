@@ -2,7 +2,7 @@ package com.solvad.backend.problem.claim;
 
 import com.solvad.backend.problem.core.Problem;
 import com.solvad.backend.problem.subtask.ProblemSubtask;
-import com.solvad.backend.solution.attempt.SolutionAttempt;
+import com.solvad.backend.problem.solution_attempt.SolutionAttempt;
 import com.solvad.backend.profile.solver.SolverProfile;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;

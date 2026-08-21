@@ -1,6 +1,6 @@
 package com.solvad.backend.problem.subtask;
 
-import com.solvad.backend.solution.attempt.SolutionAttempt;
+import com.solvad.backend.problem.solution_attempt.SolutionAttempt;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;

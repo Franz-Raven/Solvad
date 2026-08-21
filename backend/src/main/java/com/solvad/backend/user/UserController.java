@@ -2,7 +2,7 @@ package com.solvad.backend.user;
 
 import com.solvad.backend.profile.solver.SolverProfile;
 import com.solvad.backend.profile.solver.SolverProfileRepository;
-import com.solvad.backend.service.CloudinaryService;
+import com.solvad.backend.storage.CloudinaryService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;

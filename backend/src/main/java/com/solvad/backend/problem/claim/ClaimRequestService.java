@@ -1,7 +1,6 @@
 package com.solvad.backend.problem.claim;
 
 import com.solvad.backend.audit.AuditEventType;
-import com.solvad.backend.dto.ProposalDTO;
 import com.solvad.backend.problem.core.Problem;
 import com.solvad.backend.problem.core.ProblemRepository;
 import com.solvad.backend.problem.core.ProblemStatus;
@@ -12,11 +11,11 @@ import com.solvad.backend.profile.seeker.SeekerProfile;
 import com.solvad.backend.profile.solver.SolverProfile;
 import com.solvad.backend.profile.solver.SolverProfileRepository;
 import com.solvad.backend.audit.AuditService;
-import com.solvad.backend.service.CloudinaryService;
-import com.solvad.backend.solution.attempt.SolutionAttemptService;
-import com.solvad.backend.solution.attempt.SolutionAttempt;
-import com.solvad.backend.solution.attempt.SolutionAttemptRepository;
-import com.solvad.backend.solution.attempt.SolutionAttemptStatus;
+import com.solvad.backend.storage.CloudinaryService;
+import com.solvad.backend.problem.solution_attempt.SolutionAttemptService;
+import com.solvad.backend.problem.solution_attempt.SolutionAttempt;
+import com.solvad.backend.problem.solution_attempt.SolutionAttemptRepository;
+import com.solvad.backend.problem.solution_attempt.SolutionAttemptStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
