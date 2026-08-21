@@ -18,7 +18,7 @@ public interface DashboardRepository extends JpaRepository<Problem, UUID> {
             "FROM Problem p WHERE p.seeker.id = :seekerId")
     ProblemStatusGroupDto getProblemStatusGrouping(@Param("seekerId") UUID seekerId);
 
-    @Query("SELECT new com.solvad.backend.dto.SdgDistributionDto(p.sdgFocus, COUNT(p)) " +
+    @Query("SELECT new com.solvad.backend.dashboard.SdgDistributionDto(p.sdgFocus, COUNT(p)) " +
             "FROM Problem p WHERE p.sdgFocus IS NOT NULL AND p.seeker.id = :seekerId GROUP BY p.sdgFocus")
     List<SdgDistributionDto> getSdgDistribution(@Param("seekerId") UUID seekerId);
 }

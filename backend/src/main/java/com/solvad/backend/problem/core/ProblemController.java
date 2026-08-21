@@ -5,7 +5,6 @@ import com.solvad.backend.audit.AuditLogResponse;
 import com.solvad.backend.dto.*;
 import com.solvad.backend.security.JwtService;
 import com.solvad.backend.audit.AuditService;
-import com.solvad.backend.service.ProblemService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;

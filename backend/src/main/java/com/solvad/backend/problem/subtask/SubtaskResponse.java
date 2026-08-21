@@ -1,6 +1,6 @@
 package com.solvad.backend.problem.subtask;
 
-import com.solvad.backend.dto.AttachmentRequirementResponse;
+import com.solvad.backend.problem.attachment.AttachmentRequirementResponse;
 
 import java.util.List;
 import java.util.UUID;

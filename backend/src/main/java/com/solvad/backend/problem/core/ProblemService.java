@@ -1,27 +1,23 @@
-package com.solvad.backend.service;
+package com.solvad.backend.problem.core;
 
 import com.solvad.backend.audit.AuditEventType;
 import com.solvad.backend.audit.AuditService;
 import com.solvad.backend.dto.*;
-import com.solvad.backend.entity.*;
-import com.solvad.backend.event.ProblemCreatedEvent;
-import com.solvad.backend.problem.core.ProblemRequest;
-import com.solvad.backend.problem.core.ProblemResponse;
+import com.solvad.backend.problem.event.ProblemCreatedEvent;
+import com.solvad.backend.problem.attachment.AttachmentRequirementResponse;
+import com.solvad.backend.problem.attachment.ProblemAttachment;
 import com.solvad.backend.problem.ProblemSearchResult;
-import com.solvad.backend.problem.core.ProblemSummaryResponse;
-import com.solvad.backend.problem.core.Problem;
-import com.solvad.backend.problem.core.ProblemStatus;
 import com.solvad.backend.problem.subtask.ProblemSubtask;
 import com.solvad.backend.problem.subtask.SubtaskRequest;
 import com.solvad.backend.problem.subtask.SubtaskResponse;
 import com.solvad.backend.profile.seeker.SeekerNotificationResponse;
 import com.solvad.backend.profile.seeker.SeekerProblemListResponse;
 import com.solvad.backend.profile.seeker.SeekerProfile;
-import com.solvad.backend.problem.core.ProblemRepository;
 import com.solvad.backend.problem.subtask.ProblemSubtaskRepository;
 import com.solvad.backend.profile.seeker.SeekerProfileRepository;
+import com.solvad.backend.service.*;
 import com.solvad.backend.solution.attempt.SolutionAttemptRepository;
-import com.solvad.backend.repository.ProblemAttachmentRepository;
+import com.solvad.backend.problem.attachment.ProblemAttachmentRepository;
 import com.solvad.backend.solution.attempt.SolutionAttempt;
 import com.solvad.backend.solution.attempt.SolutionAttemptStatus;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -147,7 +143,6 @@ public class ProblemService {
         }
 
         savedProblem.setTags(MatchmakingService.buildTagsForProblem(savedProblem, savedSubtasks));
-        problemRepository.save(savedProblem);
 
         auditService.log(
                 savedProblem.getId(),

@@ -1,6 +1,6 @@
 package com.solvad.backend.problem.subtask;
 
-import com.solvad.backend.dto.AttachmentRequirementRequest;
+import com.solvad.backend.problem.attachment.AttachmentRequirementRequest;
 import jakarta.validation.constraints.NotBlank;
 import java.util.List;
 

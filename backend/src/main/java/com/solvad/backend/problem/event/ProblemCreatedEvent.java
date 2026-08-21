@@ -1,4 +1,4 @@
-package com.solvad.backend.event;
+package com.solvad.backend.problem.event;
 
 import java.util.UUID;
 
