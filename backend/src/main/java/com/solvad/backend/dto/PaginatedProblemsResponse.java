@@ -1,5 +1,7 @@
 package com.solvad.backend.dto;
 
+import com.solvad.backend.problem.core.ProblemResponse;
+
 import java.util.List;
 
 public class PaginatedProblemsResponse {

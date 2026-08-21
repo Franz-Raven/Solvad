@@ -1,8 +1,5 @@
-package com.solvad.backend.controller;
+package com.solvad.backend.dashboard;
 
-import com.solvad.backend.dto.ProblemStatusGroupDto;
-import com.solvad.backend.dto.SdgDistributionDto;
-import com.solvad.backend.repository.DashboardRepository;
 import com.solvad.backend.profile.seeker.SeekerProfileRepository;
 import com.solvad.backend.security.JwtService;
 import com.solvad.backend.profile.seeker.SeekerProfile;

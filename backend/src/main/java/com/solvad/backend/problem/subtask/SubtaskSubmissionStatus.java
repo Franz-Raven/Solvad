@@ -1,4 +1,4 @@
-package com.solvad.backend.entity;
+package com.solvad.backend.problem.subtask;
 
 public enum SubtaskSubmissionStatus {
     DRAFT,

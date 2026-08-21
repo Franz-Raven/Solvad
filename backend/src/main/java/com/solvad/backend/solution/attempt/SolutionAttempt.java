@@ -1,9 +1,9 @@
 package com.solvad.backend.solution.attempt;
 
-import com.solvad.backend.entity.Problem;
-import com.solvad.backend.entity.ProblemSubtask;
+import com.solvad.backend.problem.core.Problem;
+import com.solvad.backend.problem.subtask.ProblemSubtask;
 import com.solvad.backend.profile.solver.SolverProfile;
-import com.solvad.backend.entity.SubtaskSubmission;
+import com.solvad.backend.problem.subtask.SubtaskSubmission;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;

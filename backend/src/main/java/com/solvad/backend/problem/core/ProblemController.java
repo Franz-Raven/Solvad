@@ -1,4 +1,4 @@
-package com.solvad.backend.controller;
+package com.solvad.backend.problem.core;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.solvad.backend.audit.AuditLogResponse;

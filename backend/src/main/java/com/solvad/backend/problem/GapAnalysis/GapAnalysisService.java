@@ -2,8 +2,8 @@ package com.solvad.backend.problem.GapAnalysis;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.solvad.backend.entity.Problem;
-import com.solvad.backend.repository.ProblemRepository;
+import com.solvad.backend.problem.core.Problem;
+import com.solvad.backend.problem.core.ProblemRepository;
 import com.solvad.backend.service.GeminiService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

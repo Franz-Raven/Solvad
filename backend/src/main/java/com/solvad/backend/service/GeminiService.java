@@ -2,9 +2,9 @@ package com.solvad.backend.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.solvad.backend.dto.EnhancedProblemResponse;
+import com.solvad.backend.problem.core.EnhancedProblemResponse;
 import com.solvad.backend.dto.GenerateScopeResponse;
-import com.solvad.backend.dto.SubtaskResponse;
+import com.solvad.backend.problem.subtask.SubtaskResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;

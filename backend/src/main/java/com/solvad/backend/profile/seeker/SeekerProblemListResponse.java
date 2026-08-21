@@ -1,6 +1,6 @@
 package com.solvad.backend.profile.seeker;
 
-import com.solvad.backend.dto.ProblemSummaryResponse;
+import com.solvad.backend.problem.core.ProblemSummaryResponse;
 
 import java.util.List;
 

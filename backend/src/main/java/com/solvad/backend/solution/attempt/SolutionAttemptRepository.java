@@ -1,6 +1,7 @@
 package com.solvad.backend.solution.attempt;
 
-import com.solvad.backend.entity.*;
+import com.solvad.backend.problem.core.Problem;
+import com.solvad.backend.problem.subtask.ProblemSubtask;
 import com.solvad.backend.profile.solver.SolverProfile;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

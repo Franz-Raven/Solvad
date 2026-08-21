@@ -1,4 +1,4 @@
-package com.solvad.backend.entity;
+package com.solvad.backend.problem.subtask;
 
 import com.solvad.backend.solution.attempt.SolutionAttempt;
 import jakarta.persistence.*;

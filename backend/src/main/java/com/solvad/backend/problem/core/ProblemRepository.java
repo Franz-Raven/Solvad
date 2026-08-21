@@ -1,7 +1,5 @@
-package com.solvad.backend.repository;
+package com.solvad.backend.problem.core;
 
-import com.solvad.backend.entity.Problem;
-import com.solvad.backend.entity.ProblemStatus;
 import com.solvad.backend.profile.seeker.SeekerProfile;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

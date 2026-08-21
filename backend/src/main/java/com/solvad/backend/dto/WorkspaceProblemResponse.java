@@ -1,5 +1,7 @@
 package com.solvad.backend.dto;
 
+import com.solvad.backend.problem.subtask.SubtaskWithAttachmentsResponse;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -19,7 +21,7 @@ public class WorkspaceProblemResponse {
     private LocalDateTime createdAt;
     
     // Uses the new specific Subtask DTO
-    private List<SubtaskWithAttachmentsResponse> subtasks; 
+    private List<SubtaskWithAttachmentsResponse> subtasks;
     
     private List<String> tags;
     private String problemDocumentUrl;

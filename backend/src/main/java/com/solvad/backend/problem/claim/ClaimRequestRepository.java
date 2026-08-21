@@ -1,7 +1,7 @@
 package com.solvad.backend.problem.claim;
 
-import com.solvad.backend.entity.Problem;
-import com.solvad.backend.entity.ProblemSubtask;
+import com.solvad.backend.problem.core.Problem;
+import com.solvad.backend.problem.subtask.ProblemSubtask;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

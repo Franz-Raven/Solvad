@@ -2,8 +2,8 @@ package com.solvad.backend.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.solvad.backend.dto.ProblemRequest;
-import com.solvad.backend.dto.SubtaskRequest;
+import com.solvad.backend.problem.core.ProblemRequest;
+import com.solvad.backend.problem.subtask.SubtaskRequest;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;

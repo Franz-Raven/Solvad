@@ -1,4 +1,6 @@
-package com.solvad.backend.dto;
+package com.solvad.backend.dashboard;
+
+import com.solvad.backend.problem.core.ProblemResponse;
 
 import java.util.ArrayList;
 import java.util.List;

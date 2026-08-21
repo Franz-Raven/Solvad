@@ -1,9 +1,9 @@
 package com.solvad.backend.solution.attempt;
 
-import com.solvad.backend.dto.ProblemResponse;
-import com.solvad.backend.dto.SubtaskSubmissionResponse;
+import com.solvad.backend.problem.core.ProblemResponse;
+import com.solvad.backend.problem.subtask.SubtaskSubmissionResponse;
 import com.solvad.backend.security.JwtService;
-import com.solvad.backend.dto.DiscoveryDashboardResponse;
+import com.solvad.backend.dashboard.DiscoveryDashboardResponse;
 import com.solvad.backend.service.MatchmakingService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;

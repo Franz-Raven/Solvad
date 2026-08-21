@@ -1,5 +1,6 @@
-package com.solvad.backend.dto;
+package com.solvad.backend.problem.core;
 
+import com.solvad.backend.problem.subtask.SubtaskRequest;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 

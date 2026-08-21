@@ -1,5 +1,6 @@
 package com.solvad.backend.entity;
 
+import com.solvad.backend.problem.subtask.ProblemSubtask;
 import jakarta.persistence.*;
 import java.util.UUID;
 

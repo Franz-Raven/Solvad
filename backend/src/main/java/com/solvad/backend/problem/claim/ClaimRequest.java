@@ -1,7 +1,7 @@
 package com.solvad.backend.problem.claim;
 
-import com.solvad.backend.entity.Problem;
-import com.solvad.backend.entity.ProblemSubtask;
+import com.solvad.backend.problem.core.Problem;
+import com.solvad.backend.problem.subtask.ProblemSubtask;
 import com.solvad.backend.solution.attempt.SolutionAttempt;
 import com.solvad.backend.profile.solver.SolverProfile;
 import jakarta.persistence.*;

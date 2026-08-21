@@ -1,75 +1,44 @@
-package com.solvad.backend.entity;
+package com.solvad.backend.problem.core;
 
-import com.solvad.backend.profile.seeker.SeekerProfile;
-import jakarta.persistence.*;
-import org.hibernate.annotations.CreationTimestamp;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.solvad.backend.problem.subtask.SubtaskResponse;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-@Entity
-@Table(name = "problems")
-public class Problem {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
+public class ProblemResponse {
     private UUID id;
-
-    @ManyToOne
-    @JoinColumn(name = "seeker_id", nullable = false)
-    private SeekerProfile seeker;
-
-    @Column(nullable = false)
     private String title;
-
-    @Column(name = "background_context", columnDefinition = "TEXT")
     private String backgroundContext;
-
-    @Column(name = "primary_statement", columnDefinition = "TEXT", nullable = false)
     private String primaryStatement;
-
-    @Column(columnDefinition = "TEXT")
     private String objectives;
-
-    @Column(columnDefinition = "TEXT")
     private String constraints;
-
-    @Column(name = "preferred_program")
     private String preferredProgram;
-
-    @Column(name = "sdg_focus")
     private String sdgFocus;
-
-    // URL of the comprehensive problem document (PDF) stored in Cloudinary
-    @Column(name = "problem_document_url", columnDefinition = "TEXT")
-    private String problemDocumentUrl;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private ProblemStatus status = ProblemStatus.OPEN;
-
-    @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "problem_tags", joinColumns = @JoinColumn(name = "problem_id"))
-    @Column(name = "tag")
-    private List<String> tags = new ArrayList<>();
-
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
+    private String problemDocumentUrl; // URL of comprehensive problem PDF document
+    private String status;
+    private UUID seekerId;
+    @JsonProperty("organizationName")
+    private String seekerOrganization;
     private LocalDateTime createdAt;
-
-    @Column(name = "max_concurrent_solvers", nullable = false)
+    private List<SubtaskResponse> subtasks;
+    private List<String> tags = new ArrayList<>();
+    private Double matchScore;
+    private Boolean courseMatch;
     private int maxConcurrentSolvers = 3;
 
 
-
-    public Problem() {
+    public ProblemResponse() {
     }
 
-    public Problem(SeekerProfile seeker, String title, String backgroundContext, String primaryStatement,
-                   String objectives, String constraints, String preferredProgram, String sdgFocus) {
-        this.seeker = seeker;
+    public ProblemResponse(UUID id, String title, String backgroundContext, String primaryStatement,
+                           String objectives, String constraints, String preferredProgram, String sdgFocus, String status,
+                           UUID seekerId, String seekerOrganization, LocalDateTime createdAt,
+                           List<SubtaskResponse> subtasks, List<String> tags, String problemDocumentUrl,
+                           int maxConcurrentSolvers) {
+        this.id = id;
         this.title = title;
         this.backgroundContext = backgroundContext;
         this.primaryStatement = primaryStatement;
@@ -77,7 +46,18 @@ public class Problem {
         this.constraints = constraints;
         this.preferredProgram = preferredProgram;
         this.sdgFocus = sdgFocus;
+        this.status = status;
+        this.seekerId = seekerId;
+        this.seekerOrganization = seekerOrganization;
+        this.createdAt = createdAt;
+        this.subtasks = subtasks;
+        this.tags = tags != null ? tags : new ArrayList<>();
+        this.problemDocumentUrl = problemDocumentUrl;
+        this.maxConcurrentSolvers = maxConcurrentSolvers;
     }
+
+    public int getMaxConcurrentSolvers() { return maxConcurrentSolvers; }
+    public void setMaxConcurrentSolvers(int maxConcurrentSolvers) { this.maxConcurrentSolvers = maxConcurrentSolvers; }
 
     public UUID getId() {
         return id;
@@ -85,14 +65,6 @@ public class Problem {
 
     public void setId(UUID id) {
         this.id = id;
-    }
-
-    public SeekerProfile getSeeker() {
-        return seeker;
-    }
-
-    public void setSeeker(SeekerProfile seeker) {
-        this.seeker = seeker;
     }
 
     public String getTitle() {
@@ -159,12 +131,28 @@ public class Problem {
         this.problemDocumentUrl = problemDocumentUrl;
     }
 
-    public ProblemStatus getStatus() {
+    public String getStatus() {
         return status;
     }
 
-    public void setStatus(ProblemStatus status) {
+    public void setStatus(String status) {
         this.status = status;
+    }
+
+    public UUID getSeekerId() {
+        return seekerId;
+    }
+
+    public void setSeekerId(UUID seekerId) {
+        this.seekerId = seekerId;
+    }
+
+    public String getSeekerOrganization() {
+        return seekerOrganization;
+    }
+
+    public void setSeekerOrganization(String seekerOrganization) {
+        this.seekerOrganization = seekerOrganization;
     }
 
     public LocalDateTime getCreatedAt() {
@@ -175,14 +163,35 @@ public class Problem {
         this.createdAt = createdAt;
     }
 
+    public List<SubtaskResponse> getSubtasks() {
+        return subtasks;
+    }
+
+    public void setSubtasks(List<SubtaskResponse> subtasks) {
+        this.subtasks = subtasks;
+    }
+
     public List<String> getTags() {
         return tags;
     }
 
     public void setTags(List<String> tags) {
-        this.tags = tags != null ? tags : new ArrayList<>();
+        this.tags = tags;
     }
 
-    public int getMaxConcurrentSolvers() { return maxConcurrentSolvers; }
-    public void setMaxConcurrentSolvers(int maxConcurrentSolvers) { this.maxConcurrentSolvers = maxConcurrentSolvers; }
+    public Double getMatchScore() {
+        return matchScore;
+    }
+
+    public void setMatchScore(Double matchScore) {
+        this.matchScore = matchScore;
+    }
+
+    public Boolean getCourseMatch() {
+        return courseMatch;
+    }
+
+    public void setCourseMatch(Boolean courseMatch) {
+        this.courseMatch = courseMatch;
+    }
 }

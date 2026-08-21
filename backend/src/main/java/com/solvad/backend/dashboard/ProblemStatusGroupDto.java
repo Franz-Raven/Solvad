@@ -1,4 +1,4 @@
-package com.solvad.backend.dto;
+package com.solvad.backend.dashboard;
 
 public class ProblemStatusGroupDto {
     private Long open;                           // OPEN

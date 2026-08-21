@@ -2,8 +2,12 @@ package com.solvad.backend.solution.attempt;
 
 import com.solvad.backend.audit.AuditEventType;
 import com.solvad.backend.dto.*;
-import com.solvad.backend.entity.*;
+import com.solvad.backend.problem.core.ProblemResponse;
 import com.solvad.backend.problem.claim.ClaimRequest;
+import com.solvad.backend.problem.core.Problem;
+import com.solvad.backend.problem.core.ProblemRepository;
+import com.solvad.backend.problem.core.ProblemStatus;
+import com.solvad.backend.problem.subtask.*;
 import com.solvad.backend.profile.seeker.SeekerProfileRepository;
 import com.solvad.backend.profile.seeker.SeekerProfile;
 import com.solvad.backend.profile.solver.SolverProfile;

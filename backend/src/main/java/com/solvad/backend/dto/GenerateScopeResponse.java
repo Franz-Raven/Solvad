@@ -1,5 +1,8 @@
 package com.solvad.backend.dto;
 
+import com.solvad.backend.problem.core.EnhancedProblemResponse;
+import com.solvad.backend.problem.subtask.SubtaskResponse;
+
 import java.util.List;
 
 public class GenerateScopeResponse {

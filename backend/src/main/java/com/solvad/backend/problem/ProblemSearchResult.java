@@ -1,4 +1,6 @@
-package com.solvad.backend.dto;
+package com.solvad.backend.problem;
+
+import com.solvad.backend.problem.core.ProblemResponse;
 
 public class ProblemSearchResult {
     private ProblemResponse problem;

@@ -1,43 +1,75 @@
-package com.solvad.backend.dto;
+package com.solvad.backend.problem.core;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.solvad.backend.profile.seeker.SeekerProfile;
+import jakarta.persistence.*;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-public class ProblemResponse {
+@Entity
+@Table(name = "problems")
+public class Problem {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
+
+    @ManyToOne
+    @JoinColumn(name = "seeker_id", nullable = false)
+    private SeekerProfile seeker;
+
+    @Column(nullable = false)
     private String title;
+
+    @Column(name = "background_context", columnDefinition = "TEXT")
     private String backgroundContext;
+
+    @Column(name = "primary_statement", columnDefinition = "TEXT", nullable = false)
     private String primaryStatement;
+
+    @Column(columnDefinition = "TEXT")
     private String objectives;
+
+    @Column(columnDefinition = "TEXT")
     private String constraints;
+
+    @Column(name = "preferred_program")
     private String preferredProgram;
+
+    @Column(name = "sdg_focus")
     private String sdgFocus;
-    private String problemDocumentUrl; // URL of comprehensive problem PDF document
-    private String status;
-    private UUID seekerId;
-    @JsonProperty("organizationName")
-    private String seekerOrganization;
-    private LocalDateTime createdAt;
-    private List<SubtaskResponse> subtasks;
+
+    // URL of the comprehensive problem document (PDF) stored in Cloudinary
+    @Column(name = "problem_document_url", columnDefinition = "TEXT")
+    private String problemDocumentUrl;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ProblemStatus status = ProblemStatus.OPEN;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "problem_tags", joinColumns = @JoinColumn(name = "problem_id"))
+    @Column(name = "tag")
     private List<String> tags = new ArrayList<>();
-    private Double matchScore;
-    private Boolean courseMatch;
+
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "max_concurrent_solvers", nullable = false)
     private int maxConcurrentSolvers = 3;
 
 
-    public ProblemResponse() {
+
+    public Problem() {
     }
 
-    public ProblemResponse(UUID id, String title, String backgroundContext, String primaryStatement,
-                           String objectives, String constraints, String preferredProgram, String sdgFocus, String status,
-                           UUID seekerId, String seekerOrganization, LocalDateTime createdAt,
-                           List<SubtaskResponse> subtasks, List<String> tags, String problemDocumentUrl,
-                           int maxConcurrentSolvers) {
-        this.id = id;
+    public Problem(SeekerProfile seeker, String title, String backgroundContext, String primaryStatement,
+                   String objectives, String constraints, String preferredProgram, String sdgFocus) {
+        this.seeker = seeker;
         this.title = title;
         this.backgroundContext = backgroundContext;
         this.primaryStatement = primaryStatement;
@@ -45,18 +77,7 @@ public class ProblemResponse {
         this.constraints = constraints;
         this.preferredProgram = preferredProgram;
         this.sdgFocus = sdgFocus;
-        this.status = status;
-        this.seekerId = seekerId;
-        this.seekerOrganization = seekerOrganization;
-        this.createdAt = createdAt;
-        this.subtasks = subtasks;
-        this.tags = tags != null ? tags : new ArrayList<>();
-        this.problemDocumentUrl = problemDocumentUrl;
-        this.maxConcurrentSolvers = maxConcurrentSolvers;
     }
-
-    public int getMaxConcurrentSolvers() { return maxConcurrentSolvers; }
-    public void setMaxConcurrentSolvers(int maxConcurrentSolvers) { this.maxConcurrentSolvers = maxConcurrentSolvers; }
 
     public UUID getId() {
         return id;
@@ -64,6 +85,14 @@ public class ProblemResponse {
 
     public void setId(UUID id) {
         this.id = id;
+    }
+
+    public SeekerProfile getSeeker() {
+        return seeker;
+    }
+
+    public void setSeeker(SeekerProfile seeker) {
+        this.seeker = seeker;
     }
 
     public String getTitle() {
@@ -130,28 +159,12 @@ public class ProblemResponse {
         this.problemDocumentUrl = problemDocumentUrl;
     }
 
-    public String getStatus() {
+    public ProblemStatus getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(ProblemStatus status) {
         this.status = status;
-    }
-
-    public UUID getSeekerId() {
-        return seekerId;
-    }
-
-    public void setSeekerId(UUID seekerId) {
-        this.seekerId = seekerId;
-    }
-
-    public String getSeekerOrganization() {
-        return seekerOrganization;
-    }
-
-    public void setSeekerOrganization(String seekerOrganization) {
-        this.seekerOrganization = seekerOrganization;
     }
 
     public LocalDateTime getCreatedAt() {
@@ -162,35 +175,14 @@ public class ProblemResponse {
         this.createdAt = createdAt;
     }
 
-    public List<SubtaskResponse> getSubtasks() {
-        return subtasks;
-    }
-
-    public void setSubtasks(List<SubtaskResponse> subtasks) {
-        this.subtasks = subtasks;
-    }
-
     public List<String> getTags() {
         return tags;
     }
 
     public void setTags(List<String> tags) {
-        this.tags = tags;
+        this.tags = tags != null ? tags : new ArrayList<>();
     }
 
-    public Double getMatchScore() {
-        return matchScore;
-    }
-
-    public void setMatchScore(Double matchScore) {
-        this.matchScore = matchScore;
-    }
-
-    public Boolean getCourseMatch() {
-        return courseMatch;
-    }
-
-    public void setCourseMatch(Boolean courseMatch) {
-        this.courseMatch = courseMatch;
-    }
+    public int getMaxConcurrentSolvers() { return maxConcurrentSolvers; }
+    public void setMaxConcurrentSolvers(int maxConcurrentSolvers) { this.maxConcurrentSolvers = maxConcurrentSolvers; }
 }

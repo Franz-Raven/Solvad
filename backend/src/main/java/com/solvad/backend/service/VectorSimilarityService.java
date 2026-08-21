@@ -1,8 +1,8 @@
 package com.solvad.backend.service;
 
 import com.solvad.backend.dto.SimilarityResultDTO;
-import com.solvad.backend.entity.Problem;
-import com.solvad.backend.repository.ProblemRepository;
+import com.solvad.backend.problem.core.Problem;
+import com.solvad.backend.problem.core.ProblemRepository;
 import com.solvad.backend.repository.VectorRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

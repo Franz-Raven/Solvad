@@ -1,43 +1,32 @@
-package com.solvad.backend.dto;
+package com.solvad.backend.problem.subtask;
 
+import com.solvad.backend.dto.AttachmentRequirementRequest;
+import jakarta.validation.constraints.NotBlank;
 import java.util.List;
-import java.util.UUID;
 
-public class SubtaskResponse {
-    private UUID id;
+public class SubtaskRequest {
+    @NotBlank(message = "Title is required")
     private String title;
+    
+    @NotBlank(message = "Department focus is required")
     private String departmentFocus;
+    
     private String sdgFocus;
+    
+    @NotBlank(message = "Description is required")
     private String description;
-    private List<AttachmentRequirementResponse> attachments;
 
-    public SubtaskResponse() {
+    private List<AttachmentRequirementRequest> attachments;
+
+    public SubtaskRequest() {
     }
 
-    public SubtaskResponse(UUID id, String title, String departmentFocus, String sdgFocus, String description) {
-        this.id = id;
-        this.title = title;
-        this.departmentFocus = departmentFocus;
-        this.sdgFocus = sdgFocus;
-        this.description = description;
-        this.attachments = null;
-    }
-
-    public SubtaskResponse(UUID id, String title, String departmentFocus, String sdgFocus, String description, List<AttachmentRequirementResponse> attachments) {
-        this.id = id;
+    public SubtaskRequest(String title, String departmentFocus, String sdgFocus, String description, List<AttachmentRequirementRequest> attachments) {
         this.title = title;
         this.departmentFocus = departmentFocus;
         this.sdgFocus = sdgFocus;
         this.description = description;
         this.attachments = attachments;
-    }
-
-    public UUID getId() {
-        return id;
-    }
-
-    public void setId(UUID id) {
-        this.id = id;
     }
 
     public String getTitle() {
@@ -72,11 +61,11 @@ public class SubtaskResponse {
         this.description = description;
     }
 
-    public List<AttachmentRequirementResponse> getAttachments() {
+    public List<AttachmentRequirementRequest> getAttachments() {
         return attachments;
     }
 
-    public void setAttachments(List<AttachmentRequirementResponse> attachments) {
+    public void setAttachments(List<AttachmentRequirementRequest> attachments) {
         this.attachments = attachments;
     }
 }

@@ -1,12 +1,14 @@
 package com.solvad.backend.service;
 
-import com.solvad.backend.dto.DiscoveryDashboardResponse;
-import com.solvad.backend.dto.ProblemResponse;
-import com.solvad.backend.dto.SubtaskResponse;
-import com.solvad.backend.entity.*;
+import com.solvad.backend.dashboard.DiscoveryDashboardResponse;
+import com.solvad.backend.problem.core.ProblemResponse;
+import com.solvad.backend.problem.subtask.SubtaskResponse;
+import com.solvad.backend.problem.core.Problem;
+import com.solvad.backend.problem.core.ProblemStatus;
+import com.solvad.backend.problem.subtask.ProblemSubtask;
 import com.solvad.backend.profile.solver.SolverProfile;
-import com.solvad.backend.repository.ProblemRepository;
-import com.solvad.backend.repository.ProblemSubtaskRepository;
+import com.solvad.backend.problem.core.ProblemRepository;
+import com.solvad.backend.problem.subtask.ProblemSubtaskRepository;
 import com.solvad.backend.solution.attempt.SolutionAttemptRepository;
 import com.solvad.backend.profile.solver.SolverProfileRepository;
 import com.solvad.backend.solution.attempt.SolutionAttemptStatus;
