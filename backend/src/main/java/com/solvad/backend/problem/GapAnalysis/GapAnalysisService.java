@@ -122,7 +122,7 @@ public class GapAnalysisService {
         return """
             You are an expert technical analyst comparing two problem specifications.
             
-            Generate a comprehensive Gap Analysis Report with the following structure:
+            Generate aaa comprehensive Gap Analysis Report with the following structure:
             
             1. EXECUTIVE_SUMMARY: A 2-3 sentence overview of key differences
             2. FEATURE_DIFFERENCES: List of functional features present in one but not the other

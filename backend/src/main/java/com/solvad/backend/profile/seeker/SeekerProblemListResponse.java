@@ -1,4 +1,6 @@
-package com.solvad.backend.dto;
+package com.solvad.backend.profile.seeker;
+
+import com.solvad.backend.dto.ProblemSummaryResponse;
 
 import java.util.List;
 

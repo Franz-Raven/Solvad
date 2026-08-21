@@ -1,6 +1,5 @@
-package com.solvad.backend.repository;
+package com.solvad.backend.profile.solver;
 
-import com.solvad.backend.entity.SolverProfile;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

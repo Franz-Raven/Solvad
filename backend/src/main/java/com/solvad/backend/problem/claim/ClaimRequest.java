@@ -3,7 +3,7 @@ package com.solvad.backend.problem.claim;
 import com.solvad.backend.entity.Problem;
 import com.solvad.backend.entity.ProblemSubtask;
 import com.solvad.backend.solution.attempt.SolutionAttempt;
-import com.solvad.backend.entity.SolverProfile;
+import com.solvad.backend.profile.solver.SolverProfile;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.UUID;

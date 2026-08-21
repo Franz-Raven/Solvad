@@ -1,6 +1,5 @@
-package com.solvad.backend.repository;
+package com.solvad.backend.profile.seeker;
 
-import com.solvad.backend.entity.SeekerProfile;
 import com.solvad.backend.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;

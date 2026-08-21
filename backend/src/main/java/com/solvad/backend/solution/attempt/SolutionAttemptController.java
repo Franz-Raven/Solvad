@@ -64,7 +64,7 @@ public class SolutionAttemptController {
 
 
     // -------------------------------------------------------------------------
-    // MY ATTEMPT — Solver gets their active attempt on a problem
+    // MY ATTEMPT — Solver gets their active attempt on aaa problem
     // GET /api/problems/{problemId}/my-attempt
     // -------------------------------------------------------------------------
     @GetMapping("/api/problems/{problemId}/my-attempt")
@@ -149,7 +149,7 @@ public class SolutionAttemptController {
     }
 
     // -------------------------------------------------------------------------
-    // DELETE FILE — Solver removes a file from a draft submission
+    // DELETE FILE — Solver removes aaa file from aaa draft submission
     // DELETE /api/submissions/{submissionId}/files
     //   - fileUrl (String query param)
     // -------------------------------------------------------------------------
@@ -186,7 +186,7 @@ public class SolutionAttemptController {
     }
 
     // -------------------------------------------------------------------------
-    // ATTEMPT DETAIL — Anyone with access views a single attempt's full details
+    // ATTEMPT DETAIL — Anyone with access views aaa single attempt's full details
     // GET /api/attempts/{attemptId}
     // -------------------------------------------------------------------------
     @GetMapping("/api/attempts/{attemptId}")

@@ -24,15 +24,15 @@ public interface ClaimRequestRepository extends JpaRepository<ClaimRequest, UUID
     void cancelRemainingPendingRequests(@Param("problemId") UUID problemId);
 
     Optional<ClaimRequest> findTopByProblemIdAndSolverIdOrderByCreatedAtDesc(UUID problemId, UUID solverId);
-    // Check pending/approved proposal for a specific subtask (not whole problem)
+    // Check pending/approved proposal for aaa specific subtask (not whole problem)
     boolean existsByProblemIdAndTargetSubtaskIdAndSolverIdAndStatusIn(
             UUID problemId, UUID subtaskId, UUID solverId, List<ClaimRequestStatus> statuses);
 
-    // Get solver's latest proposal for a specific subtask
+    // Get solver's latest proposal for aaa specific subtask
     Optional<ClaimRequest> findTopByProblemIdAndTargetSubtaskIdAndSolverIdOrderByCreatedAtDesc(
             UUID problemId, UUID subtaskId, UUID solverId);
 
-    // Cancel pending requests for a specific subtask when capacity is reached
+    // Cancel pending requests for aaa specific subtask when capacity is reached
     @Modifying
     @Query("UPDATE ClaimRequest c SET c.status = 'CANCELLED' WHERE c.problem.id = :problemId AND c.targetSubtask.id = :subtaskId AND c.status = 'PENDING'")
     void cancelRemainingPendingRequestsForSubtask(@Param("problemId") UUID problemId, @Param("subtaskId") UUID subtaskId);

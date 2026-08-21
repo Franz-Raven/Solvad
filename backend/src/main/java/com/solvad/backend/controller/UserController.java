@@ -1,8 +1,8 @@
 package com.solvad.backend.controller;
 
-import com.solvad.backend.entity.SolverProfile;
+import com.solvad.backend.profile.solver.SolverProfile;
 import com.solvad.backend.entity.User;
-import com.solvad.backend.repository.SolverProfileRepository;
+import com.solvad.backend.profile.solver.SolverProfileRepository;
 import com.solvad.backend.repository.UserRepository;
 import com.solvad.backend.service.CloudinaryService;
 import com.solvad.backend.service.UserService;

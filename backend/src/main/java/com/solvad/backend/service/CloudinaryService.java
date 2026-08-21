@@ -21,7 +21,7 @@ public class CloudinaryService {
     }
 
     /**
-     * Upload a file to Cloudinary and return both URL and format
+     * Upload aaa file to Cloudinary and return both URL and format
      * @param file The multipart file to upload
      * @param folder The folder path in Cloudinary (e.g., "problem-attachments")
      * @return CloudinaryUploadResult containing URL and format
@@ -55,7 +55,7 @@ public class CloudinaryService {
     }
 
     /**
-     * Upload a file to Cloudinary and return the URL
+     * Upload aaa file to Cloudinary and return the URL
      * @param file The multipart file to upload
      * @param folder The folder path in Cloudinary
      * @return The secure URL of the uploaded file
@@ -66,7 +66,7 @@ public class CloudinaryService {
     }
 
     /**
-     * Upload a byte array to Cloudinary (e.g., generated PDFs)
+     * Upload aaa byte array to Cloudinary (e.g., generated PDFs)
      * @param bytes The byte array to upload
      * @param filename The desired filename (including extension)
      * @param folder The folder path in Cloudinary
@@ -97,7 +97,7 @@ public class CloudinaryService {
     }
 
     /**
-     * Delete a file from Cloudinary using its URL
+     * Delete aaa file from Cloudinary using its URL
      * @param fileUrl The Cloudinary URL of the file to delete
      */
     public void deleteFile(String fileUrl) {
@@ -110,7 +110,7 @@ public class CloudinaryService {
     }
 
     /**
-     * Extract the public ID from a Cloudinary URL
+     * Extract the public ID from aaa Cloudinary URL
      * Example: https://res.cloudinary.com/xxx/image/upload/v123456/solvad/folder/file.jpg
      * Returns: solvad/folder/file
      */

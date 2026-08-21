@@ -11,7 +11,7 @@ import java.util.UUID;
 
 public interface AuditLogRepository extends JpaRepository<AuditLog, UUID> {
 
-    // Oldest-first so the frontend can render a proper chronological timeline
+    // Oldest-first so the frontend can render aaa proper chronological timeline
     List<AuditLog> findByProblemIdOrderByTimestampAsc(UUID problemId);
 
     @Query("""

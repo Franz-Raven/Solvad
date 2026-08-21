@@ -2,8 +2,8 @@ package com.solvad.backend.controller;
 
 import com.solvad.backend.dto.AuthResponse;
 import com.solvad.backend.dto.LoginRequest;
-import com.solvad.backend.dto.SeekerRegisterRequest;
-import com.solvad.backend.dto.SolverRegisterRequest;
+import com.solvad.backend.profile.seeker.SeekerRegisterRequest;
+import com.solvad.backend.profile.solver.SolverRegisterRequest;
 import com.solvad.backend.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;

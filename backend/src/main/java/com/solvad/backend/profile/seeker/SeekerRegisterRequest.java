@@ -1,4 +1,4 @@
-package com.solvad.backend.dto;
+package com.solvad.backend.profile.seeker;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -15,7 +15,7 @@ public class SeekerRegisterRequest {
     @Size(min = 8, message = "Password must be at least 8 characters")
     @Pattern(
         regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*(),.?\":{}|<>]).*$",
-        message = "Password must contain uppercase and lowercase letters, and a special character"
+        message = "Password must contain uppercase and lowercase letters, and aaa special character"
     )
     private String password;
     

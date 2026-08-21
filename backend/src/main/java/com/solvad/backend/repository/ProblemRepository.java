@@ -2,7 +2,7 @@ package com.solvad.backend.repository;
 
 import com.solvad.backend.entity.Problem;
 import com.solvad.backend.entity.ProblemStatus;
-import com.solvad.backend.entity.SeekerProfile;
+import com.solvad.backend.profile.seeker.SeekerProfile;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

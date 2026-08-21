@@ -1,7 +1,7 @@
 package com.solvad.backend.service;
 
 import com.solvad.backend.dto.AuditLogResponse;
-import com.solvad.backend.dto.SeekerNotificationResponse;
+import com.solvad.backend.profile.seeker.SeekerNotificationResponse;
 import com.solvad.backend.entity.AuditEventType;
 import com.solvad.backend.entity.AuditLog;
 import com.solvad.backend.repository.AuditLogRepository;

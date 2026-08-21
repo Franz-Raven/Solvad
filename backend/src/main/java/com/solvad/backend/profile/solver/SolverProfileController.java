@@ -1,9 +1,6 @@
-package com.solvad.backend.controller;
+package com.solvad.backend.profile.solver;
 
-import com.solvad.backend.dto.SeekerProfileRequest;
-import com.solvad.backend.dto.SeekerProfileResponse;
 import com.solvad.backend.security.JwtService;
-import com.solvad.backend.service.SeekerProfileService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -15,24 +12,24 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/seeker-profiles")
+@RequestMapping("/api/solver-profiles")
 @CrossOrigin(origins = "http://localhost:3000")
-public class SeekerProfileController {
+public class SolverProfileController {
 
     @Autowired
-    private SeekerProfileService seekerProfileService;
+    private SolverProfileService solverProfileService;
 
     @Autowired
     private JwtService jwtService;
 
     @GetMapping("/me")
-    @PreAuthorize("hasRole('SEEKER')")
-    public ResponseEntity<SeekerProfileResponse> getMyProfile(@RequestHeader("Authorization") String authHeader) {
+    @PreAuthorize("hasRole('SOLVER')")
+    public ResponseEntity<SolverProfileResponse> getMyProfile(@RequestHeader("Authorization") String authHeader) {
         try {
             String token = authHeader.substring(7); // Remove "Bearer " prefix
             UUID userId = jwtService.extractUserId(token);
             
-            SeekerProfileResponse profile = seekerProfileService.getProfileByUserId(userId);
+            SolverProfileResponse profile = solverProfileService.getProfileByUserId(userId);
             return ResponseEntity.ok(profile);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
@@ -41,9 +38,9 @@ public class SeekerProfileController {
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<SeekerProfileResponse>> getAllProfiles() {
+    public ResponseEntity<List<SolverProfileResponse>> getAllProfiles() {
         try {
-            List<SeekerProfileResponse> profiles = seekerProfileService.getAllProfiles();
+            List<SolverProfileResponse> profiles = solverProfileService.getAllProfiles();
             return ResponseEntity.ok(profiles);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
@@ -51,21 +48,21 @@ public class SeekerProfileController {
     }
 
     @GetMapping("/{userId}")
-    @PreAuthorize("hasAnyRole('SEEKER', 'ADMIN')")
-    public ResponseEntity<SeekerProfileResponse> getProfileByUserId(
+    @PreAuthorize("hasAnyRole('SOLVER', 'ADMIN')")
+    public ResponseEntity<SolverProfileResponse> getProfileByUserId(
             @PathVariable UUID userId,
             @RequestHeader("Authorization") String authHeader) {
         try {
             String token = authHeader.substring(7);
             UUID requestingUserId = jwtService.extractUserId(token);
             
-            // Seekers can only view their own profile, admins can view any
+            // Solvers can only view their own profile, admins can view any
             if (!requestingUserId.equals(userId)) {
                 // Check if requesting user is admin - this would need to be verified via role
                 // For now, we'll allow it and let PreAuthorize handle it
             }
             
-            SeekerProfileResponse profile = seekerProfileService.getProfileByUserId(userId);
+            SolverProfileResponse profile = solverProfileService.getProfileByUserId(userId);
             return ResponseEntity.ok(profile);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
@@ -73,15 +70,15 @@ public class SeekerProfileController {
     }
 
     @PutMapping("/me")
-    @PreAuthorize("hasRole('SEEKER')")
-    public ResponseEntity<SeekerProfileResponse> updateMyProfile(
+    @PreAuthorize("hasRole('SOLVER')")
+    public ResponseEntity<SolverProfileResponse> updateMyProfile(
             @RequestHeader("Authorization") String authHeader,
-            @Valid @RequestBody SeekerProfileRequest request) {
+            @Valid @RequestBody SolverProfileRequest request) {
         try {
             String token = authHeader.substring(7);
             UUID userId = jwtService.extractUserId(token);
             
-            SeekerProfileResponse updatedProfile = seekerProfileService.updateProfile(userId, request);
+            SolverProfileResponse updatedProfile = solverProfileService.updateProfile(userId, request);
             return ResponseEntity.ok(updatedProfile);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
@@ -90,11 +87,11 @@ public class SeekerProfileController {
 
     @PutMapping("/{userId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<SeekerProfileResponse> updateProfile(
+    public ResponseEntity<SolverProfileResponse> updateProfile(
             @PathVariable UUID userId,
-            @Valid @RequestBody SeekerProfileRequest request) {
+            @Valid @RequestBody SolverProfileRequest request) {
         try {
-            SeekerProfileResponse updatedProfile = seekerProfileService.updateProfile(userId, request);
+            SolverProfileResponse updatedProfile = solverProfileService.updateProfile(userId, request);
             return ResponseEntity.ok(updatedProfile);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();

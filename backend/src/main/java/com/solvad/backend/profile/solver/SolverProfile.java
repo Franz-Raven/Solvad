@@ -1,5 +1,6 @@
-package com.solvad.backend.entity;
+package com.solvad.backend.profile.solver;
 
+import com.solvad.backend.entity.User;
 import jakarta.persistence.*;
 
 import java.util.UUID;

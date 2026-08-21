@@ -3,9 +3,12 @@ package com.solvad.backend.service;
 import com.solvad.backend.dto.*;
 import com.solvad.backend.entity.*;
 import com.solvad.backend.event.ProblemCreatedEvent;
+import com.solvad.backend.profile.seeker.SeekerNotificationResponse;
+import com.solvad.backend.profile.seeker.SeekerProblemListResponse;
+import com.solvad.backend.profile.seeker.SeekerProfile;
 import com.solvad.backend.repository.ProblemRepository;
 import com.solvad.backend.repository.ProblemSubtaskRepository;
-import com.solvad.backend.repository.SeekerProfileRepository;
+import com.solvad.backend.profile.seeker.SeekerProfileRepository;
 import com.solvad.backend.solution.attempt.SolutionAttemptRepository;
 import com.solvad.backend.repository.ProblemAttachmentRepository;
 import com.solvad.backend.solution.attempt.SolutionAttempt;
@@ -304,7 +307,7 @@ public class ProblemService {
     }
 
     @Transactional(readOnly = true)
-    public List<com.solvad.backend.dto.SeekerNotificationResponse> getSeekerNotifications(UUID seekerUserId) {
+    public List<SeekerNotificationResponse> getSeekerNotifications(UUID seekerUserId) {
         SeekerProfile seeker = seekerProfileRepository.findByUserId(seekerUserId)
                 .orElseThrow(() -> new RuntimeException("Seeker profile not found"));
 

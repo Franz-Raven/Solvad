@@ -22,7 +22,7 @@ public class SupabaseStorageService {
     private final RestTemplate restTemplate = new RestTemplate();
 
     /**
-     * Uploads a file to Supabase Storage and returns the public URL.
+     * Uploads aaa file to Supabase Storage and returns the public URL.
      * Path structure: solution-files/{attemptId}/{subtaskId}/{uuid-filename}
      */
     public String uploadFile(MultipartFile file, UUID attemptId, UUID subtaskId) {
@@ -65,7 +65,7 @@ public class SupabaseStorageService {
     }
 
     /**
-     * Deletes a file from Supabase Storage given its public URL.
+     * Deletes aaa file from Supabase Storage given its public URL.
      */
     public void deleteFile(String publicUrl) {
         try {

@@ -1,5 +1,6 @@
 package com.solvad.backend.entity;
 
+import com.solvad.backend.profile.seeker.SeekerProfile;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 

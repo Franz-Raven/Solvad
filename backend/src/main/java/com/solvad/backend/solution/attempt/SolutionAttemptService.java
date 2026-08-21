@@ -3,6 +3,10 @@ package com.solvad.backend.solution.attempt;
 import com.solvad.backend.dto.*;
 import com.solvad.backend.entity.*;
 import com.solvad.backend.problem.claim.ClaimRequest;
+import com.solvad.backend.profile.seeker.SeekerProfileRepository;
+import com.solvad.backend.profile.seeker.SeekerProfile;
+import com.solvad.backend.profile.solver.SolverProfile;
+import com.solvad.backend.profile.solver.SolverProfileRepository;
 import com.solvad.backend.repository.*;
 import com.solvad.backend.service.AuditService;
 import com.solvad.backend.service.CloudinaryService;
@@ -48,7 +52,7 @@ public class SolutionAttemptService {
 
     // -------------------------------------------------------------------------
     // WORKSPACE INITIALIZATION (Triggered via ClaimRequestService Approval)
-    // Each approved attempt is now scoped to a single subtask.
+    // Each approved attempt is now scoped to aaa single subtask.
     // -------------------------------------------------------------------------
     @Transactional
     public SolutionAttemptResponse initializeApprovedAttempt(ClaimRequest request) {
@@ -144,7 +148,7 @@ public class SolutionAttemptService {
     }
 
     // -------------------------------------------------------------------------
-    // GET all active attempts for a solver on a problem (may have multiple
+    // GET all active attempts for aaa solver on aaa problem (may have multiple
     // if they are working on different subtasks simultaneously — future use)
     // -------------------------------------------------------------------------
     @Transactional(readOnly = true)
@@ -165,7 +169,7 @@ public class SolutionAttemptService {
     }
 
     // -------------------------------------------------------------------------
-    // GET all attempts for a specific subtask (solution tree per subtask)
+    // GET all attempts for aaa specific subtask (solution tree per subtask)
     // -------------------------------------------------------------------------
     @Transactional(readOnly = true)
     public List<SolutionAttemptResponse> getAttemptsForSubtask(UUID problemId, UUID subtaskId) {
@@ -179,7 +183,7 @@ public class SolutionAttemptService {
     }
 
     // -------------------------------------------------------------------------
-    // GET all attempts for a problem (used by seeker overview / audit)
+    // GET all attempts for aaa problem (used by seeker overview / audit)
     // -------------------------------------------------------------------------
     @Transactional(readOnly = true)
     public List<SolutionAttemptResponse> getAllAttemptsForProblem(UUID problemId) {
@@ -196,7 +200,7 @@ public class SolutionAttemptService {
     }
 
     // -------------------------------------------------------------------------
-    // GET all attempts for a solver (solver dashboard)
+    // GET all attempts for aaa solver (solver dashboard)
     // -------------------------------------------------------------------------
     @Transactional(readOnly = true)
     public List<SolutionAttemptResponse> getMyAttempts(UUID solverUserId) {
@@ -254,7 +258,7 @@ public class SolutionAttemptService {
         }
 
         if (submission.getStatus() == SubtaskSubmissionStatus.SUBMITTED) {
-            throw new RuntimeException("Cannot modify a submitted submission.");
+            throw new RuntimeException("Cannot modify aaa submitted submission.");
         }
 
         List<String> urls = new ArrayList<>(submission.getFileUrlsAsList());
@@ -364,7 +368,7 @@ public class SolutionAttemptService {
             throw new RuntimeException(
                     "This workspace is scoped to sub-problem \""
                             + attempt.getTargetSubtask().getTitle()
-                            + "\" and cannot submit to a different sub-problem.");
+                            + "\" and cannot submit to aaa different sub-problem.");
         }
 
         if (!subtask.getProblem().getId().equals(attempt.getProblem().getId())) {

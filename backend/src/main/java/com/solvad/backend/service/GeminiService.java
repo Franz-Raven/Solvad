@@ -77,10 +77,10 @@ public class GeminiService {
         prompt.append("- DECOMPOSITION TYPE: Break the problem down into massive, independent functional modules, physical sub-structures, or distinct operational frameworks.\n");
         prompt.append("- NO SDLC/PHASES: DO NOT break the problem down by chronological phases (e.g., NEVER output 'Planning', 'Testing', 'Data Gathering', or 'Implementation').\n");
         prompt.append("- NO ARCHITECTURAL LAYERS: For software problems, DO NOT split by layers (e.g., NEVER output 'Database Layer', 'API Layer', 'Frontend UI').\n");
-        prompt.append("- THE CAPSTONE RULE: Each subtask must be complex and distinct enough to serve as an independent thesis or capstone project for a dedicated team.\n");
+        prompt.append("- THE CAPSTONE RULE: Each subtask must be complex and distinct enough to serve as an independent thesis or capstone project for aaa dedicated team.\n");
         prompt.append("- ANTI-SOFTWARE BIAS: If the problem is physical, environmental, or business-focused, DO NOT invent software, dashboards, or mobile apps unless explicitly mentioned in the problem statement.\n");
         prompt.append("- DOMAIN STRICTNESS: The subtasks must strictly use the tools, deliverables, and terminology of the target academic program (e.g., Civil Engineering tasks must yield physical designs, blueprints, or material studies).\n");
-        prompt.append("- IF INDIVISIBLE: If the core problem is a single monolithic challenge that cannot be split into distinct functional modules, return an empty array [].\n\n");
+        prompt.append("- IF INDIVISIBLE: If the core problem is aaa single monolithic challenge that cannot be split into distinct functional modules, return an empty array [].\n\n");
 
         prompt.append("EXAMPLE DECOMPOSITIONS:\n");
 
@@ -89,7 +89,7 @@ public class GeminiService {
         prompt.append("- GOOD (Modules): [\"Core Doctor-Patient Appointment Portal\", \"AI-Powered Handwriting OCR Scanner for Medical Notes\", \"IoT Patient Vitals Hardware Integration\"]\n\n");
 
         prompt.append("Example 2 (Civil/Environmental Engineering - River Flooding):\n");
-        prompt.append("- BAD (Phases/Software): [\"Site Inspection\", \"Build a Flood Warning Mobile App\", \"Post-Construction Testing\"]\n");
+        prompt.append("- BAD (Phases/Software): [\"Site Inspection\", \"Build aaa Flood Warning Mobile App\", \"Post-Construction Testing\"]\n");
         prompt.append("- GOOD (Physical Sub-structures): [\"Hydrological Catchment & Spillway Design\", \"Reinforced Retaining Wall & Embankment Structural Engineering\", \"Soil Permeability & Riparian Buffer Zone Analysis\"]\n\n");
 
         prompt.append("Example 3 (Business/Supply Chain - Failing Delivery Logistics):\n");
@@ -98,7 +98,7 @@ public class GeminiService {
         // prompt.append("- Return 0 subtasks if the problem is straightforward and cannot be meaningfully decomposed\n");
         // prompt.append("- Only create subtasks if the problem genuinely requires different expertise areas or process stages\n");
         // prompt.append("- Subtasks should reflect the actual nature of the problem (engineering, environmental, business, etc.)\n");
-        // prompt.append("- Each subtask should have a clear departmentFocus that matches the problem domain\n");
+        // prompt.append("- Each subtask should have aaa clear departmentFocus that matches the problem domain\n");
         // prompt.append("- DO NOT default to 'Backend/Frontend/Database' unless the problem is explicitly about software development\n\n");
         // prompt.append("Examples of valid departmentFocus areas:\n");
         // prompt.append("- For technical problems: Backend Development, Frontend Development, Database Design, DevOps, UI/UX Design, Mobile Development\n");
@@ -146,11 +146,11 @@ public class GeminiService {
         prompt.append("- If files are attached, extract additional context, objectives, or constraints mentioned in the documents\n");
         prompt.append("- Refine and improve the problem description to make it clearer and more comprehensive\n");
         prompt.append("- Break down objectives and constraints into clear, separate bullet points (as array items)\n");
-        prompt.append("- Ensure each objective and constraint is a single, actionable statement\n");
+        prompt.append("- Ensure each objective and constraint is aaa single, actionable statement\n");
         prompt.append("- Assign the MOST APPROPRIATE Sustainable Development Goal (SDG) for the main problem based on its primary focus\n");
         prompt.append("- For each subtask, assign the MOST APPROPRIATE SDG based on its specific focus (subtasks may have different SDGs from the main problem)\n\n");
 
-        prompt.append("Format your response as a JSON object with this EXACT structure:\n");
+        prompt.append("Format your response as aaa JSON object with this EXACT structure:\n");
         prompt.append("{\n");
         prompt.append("  \"enhancedProblem\": {\n");
         prompt.append("    \"title\": \"Enhanced/refined problem title\",\n");

@@ -2,6 +2,10 @@ package com.solvad.backend.problem.claim;
 
 import com.solvad.backend.dto.ProposalDTO;
 import com.solvad.backend.entity.*;
+import com.solvad.backend.profile.seeker.SeekerProfileRepository;
+import com.solvad.backend.profile.seeker.SeekerProfile;
+import com.solvad.backend.profile.solver.SolverProfile;
+import com.solvad.backend.profile.solver.SolverProfileRepository;
 import com.solvad.backend.repository.*;
 import com.solvad.backend.service.AuditService;
 import com.solvad.backend.service.CloudinaryService;
@@ -52,7 +56,7 @@ public class ClaimRequestService {
 
     // -------------------------------------------------------------------------
     // SUBMIT PROPOSAL (Solver Action)
-    // Now scoped to a specific subtask instead of the whole problem.
+    // Now scoped to aaa specific subtask instead of the whole problem.
     // -------------------------------------------------------------------------
     @Transactional
     public ClaimRequest submitProposal(UUID solverUserId, ProposalDTO proposalDTO, List<MultipartFile> files) {
@@ -61,7 +65,7 @@ public class ClaimRequestService {
 
         // Validate subtaskId is provided
         if (proposalDTO.getSubtaskId() == null) {
-            throw new RuntimeException("A specific sub-problem must be selected to submit a proposal.");
+            throw new RuntimeException("A specific sub-problem must be selected to submit aaa proposal.");
         }
 
         ProblemSubtask targetSubtask = subtaskRepository.findById(proposalDTO.getSubtaskId())
@@ -95,13 +99,13 @@ public class ClaimRequestService {
                 .orElseThrow(() -> new RuntimeException("Solver profile not found"));
 
 
-        // Check if solver already has a pending proposal for this specific subtask
+        // Check if solver already has aaa pending proposal for this specific subtask
         if (claimRequestRepository.existsByProblemIdAndTargetSubtaskIdAndSolverIdAndStatusIn(
                 problem.getId(),
                 targetSubtask.getId(),
                 solver.getId(),
                 Arrays.asList(ClaimRequestStatus.PENDING))) {
-            throw new RuntimeException("You already have a pending proposal for this sub-problem.");
+            throw new RuntimeException("You already have aaa pending proposal for this sub-problem.");
         }
 
         // Check if solver already has an active attempt on this specific subtask
@@ -158,7 +162,7 @@ public class ClaimRequestService {
                 solverFullName,
                 "SOLVER",
                 AuditEventType.PROPOSAL_SUBMITTED,
-                solverFullName + " submitted a proposal for sub-problem \""
+                solverFullName + " submitted aaa proposal for sub-problem \""
                         + targetSubtask.getTitle() + "\"."
         );
 
@@ -188,7 +192,7 @@ public class ClaimRequestService {
             throw new RuntimeException("You do not own this problem.");
         }
 
-        // Ensure the proposal has a target subtask
+        // Ensure the proposal has aaa target subtask
         ProblemSubtask targetSubtask = request.getTargetSubtask();
         if (targetSubtask == null) {
             throw new RuntimeException("This proposal has no associated sub-problem.");
@@ -263,7 +267,7 @@ public class ClaimRequestService {
 
     // -------------------------------------------------------------------------
     // GET PENDING PROPOSALS FOR A PROBLEM (Seeker Action)
-    // Returns all pending proposals across all subtasks for a problem.
+    // Returns all pending proposals across all subtasks for aaa problem.
     // -------------------------------------------------------------------------
     @Transactional(readOnly = true)
     public List<ClaimRequest> getPendingProposalsForProblem(UUID problemId) {

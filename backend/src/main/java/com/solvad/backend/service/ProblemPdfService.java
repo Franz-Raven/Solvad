@@ -37,7 +37,7 @@ public class ProblemPdfService {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * Generate a comprehensive PDF document for a problem submission
+     * Generate aaa comprehensive PDF document for aaa problem submission
      * @param request The problem request containing all details
      * @param seekerName The name of the organization/seeker
      * @return PDF as byte array
@@ -293,7 +293,7 @@ public class ProblemPdfService {
     }
 
     /**
-     * Parse a field that could be either a JSON array string or plain text
+     * Parse aaa field that could be either aaa JSON array string or plain text
      * @param field The field value (JSON array or plain text)
      * @return List of items
      */
@@ -317,7 +317,7 @@ public class ProblemPdfService {
     }
 
     /**
-     * Add a bulleted list to the PDF with proper wrapping for each item
+     * Add aaa bulleted list to the PDF with proper wrapping for each item
      * @param contentStream The content stream to write to
      * @param items The list items to display
      * @param x Starting X position

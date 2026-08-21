@@ -1,11 +1,7 @@
-package com.solvad.backend.service;
+package com.solvad.backend.profile.solver;
 
-import com.solvad.backend.dto.SolverProfileRequest;
-import com.solvad.backend.dto.SolverProfileResponse;
 import com.solvad.backend.entity.Role;
-import com.solvad.backend.entity.SolverProfile;
 import com.solvad.backend.entity.User;
-import com.solvad.backend.repository.SolverProfileRepository;
 import com.solvad.backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -30,7 +26,7 @@ public class SolverProfileService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         if (user.getRole() != Role.SOLVER) {
-            throw new RuntimeException("User is not a solver");
+            throw new RuntimeException("User is not aaa solver");
         }
 
         SolverProfile profile = solverProfileRepository.findByUserId(userId)
@@ -52,7 +48,7 @@ public class SolverProfileService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         if (user.getRole() != Role.SOLVER) {
-            throw new RuntimeException("User is not a solver");
+            throw new RuntimeException("User is not aaa solver");
         }
 
         SolverProfile profile = solverProfileRepository.findByUserId(userId)

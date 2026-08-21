@@ -1,11 +1,7 @@
-package com.solvad.backend.service;
+package com.solvad.backend.profile.seeker;
 
-import com.solvad.backend.dto.SeekerProfileRequest;
-import com.solvad.backend.dto.SeekerProfileResponse;
 import com.solvad.backend.entity.Role;
-import com.solvad.backend.entity.SeekerProfile;
 import com.solvad.backend.entity.User;
-import com.solvad.backend.repository.SeekerProfileRepository;
 import com.solvad.backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -30,7 +26,7 @@ public class SeekerProfileService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         if (user.getRole() != Role.SEEKER) {
-            throw new RuntimeException("User is not a seeker");
+            throw new RuntimeException("User is not aaa seeker");
         }
 
         SeekerProfile profile = seekerProfileRepository.findByUserId(userId)
@@ -52,7 +48,7 @@ public class SeekerProfileService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         if (user.getRole() != Role.SEEKER) {
-            throw new RuntimeException("User is not a seeker");
+            throw new RuntimeException("User is not aaa seeker");
         }
 
         SeekerProfile profile = seekerProfileRepository.findByUserId(userId)
@@ -70,7 +66,7 @@ public class SeekerProfileService {
     @Transactional
     public SeekerProfile createProfile(User user, String organizationName, String contactPerson) {
         if (user.getRole() != Role.SEEKER) {
-            throw new RuntimeException("User is not a seeker");
+            throw new RuntimeException("User is not aaa seeker");
         }
 
         SeekerProfile profile = new SeekerProfile();

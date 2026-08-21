@@ -1,4 +1,4 @@
-package com.solvad.backend.dto;
+package com.solvad.backend.profile.seeker;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
