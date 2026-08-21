@@ -3,6 +3,7 @@ package com.solvad.backend.problem.core;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.solvad.backend.audit.AuditLogResponse;
 import com.solvad.backend.dto.*;
+import com.solvad.backend.problem.search.PaginatedProblemsResponse;
 import com.solvad.backend.security.JwtService;
 import com.solvad.backend.audit.AuditService;
 import org.springframework.beans.factory.annotation.Autowired;

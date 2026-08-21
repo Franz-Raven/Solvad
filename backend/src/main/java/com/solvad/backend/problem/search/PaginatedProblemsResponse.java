@@ -1,4 +1,4 @@
-package com.solvad.backend.dto;
+package com.solvad.backend.problem.search;
 
 import com.solvad.backend.problem.core.ProblemResponse;
 
