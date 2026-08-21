@@ -1,18 +1,15 @@
-package com.solvad.backend.service;
+package com.solvad.backend.problem.GapAnalysisCache;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.solvad.backend.dto.GapAnalysisResponse;
-import com.solvad.backend.entity.GapAnalysisCache;
 import com.solvad.backend.entity.Problem;
-import com.solvad.backend.repository.GapAnalysisRepository;
 import com.solvad.backend.repository.ProblemRepository;
+import com.solvad.backend.service.GeminiService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.Optional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 

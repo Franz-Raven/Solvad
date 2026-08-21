@@ -1,4 +1,4 @@
-package com.solvad.backend.dto;
+package com.solvad.backend.problem.GapAnalysisCache;
 
 import java.util.UUID;
 
