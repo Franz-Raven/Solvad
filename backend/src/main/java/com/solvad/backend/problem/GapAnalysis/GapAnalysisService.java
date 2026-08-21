@@ -1,4 +1,4 @@
-package com.solvad.backend.problem.GapAnalysisCache;
+package com.solvad.backend.problem.GapAnalysis;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

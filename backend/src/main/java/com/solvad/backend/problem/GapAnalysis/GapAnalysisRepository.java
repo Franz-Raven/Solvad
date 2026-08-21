@@ -1,4 +1,4 @@
-package com.solvad.backend.problem.GapAnalysisCache;
+package com.solvad.backend.problem.GapAnalysis;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;

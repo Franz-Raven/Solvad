@@ -1,5 +1,6 @@
 package com.solvad.backend.entity;
 
+import com.solvad.backend.solution.attempt.SolutionAttempt;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;

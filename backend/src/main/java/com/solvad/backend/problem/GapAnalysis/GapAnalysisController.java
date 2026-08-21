@@ -1,4 +1,4 @@
-package com.solvad.backend.problem.GapAnalysisCache;
+package com.solvad.backend.problem.GapAnalysis;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;

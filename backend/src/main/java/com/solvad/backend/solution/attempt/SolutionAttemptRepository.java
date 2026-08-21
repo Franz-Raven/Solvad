@@ -1,4 +1,4 @@
-package com.solvad.backend.repository;
+package com.solvad.backend.solution.attempt;
 
 import com.solvad.backend.entity.*;
 import org.springframework.data.jpa.repository.JpaRepository;

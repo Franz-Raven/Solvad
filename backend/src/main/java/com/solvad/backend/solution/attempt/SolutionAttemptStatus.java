@@ -1,4 +1,4 @@
-package com.solvad.backend.entity;
+package com.solvad.backend.solution.attempt;
 
 public enum SolutionAttemptStatus {
     ACTIVE,

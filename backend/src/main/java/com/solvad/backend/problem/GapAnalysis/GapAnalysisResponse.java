@@ -1,4 +1,4 @@
-package com.solvad.backend.problem.GapAnalysisCache;
+package com.solvad.backend.problem.GapAnalysis;
 
 import java.util.List;
 

@@ -1,4 +1,6 @@
-package com.solvad.backend.dto;
+package com.solvad.backend.solution.attempt;
+
+import com.solvad.backend.dto.SubtaskSubmissionResponse;
 
 import java.time.LocalDateTime;
 import java.util.List;
