@@ -27,6 +27,9 @@ public class SolutionAttemptController {
     @Autowired
     private MatchmakingService matchmakingService;
 
+    @Autowired
+    private SolutionAttemptService solutionAttemptService;
+
     // -------------------------------------------------------------------------
     // BROWSE — Solver sees all OPEN problems
     // GET /api/problems/open
@@ -268,6 +271,21 @@ public class SolutionAttemptController {
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+    @GetMapping("/workspace")
+    @PreAuthorize("hasAuthority('SOLVER')")
+    public ResponseEntity<PaginatedAttemptsResponse> getWorkspaceAttempts(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam(defaultValue = "ACTIVE") String tab,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "5") int size
+    ) {
+        String token = authHeader.substring(7);
+        UUID solverId = jwtService.extractUserId(token);
+
+        PaginatedAttemptsResponse response = solutionAttemptService.getWorkspaceAttempts(solverId, tab, page, size);
+        return ResponseEntity.ok(response);
     }
 
 

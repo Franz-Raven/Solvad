@@ -20,6 +20,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -54,6 +57,9 @@ public class SolutionAttemptService {
 
     @Autowired
     private AuditService auditService;
+
+    @Autowired
+    private SolutionAttemptRepository solutionAttemptRepository;
 
     // -------------------------------------------------------------------------
     // WORKSPACE INITIALIZATION (Triggered via ClaimRequestService Approval)
@@ -448,6 +454,10 @@ public class SolutionAttemptService {
                 );
             }
 
+            // 🚀 ADD THESE TWO LINES HERE
+            attempt.setStatus(SolutionAttemptStatus.PENDING_REVIEW);
+            attemptRepository.save(attempt);
+
         } else {
             submission.setStatus(SubtaskSubmissionStatus.DRAFT);
 
@@ -710,4 +720,36 @@ public class SolutionAttemptService {
                 problem.getMaxConcurrentSolvers()
         );
     }
+
+    @Transactional(readOnly = true)
+    public PaginatedAttemptsResponse getWorkspaceAttempts(UUID solverId, String tab, int page, int size) {
+
+        List<SolutionAttemptStatus> statuses;
+
+        // Map the UI tabs to database statuses
+        if ("PENDING".equalsIgnoreCase(tab)) {
+            statuses = List.of(SolutionAttemptStatus.PENDING_REVIEW); // <-- Now maps properly!
+        } else if ("HISTORY".equalsIgnoreCase(tab)) {
+            statuses = List.of(SolutionAttemptStatus.COMPLETED, SolutionAttemptStatus.TERMINATED, SolutionAttemptStatus.ABANDONED);
+        } else {
+            statuses = List.of(SolutionAttemptStatus.ACTIVE); // Default to ACTIVE
+        }
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<SolutionAttempt> attemptPage = solutionAttemptRepository.findBySolverIdAndStatusInOrderByClaimedAtDesc(solverId, statuses, pageable);
+
+        List<SolutionAttemptResponse> content = attemptPage.getContent().stream()
+                .map(attempt -> {
+                    // 1. Fetch the submissions for this specific attempt
+                    // (If your repository method is named findByAttempt instead of findBySolutionAttempt, just swap the name!)
+                    List<SubtaskSubmission> submissions = submissionRepository.findByAttempt(attempt);
+
+                    // 2. Pass BOTH arguments to mapToResponse
+                    return mapToResponse(attempt, submissions);
+                })
+                .collect(Collectors.toList());
+
+        return new PaginatedAttemptsResponse(content, page, attemptPage.getTotalPages(), attemptPage.getTotalElements(), size);
+    }
+
 }
