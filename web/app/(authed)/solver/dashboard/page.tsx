@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { getDiscoveryDashboard } from "@/lib/api/problem";
+import { getDiscoveryDashboard, getDiscoverableProblems } from "@/lib/api/problem";
 import { getMyActiveAttempts } from "@/lib/api/attempts";
 import type { ProblemResponse } from "@/types/problem";
 import type { SolutionAttemptResponse } from "@/types/attempt";
@@ -26,53 +26,71 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export default function SolverDashboardPage() {
-  const [recommended, setRecommended] = useState<ProblemResponse[]>([]);
-  const [problems, setProblems] = useState<ProblemResponse[]>([]);
-  const [solverCourse, setSolverCourse] = useState("");
-  const [myAttempts, setMyAttempts] = useState<SolutionAttemptResponse[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab") || "home";
 
+  // Static Data States (Loaded once)
+  const [recommended, setRecommended] = useState<ProblemResponse[]>([]);
+  const [solverCourse, setSolverCourse] = useState("");
+  const [myAttempts, setMyAttempts] = useState<SolutionAttemptResponse[]>([]);
+  
+  // Paginated Data States (Loaded on page change)
+  const [paginatedProblems, setPaginatedProblems] = useState<ProblemResponse[]>([]);
+  const [explorePage, setExplorePage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  
   const [search, setSearch] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
-  const [explorePage, setExplorePage] = useState(0);
+  
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const loadDashboardData = useCallback(async () => {
+  // 1. Fetch data that doesn't change when you change pages
+  const loadInitialData = useCallback(async () => {
     try {
-      setLoading(true);
-      setError(null);
       const [discovery, attemptsData] = await Promise.all([
-        getDiscoveryDashboard({
-          search: appliedSearch || undefined,
-        }),
+        getDiscoveryDashboard({ search: appliedSearch || undefined }),
         getMyActiveAttempts().catch(() => []),
       ]);
       setRecommended(discovery.recommended);
-      setProblems(discovery.problems);
-      setExplorePage(0);
       setSolverCourse(discovery.solverCourse);
       setMyAttempts(attemptsData);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load dashboard");
-    } finally {
-      setLoading(false);
     }
   }, [appliedSearch]);
 
+  // 2. Fetch the paginated data directly from the server
+  const loadPaginatedData = useCallback(async () => {
+    try {
+      setLoading(true);
+      // Note: We will wire up the appliedSearch parameter to the backend in the next step!
+      const paginatedData = await getDiscoverableProblems(explorePage, EXPLORE_PAGE_SIZE);
+      setPaginatedProblems(paginatedData.problems);
+      setTotalPages(paginatedData.totalPages);
+      setTotalElements(paginatedData.totalElements);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load paginated problems");
+    } finally {
+      setLoading(false);
+    }
+  }, [explorePage, appliedSearch]);
+
+  // Trigger fetches
   useEffect(() => {
-    loadDashboardData();
-  }, [loadDashboardData]);
+    loadInitialData();
+  }, [loadInitialData]);
+
+  useEffect(() => {
+    loadPaginatedData();
+  }, [loadPaginatedData]);
 
   const activeAttempts = myAttempts.filter((a) => a.status === "ACTIVE");
-  const completedAttempts = myAttempts.filter((a) => a.status === "COMPLETED");
-
+  
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    const diffDays = Math.ceil(
-      Math.abs(Date.now() - date.getTime()) / (1000 * 60 * 60 * 24)
-    );
+    const diffDays = Math.ceil(Math.abs(Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
     if (diffDays === 0) return "Today";
     if (diffDays === 1) return "Yesterday";
     if (diffDays < 7) return `${diffDays} days ago`;
@@ -81,29 +99,17 @@ export default function SolverDashboardPage() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setExplorePage(0);
+    setExplorePage(0); // Reset to page 0 when searching
     setAppliedSearch(search.trim());
   };
-
-  const exploreTotalPages = Math.max(
-    1,
-    Math.ceil(problems.length / EXPLORE_PAGE_SIZE)
-  );
-  const safeExplorePage = Math.min(explorePage, exploreTotalPages - 1);
-  const exploreStart = safeExplorePage * EXPLORE_PAGE_SIZE;
-  const paginatedProblems = problems.slice(
-    exploreStart,
-    exploreStart + EXPLORE_PAGE_SIZE
-  );
-  const exploreRangeStart = problems.length === 0 ? 0 : exploreStart + 1;
-  const exploreRangeEnd = Math.min(
-    exploreStart + EXPLORE_PAGE_SIZE,
-    problems.length
-  );
 
   const handleExplorePageChange = (page: number) => {
     setExplorePage(page);
   };
+
+  // Math for the "Showing X - Y of Z problems" text
+  const exploreRangeStart = totalElements === 0 ? 0 : (explorePage * EXPLORE_PAGE_SIZE) + 1;
+  const exploreRangeEnd = Math.min((explorePage + 1) * EXPLORE_PAGE_SIZE, totalElements);
 
   return (
     <div className="min-h-screen bg-linear-to-br from-accent/20 via-background to-accent/10 p-8">
@@ -168,7 +174,7 @@ export default function SolverDashboardPage() {
               </div>
             )}
 
-            {/* Recommended for You — top 3 by skill + course match */}
+            {/* Recommended for You */}
             {!loading && recommended.length > 0 && (
               <div className="bg-white rounded-2xl shadow-xl border border-secondary/30 p-8 mb-8">
                 <div className="flex items-center justify-between mb-6">
@@ -239,25 +245,24 @@ export default function SolverDashboardPage() {
               </form>
 
               <p className="text-xs text-gray-500 mb-4">
-                Problems matching your course are listed first. Use search to
-                narrow results.
+                Problems matching your course are listed first. Use search to narrow results.
               </p>
 
               {loading ? (
                 <div className="flex justify-center py-12">
                   <div className="w-10 h-10 border-4 border-accent border-t-transparent rounded-full animate-spin" />
                 </div>
-              ) : problems.length === 0 ? (
+              ) : paginatedProblems.length === 0 ? (
                 <p className="text-gray-500 text-center py-8">
-                  No problems match your search. Try a different keyword.
+                  No problems match your criteria.
                 </p>
               ) : (
                 <>
                 <p className="text-xs text-gray-500 mb-4">
                   Showing {exploreRangeStart}–{exploreRangeEnd} of{" "}
-                  {problems.length} problem{problems.length === 1 ? "" : "s"}
-                  {exploreTotalPages > 1
-                    ? ` • Page ${safeExplorePage + 1} of ${exploreTotalPages}`
+                  {totalElements} problem{totalElements === 1 ? "" : "s"}
+                  {totalPages > 1
+                    ? ` • Page ${explorePage + 1} of ${totalPages}`
                     : ""}
                 </p>
                 <div className="space-y-4">
@@ -267,7 +272,7 @@ export default function SolverDashboardPage() {
                       className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg hover:bg-accent/10 transition-colors border border-gray-200"
                     >
                       <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center text-gray-600 font-bold shrink-0">
-                        {exploreStart + index + 1}
+                        {(explorePage * EXPLORE_PAGE_SIZE) + index + 1}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2 mb-1">
@@ -320,7 +325,7 @@ export default function SolverDashboardPage() {
                   ))}
                 </div>
 
-                {exploreTotalPages > 1 && (
+                {totalPages > 1 && (
                   <div className="mt-8">
                     <Pagination>
                       <PaginationContent>
@@ -329,12 +334,12 @@ export default function SolverDashboardPage() {
                             href="#"
                             onClick={(e) => {
                               e.preventDefault();
-                              if (safeExplorePage > 0) {
-                                handleExplorePageChange(safeExplorePage - 1);
+                              if (explorePage > 0) {
+                                handleExplorePageChange(explorePage - 1);
                               }
                             }}
                             className={
-                              safeExplorePage === 0
+                              explorePage === 0
                                 ? "pointer-events-none opacity-50"
                                 : ""
                             }
@@ -342,14 +347,14 @@ export default function SolverDashboardPage() {
                         </PaginationItem>
 
                         {Array.from(
-                          { length: exploreTotalPages },
+                          { length: totalPages },
                           (_, i) => i
                         ).map((page) => {
                           if (
                             page === 0 ||
-                            page === exploreTotalPages - 1 ||
-                            (page >= safeExplorePage - 1 &&
-                              page <= safeExplorePage + 1)
+                            page === totalPages - 1 ||
+                            (page >= explorePage - 1 &&
+                              page <= explorePage + 1)
                           ) {
                             return (
                               <PaginationItem key={page}>
@@ -359,7 +364,7 @@ export default function SolverDashboardPage() {
                                     e.preventDefault();
                                     handleExplorePageChange(page);
                                   }}
-                                  isActive={safeExplorePage === page}
+                                  isActive={explorePage === page}
                                 >
                                   {page + 1}
                                 </PaginationLink>
@@ -367,8 +372,8 @@ export default function SolverDashboardPage() {
                             );
                           }
                           if (
-                            page === safeExplorePage - 2 ||
-                            page === safeExplorePage + 2
+                            page === explorePage - 2 ||
+                            page === explorePage + 2
                           ) {
                             return (
                               <PaginationItem key={page}>
@@ -384,12 +389,12 @@ export default function SolverDashboardPage() {
                             href="#"
                             onClick={(e) => {
                               e.preventDefault();
-                              if (safeExplorePage < exploreTotalPages - 1) {
-                                handleExplorePageChange(safeExplorePage + 1);
+                              if (explorePage < totalPages - 1) {
+                                handleExplorePageChange(explorePage + 1);
                               }
                             }}
                             className={
-                              safeExplorePage === exploreTotalPages - 1
+                              explorePage === totalPages - 1
                                 ? "pointer-events-none opacity-50"
                                 : ""
                             }

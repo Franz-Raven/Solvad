@@ -42,6 +42,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+
+
 @Service
 public class ProblemService {
 
@@ -555,5 +557,35 @@ public class ProblemService {
                 .collect(Collectors.toList());
 
         return new SeekerProblemListResponse(responses, page, problemPage.getTotalPages(), (int) problemPage.getTotalElements(), size);
+    }
+
+    @Transactional(readOnly = true)
+    public PaginatedProblemsResponse getDiscoverableProblems(int page, int size) {
+        // 1. Set up pagination sorted by newest problems first
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        // 2. Fetch only OPEN problems for that specific page
+        Page<Problem> problemPage = problemRepository.findByStatus(ProblemStatus.OPEN, pageable);
+
+        if (!problemPage.hasContent()) {
+            return new PaginatedProblemsResponse(List.of(), page, 0, 0, size);
+        }
+
+        // 3. Map the page content to ProblemResponse DTOs
+        List<ProblemResponse> content = problemPage.getContent().stream()
+                .map(problem -> {
+                    List<ProblemSubtask> subtasks = subtaskRepository.findByProblem(problem);
+                    return mapToResponse(problem, subtasks, problem.getSeeker());
+                })
+                .collect(Collectors.toList());
+
+        // 4. Return the PaginatedProblemsResponse matching your constructor
+        return new PaginatedProblemsResponse(
+                content,
+                page,
+                problemPage.getTotalPages(),
+                problemPage.getTotalElements(),
+                size
+        );
     }
 }
