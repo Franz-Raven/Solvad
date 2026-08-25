@@ -99,6 +99,7 @@ export default function AuthedNavigation() {
                 >
                   Workspace
                 </Link>
+                
                 <Link
                   href="/solver/dashboard?tab=overview"
                   className={`text-gray-900 font-medium hover:text-primary-foreground transition-colors ${

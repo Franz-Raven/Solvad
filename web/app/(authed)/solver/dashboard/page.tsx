@@ -34,6 +34,7 @@ export default function SolverDashboardPage() {
   const [solverCourse, setSolverCourse] = useState("");
   const [myAttempts, setMyAttempts] = useState<SolutionAttemptResponse[]>([]);
   
+  
   // Paginated Data States (Loaded on page change)
   const [paginatedProblems, setPaginatedProblems] = useState<ProblemResponse[]>([]);
   const [explorePage, setExplorePage] = useState(0);
@@ -45,6 +46,44 @@ export default function SolverDashboardPage() {
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // 🚀 OPTIMIZATION: Separate loading states for fast vs. slow data
+  const [isAttemptsLoading, setIsAttemptsLoading] = useState(true);
+  const [isRecommendationsLoading, setIsRecommendationsLoading] = useState(true);
+
+  // 1. Fetch Attempts (Lightning Fast)
+  const loadAttempts = useCallback(async () => {
+    try {
+      setIsAttemptsLoading(true);
+      const attemptsData = await getMyActiveAttempts().catch(() => []);
+      setMyAttempts(attemptsData);
+    } catch (err) {
+      console.error("Failed to load attempts", err);
+    } finally {
+      setIsAttemptsLoading(false);
+    }
+  }, []);
+
+  // 2. Fetch Recommendations (Slower AI task - only runs ONCE on mount)
+  const loadRecommendations = useCallback(async () => {
+    try {
+      setIsRecommendationsLoading(true);
+      // Removed the search parameter! Recommendations stay static while searching.
+      const discovery = await getDiscoveryDashboard();
+      setRecommended(discovery.recommended);
+      setSolverCourse(discovery.solverCourse);
+    } catch (err) {
+      console.error("Failed to load recommendations", err);
+    } finally {
+      setIsRecommendationsLoading(false);
+    }
+  }, []);
+
+  // Trigger fetches independently
+  useEffect(() => {
+    loadAttempts();
+    loadRecommendations();
+  }, [loadAttempts, loadRecommendations]);
 
   // 1. Fetch data that doesn't change when you change pages
   const loadInitialData = useCallback(async () => {
@@ -139,8 +178,22 @@ export default function SolverDashboardPage() {
               </p>
             </div>
 
-                    {/* Sleek Workspace Shortcut Banner */}
-            {activeAttempts.length > 0 && (
+            {/* Sleek Workspace Shortcut Banner */}
+            {isAttemptsLoading ? (
+              <div className="bg-secondary/5 border border-secondary/10 rounded-2xl p-4 mb-8 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm animate-pulse">
+                <div className="flex items-center gap-3 w-full">
+                  {/* Fake Icon */}
+                  <div className="w-12 h-12 bg-gray-300/50 rounded-full shrink-0" />
+                  {/* Fake Text Lines */}
+                  <div className="space-y-2 w-full max-w-md">
+                    <div className="h-4 bg-gray-300/50 rounded w-3/4" />
+                    <div className="h-3 bg-gray-200/50 rounded w-1/2" />
+                  </div>
+                </div>
+                {/* Fake Button */}
+                <div className="w-36 h-10 bg-gray-300/50 rounded-lg shrink-0" />
+              </div>
+            ) : activeAttempts.length > 0 && (
               <div className="bg-secondary/10 border border-secondary/20 rounded-2xl p-4 mb-8 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-secondary text-white rounded-full flex items-center justify-center font-bold text-xl shadow-sm shrink-0">
@@ -163,16 +216,39 @@ export default function SolverDashboardPage() {
             )}
 
             {/* Recommended for You */}
-            {!loading && recommended.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-xl border border-secondary/30 p-8 mb-8">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-gray-900">
-                    Recommended for You
-                  </h2>
-                  <span className="text-xs text-gray-500">
-                    Top 3 matches from your skills &amp; course
-                  </span>
+            <div className="bg-white rounded-2xl shadow-xl border border-secondary/30 p-8 mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  Recommended for You
+                </h2>
+                <span className="text-xs text-gray-500">
+                  Top 3 matches from your skills &amp; course
+                </span>
+              </div>
+              
+              {isRecommendationsLoading ? (
+                // 🚀 Content-Aware Skeleton Loader
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="p-4 rounded-xl border border-gray-100 bg-gray-50 animate-pulse relative h-[132px] overflow-hidden">
+                      {/* Fake Rank Circle */}
+                      <div className="absolute top-3 left-3 w-6 h-6 rounded-full bg-gray-300/60" />
+                      
+                      <div className="pl-8 space-y-3 mt-1">
+                        {/* Fake Title Lines */}
+                        <div className="space-y-2">
+                          <div className="h-3.5 bg-gray-300/60 rounded w-full" />
+                          <div className="h-3.5 bg-gray-300/60 rounded w-2/3" />
+                        </div>
+                        {/* Fake Subtitle Line */}
+                        <div className="h-2.5 bg-gray-200/60 rounded w-4/5 pt-2" />
+                        {/* Fake Badge */}
+                        <div className="h-5 w-20 bg-green-100/60 rounded-full mt-2" />
+                      </div>
+                    </div>
+                  ))}
                 </div>
+              ) : recommended.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {recommended.slice(0, 3).map((problem, rank) => (
                     <Link
@@ -204,8 +280,10 @@ export default function SolverDashboardPage() {
                     </Link>
                   ))}
                 </div>
-              </div>
-            )}
+              ) : (
+                <p className="text-sm text-gray-500 text-center py-4">No recommendations available at this time.</p>
+              )}
+            </div>
 
             {/* Search & filters */}
             <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
