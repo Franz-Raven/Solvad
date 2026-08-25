@@ -139,38 +139,26 @@ export default function SolverDashboardPage() {
               </p>
             </div>
 
-            {/* Active workspace */}
+                    {/* Sleek Workspace Shortcut Banner */}
             {activeAttempts.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8 mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                  Your Workspace
-                </h2>
-                <div className="space-y-4">
-                  {activeAttempts.map((attempt) => (
-                    <div
-                      key={attempt.id}
-                      className="flex items-center gap-4 p-4 bg-secondary/5 rounded-lg border border-secondary/20"
-                    >
-                      <div className="w-12 h-12 bg-secondary rounded-lg flex items-center justify-center text-white font-bold">
-                        🚀
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-gray-900 text-sm">
-                          {attempt.problemTitle}
-                        </h4>
-                        <p className="text-xs text-gray-600 mt-0.5">
-                          Claimed {formatDate(attempt.claimedAt)}
-                        </p>
-                      </div>
-                      <Link
-                        href={`/solver/problem/${attempt.problemId}/work`}
-                        className="px-4 py-2 bg-secondary hover:bg-accent text-white text-sm font-medium rounded-lg transition-colors shrink-0"
-                      >
-                        Continue Working
-                      </Link>
-                    </div>
-                  ))}
+              <div className="bg-secondary/10 border border-secondary/20 rounded-2xl p-4 mb-8 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-secondary text-white rounded-full flex items-center justify-center font-bold text-xl shadow-sm shrink-0">
+                    🚀
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-secondary-dark text-base">
+                      You have {activeAttempts.length} active problem{activeAttempts.length > 1 ? 's' : ''} in your workspace
+                    </h3>
+                    <p className="text-sm text-gray-600">Keep up the momentum. Jump back in and finish your solution!</p>
+                  </div>
                 </div>
+                <Link
+                  href="/solver/workspace"
+                  className="px-6 py-2.5 bg-secondary hover:bg-accent text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap shadow-sm shrink-0"
+                >
+                  Go to Workspace →
+                </Link>
               </div>
             )}
 
