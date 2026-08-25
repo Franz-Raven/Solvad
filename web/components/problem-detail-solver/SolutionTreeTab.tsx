@@ -81,7 +81,7 @@ export function SolutionTreeTab({
   }
 
   useEffect(() => {
-    const t = setTimeout(() => setTick((n) => n + 1), 80);
+    const t = setTimeout(() => setTick((n) => n + 1), 100);
     return () => clearTimeout(t);
   }, [filteredAttempts]);
 
@@ -92,7 +92,7 @@ export function SolutionTreeTab({
           display: "flex",
           flexDirection: "row",
           alignItems: "flex-start",
-          gap: 0,
+          gap: "24px", // 🚀 FIX: Added spacing between cards
           justifyContent: "center",
         }}
       >
@@ -104,7 +104,6 @@ export function SolutionTreeTab({
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              padding: "0 16px",
             }}
           >
             {/* Attempt Card */}
@@ -180,7 +179,7 @@ export function SolutionTreeTab({
 
             {node.children.length > 0 && (
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                <div style={{ width: 2, height: 28, background: "#d1d5db" }} />
+                <div style={{ width: 2, height: 32, background: "#d1d5db" }} />
                 {renderLevel(node.children)}
               </div>
             )}
@@ -222,10 +221,10 @@ export function SolutionTreeTab({
 
           const p = toL(pRect);
           const cs = childRects.map(toL);
-          const barY = p.bottom + 14;
+          const barY = p.bottom + 16;
 
           lines.push(
-            <g key={`conn-${node.id}`} stroke="#cbd5e1" strokeWidth="1.5" fill="none" strokeLinecap="round">
+            <g key={`conn-${node.id}`} stroke="#cbd5e1" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
               <line x1={p.cx} y1={p.bottom} x2={p.cx} y2={barY} />
               <line x1={Math.min(...cs.map((c) => c.cx))} y1={barY} x2={Math.max(...cs.map((c) => c.cx))} y2={barY} />
               {cs.map((c, i) => <line key={i} x1={c.cx} y1={barY} x2={c.cx} y2={c.top} />)}
@@ -239,6 +238,8 @@ export function SolutionTreeTab({
     walk(nodes);
     return lines;
   }
+
+  const svgLines = buildConnectorLines(structuredTreeRoots);
 
   return (
     <>
@@ -394,14 +395,20 @@ export function SolutionTreeTab({
           </div>
 
           {/* Fixed-height tree viewport */}
-          <div className="tree-viewport">
+          <div className="tree-viewport" ref={containerRef}>
+            {/* 🚀 FIX: minWidth max-content and inline-block added here */}
             <div
-              ref={containerRef}
               className={`tree-content ${isAnimating ? "exiting" : "entering"}`}
-              style={{ padding: "24px 16px 32px", position: "relative", zIndex: 1 }}
+              style={{
+                padding: "32px 48px 64px 48px",
+                position: "relative",
+                zIndex: 1,
+                minWidth: "max-content",
+                display: "inline-block",
+              }}
             >
               {filteredAttempts.length === 0 ? (
-                <div className="tree-empty">
+                <div className="tree-empty" style={{ minWidth: "100%", position: "absolute", inset: 0 }}>
                   <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
                     <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -411,27 +418,27 @@ export function SolutionTreeTab({
                 </div>
               ) : (
                 <>
-                  <svg
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      pointerEvents: "none",
-                      zIndex: 0,
-                      overflow: "visible",
-                    }}
-                    width={containerRef.current?.scrollWidth ?? 0}
-                    height={containerRef.current?.scrollHeight ?? 0}
-                  >
-                    {buildConnectorLines(structuredTreeRoots)}
-                  </svg>
+                  {svgLines.length > 0 && (
+                    <svg
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: "100%", // 🚀 FIX: 100% width/height so lines stretch naturally
+                        height: "100%",
+                        pointerEvents: "none",
+                        zIndex: 0,
+                        overflow: "visible",
+                      }}
+                    >
+                      {svgLines}
+                    </svg>
+                  )}
                   <div
                     style={{
                       display: "flex",
                       flexDirection: "column",
                       alignItems: "center",
-                      minWidth: 700,
-                      paddingTop: 8,
                       position: "relative",
                       zIndex: 1,
                     }}
