@@ -1,6 +1,6 @@
 package com.solvad.backend.security;
 
-import com.solvad.backend.service.UserService;
+import com.solvad.backend.user.UserService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
