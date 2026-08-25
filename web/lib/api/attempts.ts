@@ -243,9 +243,7 @@ export async function getWorkspaceAttempts(
   params.set("size", size.toString());
   
   return apiRequest<PaginatedAttemptsResponse>(
-    // 🚀 FIX: Ensure this path perfectly matches your backend Controller's mapping!
-    // Example: If your controller is "/api/solution-attempts", change this to "/solution-attempts/workspace"
-    `/attempts/workspace?${params.toString()}`, 
+    `/attempts/workspace?${params.toString()}`,
     { method: "GET" }
   );
 }

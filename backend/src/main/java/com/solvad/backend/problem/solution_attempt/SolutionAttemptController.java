@@ -273,8 +273,8 @@ public class SolutionAttemptController {
         }
     }
 
-    @GetMapping("/workspace")
-    @PreAuthorize("hasAuthority('SOLVER')")
+    @GetMapping("/api/attempts/workspace")
+    @PreAuthorize("hasRole('SOLVER')")
     public ResponseEntity<PaginatedAttemptsResponse> getWorkspaceAttempts(
             @RequestHeader("Authorization") String authHeader,
             @RequestParam(defaultValue = "ACTIVE") String tab,
