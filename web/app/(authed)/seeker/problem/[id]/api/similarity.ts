@@ -1,4 +1,4 @@
-import { apiRequest } from "../api";
+import { apiRequest } from "../../../../../../lib/api";
 import type { SimilarityResponse } from "@/types/similarity";
 
 export async function fetchSimilarityInsights(

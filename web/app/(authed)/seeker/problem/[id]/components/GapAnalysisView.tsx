@@ -1,6 +1,6 @@
 "use client";
 
-import { GapAnalysisResponse } from "@/lib/api/gap-analysis";
+import { GapAnalysisResponse } from "../api/gap-analysis";
 import {
   FileText,
   Brain,

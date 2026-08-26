@@ -4,6 +4,7 @@ import type {
   PaginatedProblemsResponse 
 } from "@/types/problem";
 import type { SolutionAttemptResponse } from "@/types/attempt";
+import type { ProblemResponse } from "@/types/problem";
 
 export interface DiscoveryQuery {
   search?: string;
@@ -12,18 +13,13 @@ export interface DiscoveryQuery {
 
 import { PaginatedAttemptsResponse } from "@/types/attempt";
 
-/**
- * Fetches all solution attempts for the solver (powers the SolverOverview and WorkspaceBanner).
- */
+
 export async function getMyAttempts(): Promise<SolutionAttemptResponse[]> {
   return apiRequest<SolutionAttemptResponse[]>("/attempts/my", {
     method: "GET",
   });
 }
 
-/**
- * Fetches AI-recommended problems based on solver skills and courses (powers RecommendationsList).
- */
 export async function getDiscoveryDashboard(
   query: DiscoveryQuery = {}
 ): Promise<DiscoveryDashboardResponse> {
@@ -38,9 +34,7 @@ export async function getDiscoveryDashboard(
   );
 }
 
-/**
- * Fetches server-side paginated problems for the solver (powers ExploreProblems).
- */
+
 export async function getDiscoverableProblems(
   page: number = 0,
   size: number = 5
@@ -78,3 +72,8 @@ export async function getWorkspaceAttempts(
   );
 }
 
+export async function getOpenProblems(): Promise<ProblemResponse[]> {
+  return apiRequest<ProblemResponse[]>("/problems/open", {
+    method: "GET",
+  });
+}

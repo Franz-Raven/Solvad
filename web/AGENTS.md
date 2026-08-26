@@ -42,56 +42,36 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - LocalStorage (`user`, `token`) - Client-side state persistence
 - JWT tokens are stateless - frontend clears tokens on logout (no backend call needed)
 
-### File Organization
+### File Organization (Feature Colocation)
+We use a STRICT **Feature-Colocated Architecture**. Global folders are reserved ONLY for code shared across the entire application.
 
-```
+```text
 app/
 ├── (public)/          # Unauthenticated routes
-│   ├── landing/
-│   ├── login/
-│   └── register/
 ├── (authed)/          # Protected routes
-│   ├── layout.tsx     # AuthProvider wrapper + AuthedNavigation
 │   ├── solver/
-│   ├── seeker/
-│   └── admin/
+│   │   └── workspace/
+│   │       └── [id]/
+│   │           ├── api/             # LOCAL API: Only workspace-specific endpoints
+│   │           │   └── workspace.ts 
+│   │           ├── component/       # LOCAL COMPONENTS: Only used in workspace
+│   │           │   └── SubtaskForm.tsx
+│   │           └── page.tsx
 components/
 ├── navigation.tsx          # Public header
 ├── authed-navigation.tsx   # Authenticated header
-└── ui/                     # Shadcn components
+├── portal.tsx              # DOM Portal for Modals
+└── ui/                     # Shared Shadcn components
 lib/
-├── api.ts                  # apiRequest wrapper (fetch)
-├── auth-utils.ts           # Auth helper functions
+├── api.ts                  # Core apiRequest fetch wrapper
 └── api/
-    └── auth.ts             # Auth API calls
-types/
-└── auth.ts                 # TypeScript type definitions
-context/
-└── auth-context.tsx        # Auth state management
-```
+    └── auth.ts             # GLOBAL APIs only (Auth, generic utilities)
 
-## Theme & Design System
 
-### Unified Green Color Scheme
-**CRITICAL:** All user roles (SOLVER, SEEKER, ADMIN) use the same green branding consistently. **ALWAYS use CSS variables from globals.css instead of hardcoded hex values.**
-
-**CSS Variables (from globals.css):**
-```css
---accent: oklch(0.63 0.09 162)           /* Light green */
---secondary: oklch(0.50 0.10 162)        /* Medium green */
---primary-foreground: oklch(0.30 0.08 162)  /* Dark green */
-```
-
-**Usage in Tailwind:**
-- `bg-accent`, `text-accent`, `border-accent` - Light green (#5CA87C equivalent)
-- `bg-secondary`, `text-secondary` - Medium green
-- `bg-primary-foreground`, `text-primary-foreground` - Dark green (#288760 equivalent)
-- `border-input` instead of `border-gray-300`
-- `bg-background` instead of `bg-white` for semantic consistency
-
-**Common Patterns:**
-```tsx
-// Gradients
+Theme & Design SystemUnified Green Color SchemeCRITICAL: All user roles (SOLVER, SEEKER, ADMIN) use the same green branding consistently. ALWAYS use CSS variables from globals.css instead of hardcoded hex values.  CSS Variables (from globals.css):  CSS--accent: oklch(0.63 0.09 162)           /* Light green */[cite: 6]
+--secondary: oklch(0.50 0.10 162)        /* Medium green */[cite: 6]
+--primary-foreground: oklch(0.30 0.08 162)  /* Dark green */[cite: 6]
+Usage in Tailwind:  bg-accent, text-accent, border-accent - Light green (#5CA87C equivalent)  bg-secondary, text-secondary - Medium green  bg-primary-foreground, text-primary-foreground - Dark green (#288760 equivalent)  border-input instead of border-gray-300  bg-background instead of bg-white for semantic consistency  Common Patterns:  TypeScript// Gradients
 className="bg-gradient-to-br from-accent to-primary-foreground"
 className="bg-gradient-to-br from-accent to-secondary"
 
@@ -108,385 +88,104 @@ className="focus:ring-2 focus:ring-accent focus:border-transparent"
 // Hover states  
 className="hover:bg-accent/20"
 className="hover:text-primary-foreground"
-```
+DO NOT:  ❌ Hardcode hex values like #5CA87C, #288760, #1A5140  ❌ Use absolute colors like bg-green-600, text-blue-500  ❌ Mix hardcoded values with CSS variables  DO:  ✅ Use semantic CSS variable classes: bg-accent, text-secondary, border-primary-foreground  ✅ Utilize opacity modifiers: bg-accent/20, text-secondary/80  ✅ Reference globals.css for all color decisions  TypographyFont: Poppins (weights: 300, 400, 500, 600, 700)  Large headings: text-4xl md:text-5xl lg:text-6xl font-bold  Body text: text-lg md:text-xl  Styling StandardsUse Tailwind CSS classes exclusively  Responsive breakpoints: sm:, md:, lg:, xl:  Shadows: shadow-md, shadow-xl  Rounded corners: rounded-lg, rounded-xl, rounded-2xl  Borders: border border-gray-200  API IntegrationBase apiRequest WrapperAll network requests MUST use the apiRequest<T> wrapper located in lib/api.ts. This automatically injects the JWT token, handles Content-Type headers (JSON vs FormData), and parses errors seamlessly.Feature-Specific APIs (Colocation)DO NOT use a monolithic global API file (e.g., lib/api/problem.ts).Instead, API calls must be colocated with the feature that uses them.Example: The Seeker Dashboard API belongs in seeker/dashboard/api/dashboard.ts:TypeScriptimport { apiRequest } from "@/lib/api";
+import type { PaginatedProblemsResponse } from "@/types/problem";
 
-**DO NOT:**
-- ❌ Hardcode hex values like `#5CA87C`, `#288760`, `#1A5140`
-- ❌ Use absolute colors like `bg-green-600`, `text-blue-500`
-- ❌ Mix hardcoded values with CSS variables
-
-**DO:**
-- ✅ Use semantic CSS variable classes: `bg-accent`, `text-secondary`, `border-primary-foreground`
-- ✅ Utilize opacity modifiers: `bg-accent/20`, `text-secondary/80`
-- ✅ Reference globals.css for all color decisions
-
-### Typography
-- Font: Poppins (weights: 300, 400, 500, 600, 700)
-- Large headings: `text-4xl md:text-5xl lg:text-6xl font-bold`
-- Body text: `text-lg md:text-xl`
-
-### Styling Standards
-- Use Tailwind CSS classes exclusively
-- Responsive breakpoints: `sm:`, `md:`, `lg:`, `xl:`
-- Shadows: `shadow-md`, `shadow-xl`
-- Rounded corners: `rounded-lg`, `rounded-xl`, `rounded-2xl`
-- Borders: `border border-gray-200`
-
-## API Integration
-
-### Backend Connection
-**Base URL:** `http://localhost:8080/api`
-
-### API Client Setup (`lib/api.ts`)
-Uses native `fetch` with automatic token injection:
-
-```typescript
-const API_BASE_URL = "http://localhost:8080/api";
-
-export async function apiRequest<T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<T> {
-  const url = `${API_BASE_URL}${endpoint}`;
-
-  const headers: Record<string, string> = {
-    ...(options.headers as Record<string, string> | undefined),
-  };
-
-  // Automatically add auth token from localStorage
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
-  // Set Content-Type if not already set
-  if (!("Content-Type" in headers) && !(options.body instanceof FormData)) {
-    headers["Content-Type"] = "application/json";
-  }
-
-  const config: RequestInit = {
-    ...options,
-    headers,
-  };
-
-  const res = await fetch(url, config);
-
-  // Parse response based on content type
-  const contentType = res.headers.get("content-type") || "";
-  let data: unknown = null;
-
-  if (contentType.includes("application/json")) {
-    data = await res.json().catch(() => null);
-  } else {
-    data = await res.text().catch(() => null);
-  }
-
-  // Handle errors
-  if (!res.ok) {
-    const errorMsg = /* extract error message from response */ ;
-    throw new Error(errorMsg);
-  }
-
-  return data as T;
-}
-```
-
-### API Function Pattern (`lib/api/*.ts`)
-Create separate files for different API domains:
-
-```typescript
-// lib/api/auth.ts
-import { apiRequest } from "../api";
-import type { LoginPayload, SolverRegisterPayload, SeekerRegisterPayload, AuthResponse } from "@/types/auth";
-
-export async function loginUser(payload: LoginPayload): Promise<AuthResponse> {
-  return apiRequest<AuthResponse>("/auth/login", {
-    method: "POST",
-    body: JSON.stringify(payload),
+export async function searchMyProblems(page: number, size: number): Promise<PaginatedProblemsResponse> {
+  return apiRequest<PaginatedProblemsResponse>(`/problems/search?page=${page}&size=${size}`, { 
+    method: "GET" 
   });
 }
+Advanced React PatternsModals & Z-Index Issues (The Portal Pattern)If a parent container uses CSS transforms (e.g., Tailwind's animate-in slide-in-from-bottom), fixed children inside it will get trapped and fail to cover the screen.Rule: Always wrap full-screen Modals or Overlays in the <Portal> component.TypeScriptimport Portal from "@/components/portal";
 
-export async function registerSolver(payload: SolverRegisterPayload): Promise<AuthResponse> {
-  return apiRequest<AuthResponse>("/auth/register/solver", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-}
+// Inside render:
+{showModal && (
+  <Portal>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60">
+       {/* Modal Content */}
+    </div>
+  </Portal>
+)}
+Concurrent Data FetchingWhen a page requires multiple independent API calls to render, never await them sequentially. Use Promise.allSettled to fetch them concurrently and fail gracefully.TypeScriptconst [problemResult, attemptResult] = await Promise.allSettled([
+  getProblemById(id),
+  getMyAttempt(id)
+]);
 
-export async function registerSeeker(payload: SeekerRegisterPayload): Promise<AuthResponse> {
-  return apiRequest<AuthResponse>("/auth/register/seeker", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-}
-```
+// Hard fail for required data
+if (problemResult.status === "fulfilled") setProblem(problemResult.value);
+else throw new Error("Critical data failed to load");
 
-### Using API Functions in Components
-```typescript
-import { loginUser, registerSolver } from "@/lib/api/auth";
-import { setAuthStorage, setAuthCookies, getDashboardPath } from "@/lib/auth-utils";
+// Soft fail (fallback) for optional data
+setAttempt(attemptResult.status === "fulfilled" ? attemptResult.value : null);
+Performance & Lazy LoadingHeavy components (like rich text editors, data tables, or hidden tabs) should NOT be downloaded on initial page load. Use next/dynamic to code-split and lazy-load them.TypeScriptimport dynamic from "next/dynamic";
 
-const handleLogin = async (data: LoginPayload) => {
-  try {
-    const response = await loginUser(data);
-    setAuthStorage(response);
-    setAuthCookies(response.token, response.role);
-    router.push(getDashboardPath(response.role));
-  } catch (error) {
-    console.error("Login failed:", error);
-    // Handle error (show toast, etc.)
-  }
-};
-
-const handleSolverRegistration = async (data: SolverRegisterPayload) => {
-  try {
-    const response = await registerSolver(data);
-    setAuthStorage(response);
-    setAuthCookies(response.token, response.role);
-    router.push(getDashboardPath(response.role));
-  } catch (error) {
-    console.error("Registration failed:", error);
-  }
-};
-```
-
-## TypeScript Standards
-
-### Type Definitions (`types/`)
-All interfaces and types in dedicated files:
-
-```typescript
-// types/auth.ts
-export type UserRole = "SOLVER" | "SEEKER" | "ADMIN";
+const AuditTimelineTab = dynamic(() => import("./components/AuditTimelineTab").then(mod => mod.AuditTimelineTab), {
+  loading: () => <div className="animate-pulse">Loading History...</div>,
+  ssr: false // Optional: disable SSR for highly interactive/browser-only components
+});
+TypeScript StandardsType Definitions (types/)All interfaces and types in dedicated files:  TypeScript// types/auth.ts
+export type UserRole = "SOLVER" | "SEEKER" | "ADMIN";[cite: 6]
 
 export interface User {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: UserRole;
-  institution?: string;
-  degreeProgram?: string;
-}
-
-// Common fields for all registrations
-export interface BaseRegisterPayload {
-  email: string;
-  password: string;
-}
-
-// Solver-specific registration (students)
-export interface SolverRegisterPayload extends BaseRegisterPayload {
-  firstName: string;
-  lastName: string;
-  institution: string;
-  degreeProgram: string;
-}
-
-// Seeker-specific registration (industry partners)
-export interface SeekerRegisterPayload extends BaseRegisterPayload {
-  organizationName: string;
-  contactPerson: string;
-}
-
-export interface LoginPayload {
-  email: string;
-  password: string;
+  id: string;[cite: 6]
+  email: string;[cite: 6]
+  firstName: string;[cite: 6]
+  lastName: string;[cite: 6]
+  role: UserRole;[cite: 6]
+  institution?: string;[cite: 6]
+  degreeProgram?: string;[cite: 6]
 }
 
 export interface AuthResponse {
-  token: string;
-  userId: string;
-  email: string;
-  role: UserRole;
-}
-```
-  degreeProgram?: string;
-}
-
-export interface AuthResponse {
-  token: string;
-  role: UserRole;
-  user: User;
+  token: string;[cite: 6]
+  role: UserRole;[cite: 6]
+  user: User;[cite: 6]
 }
 
 export interface LoginPayload {
-  email: string;
-  password: string;
+  email: string;[cite: 6]
+  password: string;[cite: 6]
 }
-```
+Import PathsUse @/ alias for imports: import { useAuth } from "@/context/auth-context"  Never use relative paths like ../../lib/utils  Naming ConventionsFiles & FoldersComponents: kebab-case.tsx (e.g., authed-navigation.tsx)  Pages: page.tsx (Next.js convention)  API functions: kebab-case.ts (e.g., auth.ts)  Types: kebab-case.ts (e.g., auth.ts)  Variables & FunctionsVariables: camelCase (e.g., userRole, authToken)  Functions: camelCase (e.g., handleLogin, getDashboardPath)  Constants: UPPER_SNAKE_CASE (e.g., PUBLIC_PATHS, API_BASE_URL)  React components: PascalCase (e.g., AuthedNavigation, SolverDashboard)  React HooksCustom hooks: Prefix with use (e.g., useAuth)  State variables: Descriptive names (e.g., const [isLoading, setIsLoading] = useState(false))  Component StandardsClient ComponentsMark with "use client" directive when using:  useState, useEffect, useContext  Event handlers (onClick, onChange)  Browser APIs  Server ComponentsDefault in Next.js App Router - no directive needed[cite: 6]
+Use for:[cite: 6]Static content[cite: 6]Data fetching at build time[cite: 6]SEO-critical pages[cite: 6]Component StructureTypeScript"use client";[cite: 6]
 
-### Import Paths
-- Use `@/` alias for imports: `import { useAuth } from "@/context/auth-context"`
-- Never use relative paths like `../../lib/utils`
-
-## Naming Conventions
-
-### Files & Folders
-- Components: `kebab-case.tsx` (e.g., `authed-navigation.tsx`)
-- Pages: `page.tsx` (Next.js convention)
-- API functions: `kebab-case.ts` (e.g., `auth.ts`)
-- Types: `kebab-case.ts` (e.g., `auth.ts`)
-
-### Variables & Functions
-- Variables: `camelCase` (e.g., `userRole`, `authToken`)
-- Functions: `camelCase` (e.g., `handleLogin`, `getDashboardPath`)
-- Constants: `UPPER_SNAKE_CASE` (e.g., `PUBLIC_PATHS`, `API_BASE_URL`)
-- React components: `PascalCase` (e.g., `AuthedNavigation`, `SolverDashboard`)
-
-### React Hooks
-- Custom hooks: Prefix with `use` (e.g., `useAuth`)
-- State variables: Descriptive names (e.g., `const [isLoading, setIsLoading] = useState(false)`)
-
-## Component Standards
-
-### Client Components
-Mark with `"use client"` directive when using:
-- `useState`, `useEffect`, `useContext`
-- Event handlers (`onClick`, `onChange`)
-- Browser APIs
-
-### Server Components
-Default in Next.js App Router - no directive needed
-Use for:
-- Static content
-- Data fetching at build time
-- SEO-critical pages
-
-### Component Structure
-```typescript
-"use client";
-
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useState } from "react";[cite: 6]
+import { useRouter } from "next/navigation";[cite: 6]
+import Link from "next/link";[cite: 6]
 
 export default function ComponentName() {
-  // Hooks first
-  const router = useRouter();
-  const [state, setState] = useState();
+  // Hooks first[cite: 6]
+  const router = useRouter();[cite: 6]
+  const [state, setState] = useState();[cite: 6]
 
-  // Event handlers
-  const handleClick = () => {};
+  // Event handlers[cite: 6]
+  const handleClick = () => {};[cite: 6]
 
-  // Render
+  // Render[cite: 6]
   return (
     <div>
-      {/* Content */}
+      {/* Content */}[cite: 6]
     </div>
-  );
+  );[cite: 6]
 }
-```
-
-## Security Checklist for New Pages
-
-### Authenticated Pages
-- [ ] Page is inside `app/(authed)/` directory
-- [ ] Layout automatically provides `AuthProvider` and header
-- [ ] Use `useAuth()` hook to access user data
-- [ ] Middleware validates cookies server-side
-- [ ] No manual auth checks needed (handled by route group)
-
-### Public Pages
-- [ ] Page is inside `app/(public)/` directory
-- [ ] Uses public `Navigation` component (not `AuthedNavigation`)
-- [ ] No `useAuth()` calls
-- [ ] Login/register forms use `setAuthCookies()` and `setAuthStorage()` after success
-
-### API Calls
-- [ ] Import from `lib/api/*` functions
-- [ ] Type-safe with TypeScript interfaces
-- [ ] Error handling with try/catch
-- [ ] Auth token automatically added by `apiRequest` wrapper
-- [ ] Use native `fetch` via `apiRequest<T>()` helper
-
-## Form Handling
-
-### Pattern
-```typescript
-const [formData, setFormData] = useState<LoginPayload>({
-  email: "",
-  password: "",
-});
-
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  try {
-    const response = await login(formData);
-    // Handle success
-  } catch (error) {
-    // Handle error
-  }
-};
-```
-
-### Validation
-- Client-side: Basic validation before API call
-- Server-side: Backend validates all inputs
-- Display errors: Toast notifications or inline error messages
-
-## Common Patterns
-
-### Role-Specific Pages and Features
-
-**Admin Features:**
-- **Add Industry Page** (`/admin/add-industry`):
-  - Creates SEEKER user accounts and SeekerProfile
-  - Form fields: email, password, organizationName, contactPerson
-  - No multi-step form (unlike public registration)
-  - Uses CSS variables for theming (bg-accent, focus:ring-accent)
-  - Accessible via "Add Industry" tab in admin navigation
-
-**Form Patterns:**
-- Solver registration: 2-step form (credentials → profile details)
-- Admin add-industry: Single-step form (all fields on one page)
-- All forms use controlled components with `useState`
-- Password confirmation validation on client-side
-- Server-side validation on backend
-
-### Redirects After Login
-```typescript
-import { getDashboardPath } from "@/lib/auth-utils";
-router.push(getDashboardPath(response.role));
-```
-
-### Logout
-```typescript
-import { performLogout } from "@/lib/auth-utils";
-await performLogout();
-router.push("/landing");
-```
-
-### Protected Navigation
-```typescript
-import { useAuth } from "@/context/auth-context";
-const { user, isAuthenticated } = useAuth();
-
-if (!isAuthenticated) {
-  // Middleware handles redirect, but you can show loading state
-  return <div>Loading...</div>;
-}
-```
-
-## DO NOT
-
-❌ Create authentication logic outside the established system
-❌ Store sensitive data in localStorage without cookies
-❌ Use relative imports (`../../`) instead of `@/` alias
-❌ Mix color themes across roles
-❌ Create new layout patterns - use route groups
-❌ Make API calls without TypeScript types
-❌ Bypass middleware protection
-❌ Create duplicate auth state management
-
-## ALWAYS DO
-
-✅ Use established auth system (middleware + context + utils)
-✅ Follow role-based color schemes
-✅ Type all API payloads and responses
-✅ Use `@/` import alias
-✅ Place authenticated pages in `(authed)` directory
-✅ Use `lib/api/*` functions for backend calls
-✅ Handle errors gracefully
-✅ Keep components focused and single-purpose
-✅ Test with all three user roles (SOLVER, SEEKER, ADMIN)
+Security Checklist for New PagesAuthenticated Pages[ ] Page is inside app/(authed)/ directory[cite: 6][ ] Layout automatically provides AuthProvider and header[cite: 6][ ] Use useAuth() hook to access user data[cite: 6][ ] Middleware validates cookies server-side[cite: 6][ ] No manual auth checks needed (handled by route group)[cite: 6]Public Pages[ ] Page is inside app/(public)/ directory[cite: 6][ ] Uses public Navigation component (not AuthedNavigation)[cite: 6][ ] No useAuth() calls[cite: 6][ ] Login/register forms use setAuthCookies() and setAuthStorage() after success[cite: 6]API Calls[ ] Import from local feature api/* functions OR lib/api/* for global[ ] Type-safe with TypeScript interfaces[cite: 6][ ] Error handling with try/catch[cite: 6][ ] Auth token automatically added by apiRequest wrapper[cite: 6][ ] Use native fetch via apiRequest<T>() helper[cite: 6]Common PatternsRole-Specific Pages and FeaturesAdmin Features:[cite: 6]Add Industry Page (/admin/add-industry):[cite: 6]Creates SEEKER user accounts and SeekerProfile[cite: 6]Form fields: email, password, organizationName, contactPerson[cite: 6]No multi-step form (unlike public registration)[cite: 6]Uses CSS variables for theming (bg-accent, focus:ring-accent)[cite: 6]Accessible via "Add Industry" tab in admin navigation[cite: 6]Form Patterns:[cite: 6]Solver registration: 2-step form (credentials → profile details)[cite: 6]Admin add-industry: Single-step form (all fields on one page)[cite: 6]All forms use controlled components with useState[cite: 6]Password confirmation validation on client-side[cite: 6]Server-side validation on backend[cite: 6]DO NOT❌ Create monolithic global API files (e.g., a 500-line api/problems.ts).
+❌ Create authentication logic outside the established system[cite: 6]
+❌ Store sensitive data in localStorage without cookies[cite: 6]
+❌ Use relative imports (../../) instead of @/ alias[cite: 6]
+❌ Mix color themes across roles[cite: 6]
+❌ Create new layout patterns - use route groups[cite: 6]
+❌ Make API calls without TypeScript types[cite: 6]
+❌ Bypass middleware protection[cite: 6]
+❌ Create duplicate auth state management[cite: 6]
+❌ Hardcode localhost:8080 in fetch requests—always use the apiRequest wrapper.ALWAYS DO✅ Colocate feature APIs and sub-components within their respective route directories.
+✅ Wrap full-screen Modals in <Portal> to escape CSS stacking contexts.
+✅ Use Promise.allSettled for parallel network requests.
+✅ Lazy load non-critical tabs and heavy components using next/dynamic.
+✅ Use established auth system (middleware + context + utils)[cite: 6]
+✅ Follow role-based color schemes[cite: 6]
+✅ Type all API payloads and responses[cite: 6]
+✅ Use @/ import alias[cite: 6]
+✅ Place authenticated pages in (authed) directory[cite: 6]
+✅ Handle errors gracefully[cite: 6]
+✅ Keep components focused and single-purpose[cite: 6]
+✅ Test with all three user roles (SOLVER, SEEKER, ADMIN)[cite: 6]    

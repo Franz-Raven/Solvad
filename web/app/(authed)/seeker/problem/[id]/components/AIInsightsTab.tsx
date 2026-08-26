@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { fetchSimilarityInsights } from "@/lib/api/similarity";
+import { fetchSimilarityInsights } from "@/app/(authed)/seeker/problem/[id]/api/similarity";
 import type { SimilarityMatch } from "@/types/similarity";
 import SimilarityWarningCard from "./SimilarityWarningCard";
-import { fetchGapAnalysis, GapAnalysisResponse } from "@/lib/api/gap-analysis";
+import { fetchGapAnalysis, GapAnalysisResponse } from "@/app/(authed)/seeker/problem/[id]/api/gap-analysis";
 import GapAnalysisView from "./GapAnalysisView";
 
 interface AIInsightsTabProps {
