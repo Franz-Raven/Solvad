@@ -91,8 +91,8 @@ export default function SolverWorkspacePage() {
             <h3 className="text-xl font-bold text-gray-900 mb-2">No {activeTab.toLowerCase()} attempts</h3>
             <p className="text-gray-500 mb-6">
               {activeTab === "ACTIVE" && "You don't have any active problems right now. Go find one!"}
-              {/* 🚀 FIX: Updated empty state text for Pending Tab */}
-              {activeTab === "PENDING" && "You have no sub-tasks waiting for Seeker review."}
+              {/* 🚀 Change this text back! */}
+              {activeTab === "PENDING" && "You have no proposals waiting for approval."}
               {activeTab === "HISTORY" && "You haven't completed or abandoned any problems yet."}
             </p>
             {activeTab === "ACTIVE" && (

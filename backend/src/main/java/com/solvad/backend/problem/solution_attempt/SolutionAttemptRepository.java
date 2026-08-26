@@ -51,9 +51,11 @@ public interface SolutionAttemptRepository extends JpaRepository<SolutionAttempt
     Optional<SolutionAttempt> findFirstByProblemAndSolverOrderByClaimedAtDesc(
             Problem problem, SolverProfile solver);
 
-    Page<SolutionAttempt> findBySolverIdAndStatusInOrderByClaimedAtDesc(
-            UUID solverId,
+    Page<SolutionAttempt> findBySolverAndStatusInOrderByClaimedAtDesc(
+            SolverProfile solver,
             List<SolutionAttemptStatus> statuses,
             Pageable pageable
     );
+
+
 }

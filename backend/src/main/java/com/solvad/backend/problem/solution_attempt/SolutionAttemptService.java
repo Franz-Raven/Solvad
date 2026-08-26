@@ -3,6 +3,8 @@ package com.solvad.backend.problem.solution_attempt;
 import com.solvad.backend.audit.AuditEventType;
 import com.solvad.backend.problem.attachment.ProblemAttachmentRepository;
 import com.solvad.backend.problem.attachment.AttachmentRequirementResponse;
+import com.solvad.backend.problem.claim.ClaimRequestRepository;
+import com.solvad.backend.problem.claim.ClaimRequestStatus;
 import com.solvad.backend.problem.core.ProblemResponse;
 import com.solvad.backend.problem.claim.ClaimRequest;
 import com.solvad.backend.problem.core.Problem;
@@ -60,6 +62,9 @@ public class SolutionAttemptService {
 
     @Autowired
     private SolutionAttemptRepository solutionAttemptRepository;
+
+    @Autowired
+    private ClaimRequestRepository claimRequestRepository;
 
     // -------------------------------------------------------------------------
     // WORKSPACE INITIALIZATION (Triggered via ClaimRequestService Approval)
@@ -722,29 +727,59 @@ public class SolutionAttemptService {
     }
 
     @Transactional(readOnly = true)
-    public PaginatedAttemptsResponse getWorkspaceAttempts(UUID solverId, String tab, int page, int size) {
+    public PaginatedAttemptsResponse getWorkspaceAttempts(UUID solverUserId, String tab, int page, int size) {
 
-        List<SolutionAttemptStatus> statuses;
-
-        // Map the UI tabs to database statuses
-        if ("PENDING".equalsIgnoreCase(tab)) {
-            statuses = List.of(SolutionAttemptStatus.PENDING_REVIEW); // <-- Now maps properly!
-        } else if ("HISTORY".equalsIgnoreCase(tab)) {
-            statuses = List.of(SolutionAttemptStatus.COMPLETED, SolutionAttemptStatus.TERMINATED, SolutionAttemptStatus.ABANDONED);
-        } else {
-            statuses = List.of(SolutionAttemptStatus.ACTIVE); // Default to ACTIVE
-        }
+        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
+                .orElseThrow(() -> new RuntimeException("Solver profile not found"));
 
         Pageable pageable = PageRequest.of(page, size);
-        Page<SolutionAttempt> attemptPage = solutionAttemptRepository.findBySolverIdAndStatusInOrderByClaimedAtDesc(solverId, statuses, pageable);
+
+        // 🚀 THE MAGIC ADAPTER: Intercept "PENDING" to fetch Proposals instead of Attempts
+        if ("PENDING".equalsIgnoreCase(tab)) {
+            Page<ClaimRequest> claimPage = claimRequestRepository.findBySolverAndStatusOrderByCreatedAtDesc(
+                    solver, ClaimRequestStatus.PENDING, pageable);
+
+            List<SolutionAttemptResponse> content = claimPage.getContent().stream()
+                    .map(claim -> new SolutionAttemptResponse(
+                            claim.getId(),
+                            claim.getProblem().getId(),
+                            claim.getProblem().getTitle(),
+                            solver.getId(),
+                            solver.getFirstName(),
+                            solver.getLastName(),
+                            solver.getUser().getProfileUrl(),
+                            solver.getInstitution(),
+                            solver.getDegreeProgram(),
+                            claim.getStatus().name(), // Will output "PENDING"
+                            new ArrayList<>(), // Proposals don't have code submissions yet
+                            claim.getCreatedAt(),
+                            claim.getCreatedAt(),
+                            null,
+                            claim.getParentAttempt() != null ? claim.getParentAttempt().getId() : null,
+                            claim.getParentAttempt() != null ? claim.getParentAttempt().getSolver().getFirstName() + " " + claim.getParentAttempt().getSolver().getLastName() : null,
+                            claim.getTargetSubtask() != null ? claim.getTargetSubtask().getId() : null,
+                            claim.getTargetSubtask() != null ? claim.getTargetSubtask().getTitle() : null,
+                            null,
+                            new ArrayList<>()
+                    ))
+                    .collect(Collectors.toList());
+
+            return new PaginatedAttemptsResponse(content, page, claimPage.getTotalPages(), claimPage.getTotalElements(), size);
+        }
+
+        // --- Standard logic for ACTIVE and HISTORY tabs ---
+        List<SolutionAttemptStatus> statuses;
+        if ("HISTORY".equalsIgnoreCase(tab)) {
+            statuses = List.of(SolutionAttemptStatus.COMPLETED, SolutionAttemptStatus.TERMINATED, SolutionAttemptStatus.ABANDONED);
+        } else {
+            statuses = List.of(SolutionAttemptStatus.ACTIVE);
+        }
+
+        Page<SolutionAttempt> attemptPage = solutionAttemptRepository.findBySolverAndStatusInOrderByClaimedAtDesc(solver, statuses, pageable);
 
         List<SolutionAttemptResponse> content = attemptPage.getContent().stream()
                 .map(attempt -> {
-                    // 1. Fetch the submissions for this specific attempt
-                    // (If your repository method is named findByAttempt instead of findBySolutionAttempt, just swap the name!)
                     List<SubtaskSubmission> submissions = submissionRepository.findByAttempt(attempt);
-
-                    // 2. Pass BOTH arguments to mapToResponse
                     return mapToResponse(attempt, submissions);
                 })
                 .collect(Collectors.toList());
