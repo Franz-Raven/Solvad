@@ -6,30 +6,32 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { getProblemById } from "./api/problem";
 import { apiRequest } from "@/lib/api";
-import { getMyAttempt, getAllAttempts } from "@/lib/api/attempts";
+import { getMyAttempt } from "@/lib/api/attempts";
+import { getAllAttempts } from "@/app/(authed)/seeker/problem/[id]/api/problem";
+
 import type { ProblemResponse } from "@/types/problem";
 import type { SolutionAttemptResponse } from "@/types/attempt";
 
-// 🚀 OPTIMIZATION: Lazy Load all tab components. 
+// 🚀 OPTIMIZATION: Lazy Load all tab components locally. 
 // The browser will NOT download the code for these until the user clicks the specific tab.
-const BlueprintTab = dynamic(() => import("@/components/problem-detail-solver/BlueprintTab").then(mod => mod.BlueprintTab), {
+const BlueprintTab = dynamic(() => import("./components/BlueprintTab").then(mod => mod.BlueprintTab), {
   loading: () => <div className="p-12 text-center text-gray-500 animate-pulse">Loading Blueprint...</div>
 });
 
-const SubtasksTab = dynamic(() => import("@/components/problem-detail-solver/SubtasksTab").then(mod => mod.SubtasksTab), {
+const SubtasksTab = dynamic(() => import("./components/SubtasksTab").then(mod => mod.SubtasksTab), {
   loading: () => <div className="p-12 text-center text-gray-500 animate-pulse">Loading Subtasks...</div>
 });
 
-const SolutionTreeTab = dynamic(() => import("@/components/problem-detail-solver/SolutionTreeTab").then(mod => mod.SolutionTreeTab), {
+const SolutionTreeTab = dynamic(() => import("./components/SolutionTreeTab").then(mod => mod.SolutionTreeTab), {
   loading: () => <div className="p-12 text-center text-gray-500 animate-pulse">Loading Solution Tree...</div>
 });
 
-const AuditTimelineTab = dynamic(() => import("@/components/problem-detail-solver/AuditTimelineTab").then(mod => mod.AuditTimelineTab), {
+const AuditTimelineTab = dynamic(() => import("./components/AuditTimelineTab").then(mod => mod.AuditTimelineTab), {
   loading: () => <div className="p-12 text-center text-gray-500 animate-pulse">Loading History...</div>
 });
 
 // Modals are perfect for lazy loading and disabling SSR since they are heavily interactive
-const SubmitProposalModal = dynamic(() => import("@/components/problem-detail-solver/SubmitProposalModal"), {
+const SubmitProposalModal = dynamic(() => import("./components/SubmitProposalModal"), {
   ssr: false,
 });
 
@@ -359,7 +361,7 @@ export default function SolverProblemDetailPage() {
             problem={problem}
             attempts={attempts} 
             canPropose={canPropose}
-            onPropose={(subtaskId) => openProposalModal(subtaskId)}
+            onPropose={(subtaskId: string) => openProposalModal(subtaskId)}
           />
         )}
 
@@ -370,7 +372,7 @@ export default function SolverProblemDetailPage() {
             isCompleted={isCompleted}
             isUnavailable={isUnavailable}
             myProposalStatus={myProposalStatus}
-            onForkRequest={(parentId, subtaskId) => openProposalModal(subtaskId, parentId)}
+            onForkRequest={(parentId: string, subtaskId: string) => openProposalModal(subtaskId, parentId)}
             onClaimNew={() => setActiveTab("subtasks")}
           />
           )}

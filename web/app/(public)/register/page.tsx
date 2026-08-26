@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Step1 from "@/components/register/step1";
-import Step2 from "@/components/register/step2";
-import { registerSolver } from "@/lib/api/auth";
+import Step1 from "@/app/(public)/register/components/step1";
+import Step2 from "@/app/(public)/register/components/step2";
+import { registerSolver } from "@/app/(public)/register/api/auth";
 import { setAuthCookies, setAuthStorage, getDashboardPath } from "@/lib/auth-utils";
 
 export default function RegisterPage() {

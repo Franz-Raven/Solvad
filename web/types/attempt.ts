@@ -32,7 +32,6 @@ export interface SolutionAttemptResponse {
   parentAttemptName?: string | null;
   targetSubtaskId?: string | null;      // ADD
   targetSubtaskTitle?: string | null;   // ADD
-
   parentSolverName?: string | null;
   parentDescription?: string | null;
   parentFileUrls?: string[];

@@ -4,7 +4,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { getAllAttempts } from "../api/problem";
 import { updateProblemMaxSolvers } from "../api/problem";
 import type { SolutionAttemptResponse } from "@/types/attempt";
-import type { ProblemResponse } from "../types/problemType";
+import type { ProblemResponse } from "@/types/problem";
 
 interface WorkspaceTabProps {
   problem: ProblemResponse;

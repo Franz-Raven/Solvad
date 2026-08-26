@@ -14,7 +14,7 @@ import {
 type WorkspaceTab = "ACTIVE" | "PENDING" | "HISTORY";
 const ITEMS_PER_PAGE = 5;
 
-export default function SolverWorkspacePage() {
+export function MyWorkspace() {
   const [paginatedData, setPaginatedData] = useState<PaginatedAttemptsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,12 +55,11 @@ export default function SolverWorkspacePage() {
   const rangeEnd = Math.min((currentPage + 1) * ITEMS_PER_PAGE, totalElements);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-accent/20 via-background to-accent/10 p-8">
-      <div className="max-w-5xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">My Workspace</h1>
-          <p className="text-gray-600">Manage your active solutions, pending reviews, and past work.</p>
-        </div>
+    <div className="max-w-5xl mx-auto w-full animate-in fade-in duration-300">
+      <div className="mb-8">
+        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">My Workspace</h1>
+        <p className="text-gray-600">Manage your active solutions, pending reviews, and past work.</p>
+      
 
         {error && <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">{error}</div>}
 

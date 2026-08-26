@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { registerSeeker } from "@/lib/api/auth";
+import { registerSeeker } from "@/app/(public)/register/api/auth";
 
 export default function AddIndustryPage() {
   const [isLoading, setIsLoading] = useState(false);

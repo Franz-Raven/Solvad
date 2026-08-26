@@ -42,7 +42,7 @@ export function WorkspaceBanner({ isLoading, activeCount }: WorkspaceBannerProps
         </div>
       </div>
       <Link
-        href="/solver/workspace"
+        href="/solver/dashboard?tab=workspace"
         className="px-6 py-2.5 bg-secondary hover:bg-accent text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap shadow-sm shrink-0 flex items-center gap-2"
       >
         Go to Workspace

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { loginUser } from "@/lib/api/auth";
+import { loginUser } from "@/app/(public)/register/api/auth";
 import { setAuthCookies, setAuthStorage, getDashboardPath } from "@/lib/auth-utils";
 
 export default function LoginPage() {

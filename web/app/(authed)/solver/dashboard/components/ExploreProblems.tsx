@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Search, ChevronRight, Hash, Calendar, Building2, GraduationCap } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
-import { getDiscoverableProblems } from "@/lib/api/problem";
+import { getDiscoverableProblems } from "../api/dashboard";
 import type { ProblemResponse } from "@/types/problem";
 import {
   Pagination,

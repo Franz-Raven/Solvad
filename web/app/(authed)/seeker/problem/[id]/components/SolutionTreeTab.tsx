@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { getAllAttempts } from "@/lib/api/attempts";
+import { getAllAttempts } from "../api/problem";
 import type { SolutionAttemptResponse, TreeAttemptNode } from "@/types/attempt";
 
 // ─── Portal helper ────────────────────────────────────────────────────────────

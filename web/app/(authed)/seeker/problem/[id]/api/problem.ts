@@ -1,6 +1,7 @@
 import { apiRequest } from "@/lib/api";
 import type { ProblemResponse } from "@/types/problem";
 import type { ClaimRequestResponse } from "@/types/attempt";
+import type { SolutionAttemptResponse } from "@/types/attempt";
 
 
 /**
