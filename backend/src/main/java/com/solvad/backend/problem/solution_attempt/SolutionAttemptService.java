@@ -140,27 +140,30 @@ public class SolutionAttemptService {
     }
 
     public SolutionAttemptResponse getMyAttempt(UUID solverUserId, UUID problemId) {
-
         Problem problem = problemRepository.findById(problemId)
                 .orElseThrow(() -> new RuntimeException("Problem not found"));
 
         SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
                 .orElseThrow(() -> new RuntimeException("Solver profile not found"));
 
+        // 🚀 FIX: Fetch the solver's attempts and find the most recent one for this problem.
+        // This guarantees the workspace loads even if the status transitioned away from ACTIVE!
+        List<SolutionAttempt> allMyAttempts = attemptRepository.findBySolverOrderByClaimedAtDesc(solver);
 
-        List<SolutionAttempt> activeAttempts = attemptRepository.findByProblemAndSolverAndStatus(
-                problem, solver, SolutionAttemptStatus.ACTIVE
-        );
+        SolutionAttempt targetAttempt = null;
+        for (SolutionAttempt attempt : allMyAttempts) {
+            if (attempt.getProblem().getId().equals(problemId)) {
+                targetAttempt = attempt;
+                break; // Get the most recent match
+            }
+        }
 
-        if (activeAttempts.isEmpty()) {
+        if (targetAttempt == null) {
             throw new RuntimeException("No active attempt found");
         }
 
-        SolutionAttempt attempt = activeAttempts.get(0);
-        List<SubtaskSubmission> submissions = submissionRepository.findByAttempt(attempt);
-
-
-        return mapToResponse(attempt, submissions);
+        List<SubtaskSubmission> submissions = submissionRepository.findByAttempt(targetAttempt);
+        return mapToResponse(targetAttempt, submissions);
     }
 
     // -------------------------------------------------------------------------
@@ -459,8 +462,7 @@ public class SolutionAttemptService {
                 );
             }
 
-            // 🚀 ADD THESE TWO LINES HERE
-            attempt.setStatus(SolutionAttemptStatus.PENDING_REVIEW);
+
             attemptRepository.save(attempt);
 
         } else {
@@ -555,8 +557,8 @@ public class SolutionAttemptService {
             throw new RuntimeException("You do not own this attempt.");
         }
 
-        if (attempt.getStatus() != SolutionAttemptStatus.ACTIVE) {
-            throw new RuntimeException("Attempt is not active.");
+        if (attempt.getStatus() == SolutionAttemptStatus.COMPLETED) {
+            throw new RuntimeException("This attempt has already been completed.");
         }
 
         List<SubtaskSubmission> submissions = submissionRepository.findByAttempt(attempt);

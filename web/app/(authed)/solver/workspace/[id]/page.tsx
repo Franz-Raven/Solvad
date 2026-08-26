@@ -6,12 +6,11 @@ import Link from "next/link";
 import { getProblemById } from "../../problem/[id]/api/problem";
 
 import { getMyAttempt } from "./api/workspace";
-
 import { abandonClaim, submitFullAttempt } from "./api/workspace";
+import { getMyActiveAttempts } from "@/lib/api/attempts"; // 🚀 Added to support fallback searching
 import type { ProblemResponse } from "@/types/problem";
 import type { SolutionAttemptResponse } from "@/types/attempt";
 import { SubtaskForm } from "./component/SubtaskForm";
-
 
 type ModalType = "abandon" | "submit" | null;
 
@@ -20,7 +19,6 @@ export default function SolverWorkspacePage() {
   const router = useRouter();
   const problemId = params.id as string;
   
-
   const [problem, setProblem] = useState<ProblemResponse | null>(null);
   const [attempt, setAttempt] = useState<SolutionAttemptResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,25 +29,35 @@ export default function SolverWorkspacePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   
-
   const fetchWorkspace = useCallback(async (showLoading = true) => {
     try {
       if (showLoading) setLoading(true);
       const probData = await getProblemById(problemId);
       setProblem(probData);
 
-      let attemptData: SolutionAttemptResponse | null = null;
+      let attemptData: SolutionAttemptResponse | undefined;
       try {
+        // 1. Try the standard active fetch
         attemptData = await getMyAttempt(problemId);
       } catch {
-        await new Promise((r) => setTimeout(r, 1000));
-        attemptData = await getMyAttempt(problemId);
+        // 🚀 2. THE FALLBACK: If the backend auto-transitioned the attempt to PENDING_REVIEW, 
+        // getMyAttempt will fail. We catch the error and search ALL attempts to find it!
+        const allAttempts = await getMyActiveAttempts();
+        attemptData = allAttempts.find(a => 
+          a.problemId === problemId && 
+          (a.status === "ACTIVE" || a.status === "PENDING_REVIEW" || a.status === "PENDING")
+        );
+        
+        if (!attemptData) {
+          throw new Error("No active attempt found.");
+        }
       }
+      
       setAttempt(attemptData);
 
       setActiveSubtaskId(prev => {
-        const target = attemptData.targetSubtaskId
-            ? probData.subtasks.find((s) => s.id === attemptData.targetSubtaskId)
+        const target = attemptData!.targetSubtaskId
+            ? probData.subtasks.find((s) => s.id === attemptData!.targetSubtaskId)
             : probData.subtasks[0];
           if (!prev && target) {
             return target.id;
@@ -75,16 +83,16 @@ export default function SolverWorkspacePage() {
   }, [activeModal]);
 
   const executeAbandon = async () => {
-  setIsAbandoning(true);
-  try {
-    await abandonClaim(attempt!.id); // pass attempt.id, not problemId
-    router.push("/solver/dashboard");
-  } catch (err: any) {
-    setError(err.message || "Failed to abandon claim");
-    setIsAbandoning(false);
-    setActiveModal(null);
-  }
-};
+    setIsAbandoning(true);
+    try {
+      await abandonClaim(attempt!.id); 
+      router.push("/solver/dashboard");
+    } catch (err: any) {
+      setError(err.message || "Failed to abandon claim");
+      setIsAbandoning(false);
+      setActiveModal(null);
+    }
+  };
 
   const executeFinalSubmit = async () => {
     if (!attempt) return;
@@ -111,7 +119,6 @@ export default function SolverWorkspacePage() {
   }
 
   if (error || !problem || !attempt) {
-    
     return (
       <div className="min-h-screen bg-slate-50 p-8 flex items-center justify-center">
         <div className="max-w-md w-full bg-white rounded-2xl shadow-sm border border-red-100 p-8 text-center">
@@ -120,7 +127,7 @@ export default function SolverWorkspacePage() {
           </div>
           <h2 className="text-xl font-bold text-gray-900 mb-2">Workspace Unavailable</h2>
           <p className="text-gray-600 mb-6 text-sm">{error || "Make sure you have an active claim."}</p>
-          <Link href="/solver/dashboard" className="w-full inline-block px-4 py-2 bg-accent text-white rounded-lg hover:bg-secondary transition-colors font-medium">
+          <Link href="/solver/dashboard" className="w-full inline-block px-4 py-2.5 bg-accent text-white rounded-lg hover:bg-secondary transition-colors font-semibold shadow-sm">
             Return to Dashboard
           </Link>
         </div>
@@ -136,9 +143,6 @@ export default function SolverWorkspacePage() {
   const activeSubtask = problem.subtasks.find((s) => s.id === activeSubtaskId);
   const existingSubmission = activeSubtask ? attempt.submissions.find((s) => s.subtaskId === activeSubtask.id) : undefined;
   
-
-
-
   const isForked = !!attempt.parentAttemptId; 
 
   return (
@@ -146,41 +150,41 @@ export default function SolverWorkspacePage() {
       
       {/* ── Custom Confirmation Modals ── */}
       {activeModal && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="p-6">
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 ${activeModal === 'abandon' ? 'bg-red-100 text-red-600' : 'bg-accent/10 text-accent'}`}>
+            <div className="p-8">
+              <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-5 ${activeModal === 'abandon' ? 'bg-red-100 text-red-600' : 'bg-accent/10 text-accent'}`}>
                 {activeModal === 'abandon' ? (
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                 ) : (
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 )}
               </div>
               
-              <h2 className="text-xl font-bold text-gray-900 text-center mb-2">
+              <h2 className="text-2xl font-bold text-gray-900 text-center mb-2">
                 {activeModal === 'abandon' ? "Abandon Workspace?" : "Submit Final Project?"}
               </h2>
               
-              <p className="text-gray-600 text-center text-sm">
+              <p className="text-gray-600 text-center text-sm leading-relaxed">
                 {activeModal === 'abandon' 
                   ? "Are you sure you want to abandon this problem? It will become available for other solvers immediately."
                   : "Are you sure you want to submit your final solution? You won't be able to edit this attempt anymore."}
               </p>
             </div>
             
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex gap-3">
+            <div className="px-8 py-5 bg-gray-50 border-t border-gray-100 flex gap-3">
               <button
                 onClick={() => setActiveModal(null)}
                 disabled={isAbandoning || isSubmitting}
-                className="flex-1 px-4 py-2.5 border border-gray-200 bg-white text-gray-700 font-medium rounded-lg hover:bg-gray-100 transition-colors text-sm disabled:opacity-50"
+                className="flex-1 px-4 py-2.5 border border-gray-300 bg-white text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-colors shadow-sm text-sm disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={activeModal === 'abandon' ? executeAbandon : executeFinalSubmit}
                 disabled={isAbandoning || isSubmitting}
-                className={`flex-1 px-4 py-2.5 text-white font-semibold rounded-lg transition-colors text-sm disabled:opacity-50 flex items-center justify-center gap-2 ${
-                  activeModal === 'abandon' ? 'bg-red-600 hover:bg-red-700' : 'bg-accent hover:bg-secondary'
+                className={`flex-1 px-4 py-2.5 text-white font-semibold rounded-xl transition-colors shadow-sm text-sm disabled:opacity-50 flex items-center justify-center gap-2 ${
+                  activeModal === 'abandon' ? 'bg-red-600 hover:bg-red-700' : 'bg-secondary hover:bg-accent'
                 }`}
               >
                 {(isAbandoning || isSubmitting) && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
@@ -214,14 +218,14 @@ export default function SolverWorkspacePage() {
             <button
               onClick={() => setActiveModal('abandon')}
               disabled={isAbandoning || isSubmitting}
-              className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+              className="px-4 py-2 text-sm font-semibold text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
             >
               Abandon
             </button>
             <button
               onClick={() => setActiveModal('submit')}
               disabled={isSubmitting || isAbandoning || submittedCount === 0}
-              className="px-5 py-2 text-sm font-semibold bg-secondary hover:bg-accent text-white rounded-lg transition-all shadow-sm disabled:opacity-50 flex items-center gap-2"
+              className="px-5 py-2.5 text-sm font-semibold bg-secondary hover:bg-accent text-white rounded-xl transition-all shadow-sm disabled:opacity-50 flex items-center gap-2"
             >
               Submit Project
             </button>
@@ -305,11 +309,8 @@ export default function SolverWorkspacePage() {
                 submissionId={existingSubmission?.id}
                 isSubmitted={existingSubmission?.status === "SUBMITTED"}
                 isForked={isForked}
-                
-                // USE THE EXACT FIELD NAMES FROM YOUR JSON PAYLOAD
                 parentDescription={attempt.parentDescription ?? undefined}
                 parentFiles={attempt.parentFileUrls ?? []}
-                
                 onSuccess={() => fetchWorkspace(false)} 
               />
             </div>

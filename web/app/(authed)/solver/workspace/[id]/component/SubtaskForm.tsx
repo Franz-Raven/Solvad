@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { submitSubtaskSolution } from "@/lib/api/attempts";
-import { saveSubtaskDraft, submitSubtaskFinal } from "../api/workspace";
+import { useState, useEffect, useRef } from "react";
+import { UploadCloud, Trash2, FileText, CheckCircle2, AlertCircle, Info, FileCode } from "lucide-react";
+import { saveSubtaskDraft, submitSubtaskFinal, deleteFileFromSubmission } from "../api/workspace";
 import type { SubtaskResponse, AttachmentRequirement } from "@/types/problem";
+import Portal from "@/components/portal";
 
 interface SubtaskFormProps {
   attemptId: string;
@@ -38,16 +39,17 @@ const getFileExtension = (filename: string): string => {
 const validateFileType = (file: File, requirementType: string): boolean => {
   if (requirementType === "GITHUB_LINK") return true;
   const allowedExts = ALLOWED_EXTENSIONS[requirementType] || [];
+  if (allowedExts.length === 0) return true; // Accept anything if no specific rule
   return allowedExts.includes(getFileExtension(file.name));
 };
 
 const getFileTypeLabel = (type: string): string => {
   switch (type) {
-    case "PDF": return "PDF Documents";
+    case "PDF": return "PDF Documents (.pdf)";
     case "EXCEL": return "Excel Files (.xlsx, .xls)";
     case "GITHUB_LINK": return "GitHub Repository Link";
-    case "PNG_JPG": return "Images (PNG, JPG)";
-    default: return "File";
+    case "PNG_JPG": return "Images (.png, .jpg, .jpeg)";
+    default: return "Supported File";
   }
 };
 
@@ -61,7 +63,6 @@ export function SubtaskForm({
   isSubmitted,
   isForked,
   parentDescription,
-  parentFiles,
   onSuccess
 }: SubtaskFormProps) {
   const [description, setDescription] = useState(existingDescription);
@@ -102,7 +103,7 @@ export function SubtaskForm({
       };
     });
     setRequirementStates(initialStates);
-  }, [subtask.id, attemptId, existingFiles, requirements.length]);
+  }, [subtask.id, attemptId, existingFiles, requirements.length, existingDescription, existingDelta]);
 
   useEffect(() => {
     if (showConfirmModal) document.body.style.overflow = "hidden";
@@ -129,7 +130,7 @@ export function SubtaskForm({
 
     fileArray.forEach(file => {
       if (!validateFileType(file, requirementType)) {
-        errors.push(`${file.name} is not a valid ${getFileTypeLabel(requirementType).toLowerCase()}.`);
+        errors.push(`${file.name} is an invalid format. Please upload ${getFileTypeLabel(requirementType)}.`);
       } else {
         validFiles.push(file);
       }
@@ -139,7 +140,7 @@ export function SubtaskForm({
       ...prev,
       [requirementId]: {
         ...prev[requirementId],
-        files: validFiles,
+        files: [...prev[requirementId].files, ...validFiles],
         error: errors.length > 0 ? errors[0] : null,
       }
     }));
@@ -155,19 +156,13 @@ export function SubtaskForm({
     }
   };
 
-  // FIXED: Delete generic server file
+  // 🚀 FIXED: Now uses the isolated API function instead of a hardcoded fetch
   const handleDeleteServerFile = async (fileUrl: string) => {
     if (!submissionId) return;
 
     setIsDeletingFile(fileUrl);
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`http://localhost:8080/api/submissions/${submissionId}/files?fileUrl=${encodeURIComponent(fileUrl)}`, {
-        method: "DELETE",
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error("Failed to delete file");
-      
+      await deleteFileFromSubmission(submissionId, fileUrl);
       setServerFiles(prev => prev.filter(f => f !== fileUrl));
       onSuccess(); 
     } catch (err: any) {
@@ -197,7 +192,7 @@ export function SubtaskForm({
     try {
       const allFiles: File[] = [...files];
       
-      // Flatten specific requirement files for backend submission
+      // 🚀 Flattens all specific requirement files into a single array for Spring Boot
       Object.values(requirementStates).forEach(state => {
         allFiles.push(...state.files);
       });
@@ -205,9 +200,10 @@ export function SubtaskForm({
       if (action === "SAVE_DRAFT") {
         await saveSubtaskDraft(attemptId, subtask.id, description, deltaDescription, allFiles);
       } else {
-        await submitSubtaskSolution(attemptId, subtask.id, description, deltaDescription, allFiles);
+        await submitSubtaskFinal(attemptId, subtask.id, description, deltaDescription, allFiles);
       }
       
+      // Clear local state since files are now securely on the server
       setFiles([]); 
       setRequirementStates(prev => {
         const updated: Record<string, RequirementUploadState> = {};
@@ -228,12 +224,10 @@ export function SubtaskForm({
 
   const hasRequirementErrors = Object.keys(requirementErrors).length > 0;
   
-  // FIXED: Logic to check if requirements are met (either new files in state OR existing server files exist)
+  // Logic to check if requirements are met (either new files in state OR existing server files exist)
   const allRequirementsFullfilled = requirements.length > 0 
     ? requirements.every(req => {
         const state = requirementStates[req.id];
-        // If serverFiles exist, we assume they fulfilled previous requirements. 
-        // (Since backend flattens them, this is the safest check)
         return (state && state.files.length > 0) || serverFiles.length > 0 || req.attachmentType === "GITHUB_LINK"; 
       })
     : true;
@@ -244,35 +238,40 @@ export function SubtaskForm({
     !hasRequirementErrors &&
     (!isForked || deltaDescription.trim().length > 0);
 
+  // ─── RENDER SUBMITTED (LOCKED) STATE ───────────────────────────────────────
   if (isSubmitted) {
     return (
       <div className="bg-white rounded-2xl shadow-sm border border-green-200 overflow-hidden">
-        <div className="bg-green-50 px-8 py-4 border-b border-green-100 flex items-center gap-3">
-          <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          <h3 className="font-bold text-green-800">Module Submitted</h3>
+        <div className="bg-green-50/80 px-8 py-5 border-b border-green-100 flex items-center gap-3">
+          <CheckCircle2 className="w-6 h-6 text-green-600" />
+          <h3 className="font-bold text-green-900">Module Locked & Submitted</h3>
         </div>
 
-        <div className="p-8">
-          <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Your Solution</h4>
-          <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-            {description}
+        <div className="p-8 space-y-8">
+          <div>
+            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Your Solution</h4>
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-sm text-gray-800 whitespace-pre-wrap leading-relaxed shadow-sm">
+              {description}
+            </div>
           </div>
           
           {isForked && deltaDescription && (
-             <div className="mt-6">
-                <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-2">Changes From Parent Solution</h4>
-                <p className="text-sm text-gray-600 bg-gray-50 p-4 rounded-lg border border-gray-100">{deltaDescription}</p>
+             <div>
+                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Changes From Parent Solution</h4>
+                <div className="bg-blue-50/50 p-6 rounded-xl border border-blue-100 text-sm text-blue-900 leading-relaxed shadow-sm">
+                  {deltaDescription}
+                </div>
              </div>
           )}
 
           {serverFiles.length > 0 && (
-             <div className="mt-6">
-              <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Attached Documents</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+             <div>
+              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Attached Documents</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {serverFiles.map((url, idx) => (
-                  <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:text-secondary hover:border-secondary transition-all">
-                    <div className="bg-blue-50 text-blue-600 p-2 rounded-md">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                  <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 hover:text-secondary hover:border-secondary transition-all shadow-sm group">
+                    <div className="bg-gray-50 text-gray-400 p-2.5 rounded-lg group-hover:bg-secondary/10 group-hover:text-secondary transition-colors">
+                      <FileText className="w-5 h-5" />
                     </div>
                     <span className="truncate font-medium flex-1">{getFilenameFromUrl(url)}</span>
                   </a>
@@ -288,63 +287,108 @@ export function SubtaskForm({
   return (
     <>
       {showConfirmModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="p-6">
-              <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+        <Portal> {/* 🚀 ADD THIS PORTAL WRAPPER */}
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+              <div className="p-8">
+                <div className="w-14 h-14 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-5">
+                  <AlertCircle className="w-7 h-7" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 text-center mb-2">Lock & Submit Module?</h2>
+                 <p className="text-gray-600 text-center text-sm leading-relaxed">
+                  Once locked, you will not be able to edit this module's narrative or attachments.
+                </p>
               </div>
-              <h2 className="text-xl font-bold text-gray-900 text-center mb-2">Lock & Submit Module?</h2>
-               <p className="text-gray-600 text-center text-sm">
-                Once locked, you will not be able to edit this module's narrative or attachments.
-              </p>
-            </div>
-            
-            <div className="px-6 py-4 bg-gray-50 flex gap-3">
-              <button onClick={() => setShowConfirmModal(false)} className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-100 transition-colors">Go Back</button>
-              <button onClick={() => executeAction("SUBMIT")} className="flex-1 px-4 py-2 bg-secondary text-white rounded-lg hover:bg-accent transition-colors">Yes, Lock it</button>
+              
+              <div className="px-8 py-5 bg-gray-50 border-t border-gray-100 flex gap-3">
+                <button onClick={() => setShowConfirmModal(false)} className="flex-1 px-4 py-2.5 bg-white border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-colors shadow-sm text-sm">
+                  Go Back
+                </button>
+                <button onClick={() => executeAction("SUBMIT")} className="flex-1 px-4 py-2.5 bg-secondary text-white font-semibold rounded-xl hover:bg-accent transition-colors shadow-sm text-sm">
+                  Yes, Lock it
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </Portal> 
       )}
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden relative">
         <div className="px-8 py-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-          <h3 className="font-bold text-gray-900">Workspace Editor</h3>
-          <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200">Draft Mode</span>
+          <h3 className="font-bold text-gray-900 text-lg">Workspace Editor</h3>
+          <span className="text-xs font-bold text-amber-700 bg-amber-100 px-3 py-1.5 rounded-full border border-amber-200 uppercase tracking-wide">
+            Draft Mode
+          </span>
         </div>
 
-        <div className="p-8 space-y-6">
-           {error && <div className="p-4 rounded-lg bg-red-50 border border-red-100 text-red-600 text-sm font-medium">{error}</div>}
+        <div className="p-8 space-y-8">
+           {error && (
+             <div className="p-4 rounded-xl bg-red-50 border border-red-200 flex items-start gap-3">
+               <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+               <p className="text-red-700 text-sm font-medium">{error}</p>
+             </div>
+           )}
 
+          {/* Solution Narrative */}
           <div>
-            <label className="block text-sm font-bold text-gray-900 mb-2">Solution Narrative <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-bold text-gray-900 mb-2">
+              Solution Narrative <span className="text-red-500">*</span>
+            </label>
             <textarea
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-secondary text-sm"
-              placeholder="Document your findings, code architecture, or research here..."
+              className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all text-sm text-gray-800 placeholder:text-gray-400 resize-y"
+              placeholder="Document your findings, code architecture, or research methodology here..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               style={{ minHeight: "250px" }}
             />
           </div>
 
-          {/* ALREADY UPLOADED FILES DISPLAY */}
+          {/* Delta Description (If Forked) */}
+          {isForked && (
+            <div>
+              <label className="block text-sm font-bold text-gray-900 mb-2">
+                Changes from Original Solution <span className="text-red-500">*</span>
+              </label>
+              <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-5 mb-4">
+                <p className="text-[11px] font-bold text-blue-800 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <Info className="w-3.5 h-3.5" /> Original Approach
+                </p>
+                <p className="text-sm text-blue-900/80 line-clamp-3 leading-relaxed">
+                  {parentDescription || "No description provided in the original solution."}
+                </p>
+              </div>
+              <textarea
+                value={deltaDescription}
+                onChange={(e) => setDeltaDescription(e.target.value)}
+                rows={4}
+                className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all text-sm text-gray-800 placeholder:text-gray-400 resize-y"
+                placeholder="Detail exactly what you improved, fixed, or changed from the original solution..."
+              />
+            </div>
+          )}
+
+          {/* Already Uploaded Files */}
           {serverFiles.length > 0 && (
-             <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-5">
-              <h4 className="text-sm font-bold text-blue-900 mb-3">Previously Saved Documents</h4>
-              <ul className="grid grid-cols-1 gap-2">
+             <div>
+              <label className="block text-sm font-bold text-gray-900 mb-3">Previously Saved Documents</label>
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {serverFiles.map((url, idx) => (
-                  <li key={idx} className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg text-sm shadow-sm">
-                    <a href={url} target="_blank" rel="noopener noreferrer" className="truncate font-medium text-secondary hover:underline">
-                      {getFilenameFromUrl(url)}
-                    </a>
+                  <li key={idx} className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-xl text-sm shadow-sm group">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <div className="bg-blue-50 text-blue-600 p-2 rounded-lg">
+                        <FileText className="w-4 h-4" />
+                      </div>
+                      <a href={url} target="_blank" rel="noopener noreferrer" className="truncate font-medium text-gray-700 group-hover:text-secondary transition-colors">
+                        {getFilenameFromUrl(url)}
+                      </a>
+                    </div>
                     <button 
                       type="button" 
                       onClick={() => handleDeleteServerFile(url)}
                       disabled={isDeletingFile === url}
-                      className="text-gray-400 hover:text-red-500 p-1.5 rounded-md hover:bg-red-50 disabled:opacity-50"
+                      className="text-gray-400 hover:text-red-500 p-2 rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors"
                     >
-                      {isDeletingFile === url ? <span className="animate-pulse">...</span> : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>}
+                      {isDeletingFile === url ? <span className="animate-pulse">...</span> : <Trash2 className="w-4 h-4" />}
                     </button>
                   </li>
                 ))}
@@ -352,29 +396,47 @@ export function SubtaskForm({
             </div>
           )}
 
-          {/* REQUIREMENTS INPUTS */}
+          {/* Mapped Requirements Dropzones */}
           {requirements.length > 0 && (
             <div>
-              <h3 className="text-sm font-bold text-gray-900 mb-4">Required Submissions <span className="text-red-500">*</span></h3>
+              <div className="flex items-center justify-between mb-4">
+                <label className="block text-sm font-bold text-gray-900">
+                  Required Submissions <span className="text-red-500">*</span>
+                </label>
+              </div>
+
               <div className="space-y-6">
                 {requirements.map((req) => {
                   const state = requirementStates[req.id];
                   const hasError = requirementErrors[req.id];
 
                   return (
-                    <div key={req.id} className={`border rounded-xl p-5 ${hasError ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-gray-50'}`}>
-                      <div className="mb-3">
-                        <h4 className="text-sm font-semibold text-gray-900">{req.attachmentTitle}</h4>
-                        <p className="text-xs text-gray-600 mt-1">Type: {getFileTypeLabel(req.attachmentType)}</p>
+                    <div key={req.id} className={`border rounded-2xl p-6 transition-colors ${hasError ? 'border-red-300 bg-red-50/50' : 'border-gray-200 bg-white'}`}>
+                      <div className="mb-4 flex items-start justify-between gap-4">
+                        <div>
+                          <h4 className="text-sm font-bold text-gray-900">{req.attachmentTitle}</h4>
+                          <p className="text-xs font-medium text-gray-500 mt-1 uppercase tracking-wider">
+                            Format: {getFileTypeLabel(req.attachmentType)}
+                          </p>
+                        </div>
+                        {req.attachmentType === "GITHUB_LINK" ? (
+                          <div className="bg-gray-100 p-2 rounded-lg"><FileCode className="w-5 h-5 text-gray-500" /></div>
+                        ) : (
+                          <div className="bg-gray-100 p-2 rounded-lg"><UploadCloud className="w-5 h-5 text-gray-500" /></div>
+                        )}
                       </div>
 
-                      {hasError && <div className="p-3 rounded-lg bg-red-100 border border-red-300 text-red-700 text-sm mb-3">{hasError}</div>}
+                      {hasError && (
+                        <div className="p-3 mb-4 rounded-xl bg-red-100 border border-red-200 text-red-700 text-sm font-medium flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4" /> {hasError}
+                        </div>
+                      )}
 
                       {req.attachmentType === "GITHUB_LINK" ? (
                         <input
                           type="url"
-                          placeholder="https://github.com/username/repo"
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-secondary"
+                          placeholder="https://github.com/username/repository"
+                          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-secondary transition-all"
                           onChange={(e) => {
                             if (e.target.value.trim()) {
                               setRequirementErrors(prev => {
@@ -386,28 +448,34 @@ export function SubtaskForm({
                           }}
                         />
                       ) : (
-                        <div className="h-[120px] border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center bg-white hover:bg-gray-50 relative cursor-pointer">
+                        <div className="relative">
                           <input 
                             type="file" 
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                             onChange={(e) => handleRequirementFileUpload(req.id, e.target.files, req.attachmentType)} 
                           />
-                          <p className="text-sm font-medium text-gray-600">Drag & drop or click to upload</p>
+                          <div className="border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center p-8 bg-gray-50 hover:bg-white hover:border-secondary transition-all">
+                            <p className="text-sm font-semibold text-gray-600">Drag & drop or click to upload</p>
+                          </div>
                         </div>
                       )}
 
-                      {/* SHOW LOCAL PENDING UPLOADS FOR THIS REQUIREMENT */}
+                      {/* Local Uploaded Files Queue */}
                       {state && state.files.length > 0 && (
                         <ul className="mt-4 space-y-2">
                           {state.files.map((file, idx) => (
-                            <li key={idx} className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg text-sm shadow-sm">
-                              <span className="truncate font-medium text-secondary">{file.name}</span>
+                            <li key={idx} className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-xl text-sm shadow-sm">
+                              <div className="flex items-center gap-3 overflow-hidden">
+                                <div className="bg-green-50 p-1.5 rounded text-green-600"><CheckCircle2 className="w-4 h-4" /></div>
+                                <span className="truncate font-medium text-gray-700">{file.name}</span>
+                                <span className="text-xs text-gray-400">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+                              </div>
                               <button 
                                 type="button" 
                                 onClick={() => removeRequirementLocalFile(req.id, idx)}
-                                className="text-gray-400 hover:text-red-500 p-1.5"
+                                className="text-gray-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-colors"
                               >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                <Trash2 className="w-4 h-4" />
                               </button>
                             </li>
                           ))}
@@ -421,15 +489,25 @@ export function SubtaskForm({
           )}
         </div>
 
-        <div className="px-8 py-5 border-t border-gray-100 flex items-center justify-between">
-          <p className="text-xs text-gray-500">
-            {!canSubmit ? <span className="text-red-500 font-medium">Please fill out all required fields.</span> : "Ensure your work is saved."}
+        {/* Footer Actions */}
+        <div className="px-8 py-6 border-t border-gray-100 flex items-center justify-between bg-gray-50">
+          <p className="text-sm font-medium text-gray-600">
+            {!canSubmit && <span className="text-red-500 flex items-center gap-1.5"><AlertCircle className="w-4 h-4"/> Please fill out all required fields.</span>}
           </p>
           <div className="flex gap-3">
-             <button onClick={() => executeAction("SAVE_DRAFT")} disabled={isSaving || isSubmitting || !description.trim()} className="px-6 py-2 border rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50">
+             <button 
+                onClick={() => executeAction("SAVE_DRAFT")} 
+                disabled={isSaving || isSubmitting || !description.trim()} 
+                className="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-100 transition-colors disabled:opacity-50 shadow-sm text-sm"
+              >
               {isSaving ? "Saving..." : "Save Draft"}
             </button>
-            <button onClick={() => setShowConfirmModal(true)} disabled={isSubmitting || isSaving || !canSubmit} className="px-6 py-2 bg-secondary text-white rounded-lg text-sm hover:bg-accent disabled:opacity-50">
+            <button 
+              onClick={() => setShowConfirmModal(true)} 
+              disabled={isSubmitting || isSaving || !canSubmit} 
+              className="px-6 py-2.5 bg-secondary text-white font-semibold rounded-xl hover:bg-accent transition-colors disabled:opacity-50 shadow-sm text-sm flex items-center gap-2"
+            >
+              {isSubmitting && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
               {isSubmitting ? "Locking..." : "Lock & Submit"}
             </button>
           </div>

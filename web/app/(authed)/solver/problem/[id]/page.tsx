@@ -335,8 +335,9 @@ export default function SolverProblemDetailPage() {
                 You have an active claim on this problem.
               </p>
             </div>
+            {/* 🚀 Change href from /problem/${problemId}/work to /workspace/${problemId} */}
             <Link
-              href={`/solver/problem/${problemId}/work`}
+              href={`/solver/workspace/${problemId}`}
               className="text-sm font-semibold text-secondary hover:text-accent transition-colors"
             >
               Go to workspace →
