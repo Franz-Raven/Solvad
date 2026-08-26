@@ -16,6 +16,7 @@ public interface ProblemRepository extends JpaRepository<Problem, UUID> {
     List<Problem> findBySeeker(SeekerProfile seeker);
     List<Problem> findBySeekerId(UUID seekerId);
     Page<Problem> findByStatus(ProblemStatus status, Pageable pageable);
+    Page<Problem> findByStatusIn(List<ProblemStatus> statuses, Pageable pageable);
 
     List<Problem> findByStatusIn(List<ProblemStatus> statuses);
     Page<Problem> findBySeeker(SeekerProfile seeker, Pageable pageable);

@@ -37,6 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -561,17 +562,22 @@ public class ProblemService {
 
     @Transactional(readOnly = true)
     public PaginatedProblemsResponse getDiscoverableProblems(int page, int size) {
-        // 1. Set up pagination sorted by newest problems first
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        // 2. Fetch only OPEN problems for that specific page
-        Page<Problem> problemPage = problemRepository.findByStatus(ProblemStatus.OPEN, pageable);
+        List<ProblemStatus> visibleStatuses = Arrays.asList(
+                ProblemStatus.OPEN,
+                ProblemStatus.CLAIMED,
+                ProblemStatus.IN_PROGRESS,
+                ProblemStatus.SOLVED_OPEN_FOR_IMPROVEMENT
+        );
 
+
+        Page<Problem> problemPage = problemRepository.findByStatusIn(visibleStatuses, pageable);
         if (!problemPage.hasContent()) {
             return new PaginatedProblemsResponse(List.of(), page, 0, 0, size);
         }
 
-        // 3. Map the page content to ProblemResponse DTOs
+
         List<ProblemResponse> content = problemPage.getContent().stream()
                 .map(problem -> {
                     List<ProblemSubtask> subtasks = subtaskRepository.findByProblem(problem);
@@ -579,7 +585,7 @@ public class ProblemService {
                 })
                 .collect(Collectors.toList());
 
-        // 4. Return the PaginatedProblemsResponse matching your constructor
+
         return new PaginatedProblemsResponse(
                 content,
                 page,
