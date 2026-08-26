@@ -5,7 +5,9 @@ import Link from "next/link";
 import { 
   Rocket, CheckCircle2, Hourglass, Inbox, Calendar, GitBranch, ArrowRight, Eye 
 } from "lucide-react";
-import { getWorkspaceAttempts, type PaginatedAttemptsResponse } from "@/lib/api/attempts";
+import { getWorkspaceAttempts } from "../api/dashboard";
+import { PaginatedAttemptsResponse } from "@/types/attempt";
+
 import {
   Pagination, PaginationContent, PaginationEllipsis, PaginationItem,
   PaginationLink, PaginationNext, PaginationPrevious,

@@ -88,3 +88,12 @@ export interface ClaimRequestResponse {
   targetSubtaskTitle?: string; // ADD
   parentAttemptId?: string;
 }
+
+
+export interface PaginatedAttemptsResponse {
+  attempts: SolutionAttemptResponse[];
+  currentPage: number;
+  totalPages: number;
+  totalElements: number;
+  size: number;
+}

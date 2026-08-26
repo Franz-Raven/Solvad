@@ -1,4 +1,4 @@
-import { apiRequest } from "../api";
+import { apiRequest } from "../../../../lib/api";
 import { SolverProfile, UpdateSolverProfilePayload } from "@/types/solver";
 
 /**

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { getDiscoveryDashboard } from "./api/dashboard";
-import { getMyActiveAttempts } from "@/lib/api/attempts";
+import { getMyActiveAttempts } from "./api/dashboard";
 import type { ProblemResponse } from "@/types/problem";
 import type { SolutionAttemptResponse } from "@/types/attempt";
 

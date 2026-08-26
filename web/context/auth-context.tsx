@@ -4,8 +4,8 @@ import { createContext, useContext, useEffect, useState, useCallback } from "rea
 import { useRouter } from "next/navigation";
 import type { User, UserRole } from "@/types/auth";
 import { performLogout } from "@/lib/auth-utils";
-import { getMyProfile as getSeekerProfile } from "@/lib/api/seeker";
-import { getMyProfile as getSolverProfile } from "@/lib/api/solver";
+import { getMyProfile as getSeekerProfile } from "@/app/(authed)/profile/api/seeker";
+import { getMyProfile as getSolverProfile } from "@/app/(authed)/profile/api/solver";
 
 type AuthContextValue = {
   user: User | null;

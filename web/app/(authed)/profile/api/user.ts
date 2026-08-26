@@ -1,4 +1,4 @@
-import { apiRequest } from "../api";
+import { apiRequest } from "../../../../lib/api";
 
 export async function uploadProfilePicture(file: File): Promise<{ profileUrl: string }> {
   const formData = new FormData();

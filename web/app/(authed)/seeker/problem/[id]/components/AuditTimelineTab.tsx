@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getAuditLog } from "@/lib/api/attempts";
+import { getAuditLog } from "../api/problem";
 import type { AuditLogEntry, AuditEventType } from "@/types/attempt";
 
-// ─── Audit event config ───────────────────────────────────────────────────────
 const AUDIT_EVENT_CONFIG: Record<
   AuditEventType,
   { label: string; icon: React.ReactNode; color: string; dotColor: string }

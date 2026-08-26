@@ -7,7 +7,7 @@ import { getProblemById } from "../../problem/[id]/api/problem";
 
 import { getMyAttempt } from "./api/workspace";
 import { abandonClaim, submitFullAttempt } from "./api/workspace";
-import { getMyActiveAttempts } from "@/lib/api/attempts"; // 🚀 Added to support fallback searching
+import { getMyActiveAttempts } from "../../dashboard/api/dashboard";
 import type { ProblemResponse } from "@/types/problem";
 import type { SolutionAttemptResponse } from "@/types/attempt";
 import { SubtaskForm } from "./component/SubtaskForm";

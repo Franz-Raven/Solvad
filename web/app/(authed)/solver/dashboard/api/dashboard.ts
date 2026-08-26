@@ -10,6 +10,8 @@ export interface DiscoveryQuery {
   tags?: string;
 }
 
+import { PaginatedAttemptsResponse } from "@/types/attempt";
+
 /**
  * Fetches all solution attempts for the solver (powers the SolverOverview and WorkspaceBanner).
  */
@@ -52,3 +54,27 @@ export async function getDiscoverableProblems(
     { method: "GET" }
   );
 }
+export async function getMyActiveAttempts(): Promise<SolutionAttemptResponse[]> {
+  return apiRequest<SolutionAttemptResponse[]>("/attempts/my-attempts", {
+    method: "GET",
+  });
+}
+
+
+
+export async function getWorkspaceAttempts(
+  tab: "ACTIVE" | "PENDING" | "HISTORY",
+  page: number = 0,
+  size: number = 5
+): Promise<PaginatedAttemptsResponse> {
+  const params = new URLSearchParams();
+  params.set("tab", tab);
+  params.set("page", page.toString());
+  params.set("size", size.toString());
+  
+  return apiRequest<PaginatedAttemptsResponse>(
+    `/attempts/workspace?${params.toString()}`,
+    { method: "GET" }
+  );
+}
+

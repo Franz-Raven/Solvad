@@ -79,9 +79,6 @@ export async function searchMyProblems(
 
 
 
-
-
-
 export async function getOpenProblems(): Promise<ProblemResponse[]> {
   return apiRequest<ProblemResponse[]>("/problems/open", {
     method: "GET",

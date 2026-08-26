@@ -1,5 +1,5 @@
-import { apiRequest } from "../api";
-import { SeekerProfile, UpdateSeekerProfilePayload } from "../../types/seeker";
+import { apiRequest } from "../../../../lib/api";
+import { SeekerProfile, UpdateSeekerProfilePayload } from "../../../../types/seeker";
 
 /**
  * Get the currently authenticated seeker's profile

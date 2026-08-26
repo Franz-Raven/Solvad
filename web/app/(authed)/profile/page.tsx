@@ -19,9 +19,9 @@ import {
   User2,
   Users2,
 } from "lucide-react";
-import { getMyProfile as getSeekerProfile, updateMyProfile as updateSeekerProfile } from "@/lib/api/seeker";
-import { getMyProfile as getSolverProfile, updateMyProfile as updateSolverProfile } from "@/lib/api/solver";
-import { uploadProfilePicture } from "@/lib/api/user";
+import { getMyProfile as getSeekerProfile, updateMyProfile as updateSeekerProfile } from "@/app/(authed)/profile/api/seeker";
+import { getMyProfile as getSolverProfile, updateMyProfile as updateSolverProfile } from "@/app/(authed)/profile/api/solver";
+import { uploadProfilePicture } from "@/app/(authed)/profile/api/user";
 import { cebuUniversities } from "@/lib/data/universities";
 import { programCategories } from "@/lib/data/programs";
 import {

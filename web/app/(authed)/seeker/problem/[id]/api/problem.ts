@@ -2,11 +2,8 @@ import { apiRequest } from "@/lib/api";
 import type { ProblemResponse } from "@/types/problem";
 import type { ClaimRequestResponse } from "@/types/attempt";
 import type { SolutionAttemptResponse } from "@/types/attempt";
+import { AuditLogEntry } from "@/types/attempt";
 
-
-/**
- * Fetches the full details of a specific problem.
- */
 export async function getProblemById(
   problemId: string
 ): Promise<ProblemResponse> {
@@ -15,9 +12,15 @@ export async function getProblemById(
   });
 }
 
-/**
- * Fetches all pending proposals (job applications) for this specific problem.
- */
+export async function getAuditLog(
+  problemId: string
+): Promise<AuditLogEntry[]> {
+  // ✅ Correct path matching ProblemController.java
+  return apiRequest<AuditLogEntry[]>(`/problems/${problemId}/audit-log`, {
+    method: "GET",
+  });
+}
+
 export async function getPendingProposals(
   problemId: string
 ): Promise<ClaimRequestResponse[]> {
@@ -26,10 +29,6 @@ export async function getPendingProposals(
   });
 }
 
-/**
- * Evaluates a proposal from a solver. 
- * If approved, the backend generates the active workspace for them.
- */
 export async function evaluateProposal(
   proposalId: string, 
   isApproved: boolean
@@ -39,9 +38,6 @@ export async function evaluateProposal(
   });
 }
 
-/**
- * Marks the problem as fully solved and closes all active workspaces.
- */
 export async function markAsSolved(
   problemId: string
 ): Promise<void> {
@@ -50,9 +46,6 @@ export async function markAsSolved(
   });
 }
 
-/**
- * Updates the maximum number of concurrent solvers allowed for this problem.
- */
 export async function updateProblemMaxSolvers(
   problemId: string, 
   maxSolvers: number
@@ -73,9 +66,6 @@ export async function updateProblemMaxSolvers(
   }
 }
 
-/**
- * Updates the overall status of the problem (e.g., OPEN, CLOSED).
- */
 export async function updateProblemStatus(
   problemId: string,
   status: string
@@ -86,9 +76,6 @@ export async function updateProblemStatus(
   });
 }
 
-/**
- * Permanently deletes the problem.
- */
 export async function deleteProblem(problemId: string): Promise<void> {
   return apiRequest<void>(`/problems/${problemId}`, {
     method: "DELETE",
@@ -103,3 +90,4 @@ export async function getAllAttempts(
     method: "GET",
   });
 }
+
