@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { getMyProblems, getSeekerNotifications } from "@/lib/api/problem";
+import { getMyProblems } from "./api/dashboard";
+import { getSeekerNotifications } from "./api/dashboard";
 import type { ProblemResponse, SeekerNotification } from "@/types/problem";
-import { SeekerOverview } from "@/components/seeker-dashboard/SeekerOverview";
-import { SeekerRecentActivity } from "@/components/seeker-dashboard/SeekerRecentActivity";
-import { SeekerPostedProblems } from "@/components/seeker-dashboard/SeekerPostedProblems";
+import { SeekerOverview } from "./components/SeekerOverview";
+import { SeekerRecentActivity } from "./components/SeekerRecentActivity";
+import { SeekerPostedProblems } from "./components/SeekerPostedProblems";
 
 export default function SeekerDashboardPage() {
   const searchParams = useSearchParams();

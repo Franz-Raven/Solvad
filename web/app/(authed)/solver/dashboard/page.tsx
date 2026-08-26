@@ -2,16 +2,17 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
-import { getDiscoveryDashboard } from "@/lib/api/problem";
-import { getMyActiveAttempts } from "@/lib/api/attempts";
+import { getDiscoveryDashboard } from "./api/dashboard";
+import { getMyActiveAttempts } from "./api/dashboard";
 import type { ProblemResponse } from "@/types/problem";
 import type { SolutionAttemptResponse } from "@/types/attempt";
 
 // Extracted Components
-import { SolverOverview } from "@/components/solver-dashboard/SolverOverview";
-import { WorkspaceBanner } from "@/components/solver-dashboard/WorkspaceBanner";
-import { RecommendationsList } from "@/components/solver-dashboard/RecommendationsList";
-import { ExploreProblems } from "@/components/solver-dashboard/ExploreProblems";
+import { SolverOverview } from "./components/SolverOverview";
+import { WorkspaceBanner } from "./components/WorkspaceBanner";
+import { RecommendationsList } from "./components/RecommendationsList";
+import { ExploreProblems } from "./components/ExploreProblems";
+import { MyWorkspace } from "./components/MyWorkspace";
 
 export default function SolverDashboardPage() {
   const searchParams = useSearchParams();
@@ -88,6 +89,12 @@ export default function SolverDashboardPage() {
         {activeTab === "overview" && (
           <SolverOverview attempts={myAttempts} loading={isAttemptsLoading} />
         )}
+
+    
+        {activeTab === "workspace" && (
+          <MyWorkspace />
+        )}
+
       </div>
     </div>
   );

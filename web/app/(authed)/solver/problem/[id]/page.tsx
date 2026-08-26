@@ -4,32 +4,36 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { getProblemById } from "@/lib/api/problem";
-import { apiRequest } from "@/lib/api";
-import { getMyAttempt, getAllAttempts } from "@/lib/api/attempts";
+import { 
+  getProblemById, 
+  getAllAttempts, 
+  getMyAttempt, 
+  getMyProposalStatus 
+} from "./api/problem";
+
 import type { ProblemResponse } from "@/types/problem";
 import type { SolutionAttemptResponse } from "@/types/attempt";
 
-// 🚀 OPTIMIZATION: Lazy Load all tab components. 
+// 🚀 OPTIMIZATION: Lazy Load all tab components locally. 
 // The browser will NOT download the code for these until the user clicks the specific tab.
-const BlueprintTab = dynamic(() => import("@/components/problem-detail-solver/BlueprintTab").then(mod => mod.BlueprintTab), {
+const BlueprintTab = dynamic(() => import("./components/BlueprintTab").then(mod => mod.BlueprintTab), {
   loading: () => <div className="p-12 text-center text-gray-500 animate-pulse">Loading Blueprint...</div>
 });
 
-const SubtasksTab = dynamic(() => import("@/components/problem-detail-solver/SubtasksTab").then(mod => mod.SubtasksTab), {
+const SubtasksTab = dynamic(() => import("./components/SubtasksTab").then(mod => mod.SubtasksTab), {
   loading: () => <div className="p-12 text-center text-gray-500 animate-pulse">Loading Subtasks...</div>
 });
 
-const SolutionTreeTab = dynamic(() => import("@/components/problem-detail-solver/SolutionTreeTab").then(mod => mod.SolutionTreeTab), {
+const SolutionTreeTab = dynamic(() => import("./components/SolutionTreeTab").then(mod => mod.SolutionTreeTab), {
   loading: () => <div className="p-12 text-center text-gray-500 animate-pulse">Loading Solution Tree...</div>
 });
 
-const AuditTimelineTab = dynamic(() => import("@/components/problem-detail-solver/AuditTimelineTab").then(mod => mod.AuditTimelineTab), {
+const AuditTimelineTab = dynamic(() => import("./components/AuditTimelineTab").then(mod => mod.AuditTimelineTab), {
   loading: () => <div className="p-12 text-center text-gray-500 animate-pulse">Loading History...</div>
 });
 
 // Modals are perfect for lazy loading and disabling SSR since they are heavily interactive
-const SubmitProposalModal = dynamic(() => import("@/components/problem-detail-solver/SubmitProposalModal"), {
+const SubmitProposalModal = dynamic(() => import("./components/SubmitProposalModal"), {
   ssr: false,
 });
 
@@ -82,7 +86,7 @@ export default function SolverProblemDetailPage() {
         getProblemById(problemId),
         getMyAttempt(problemId),
         getAllAttempts(problemId),
-        apiRequest<{ status: string }>(`/problems/${problemId}/proposals/my-status`)
+        getMyProposalStatus(problemId)
       ]);
 
       // 1. Handle Problem Data (Required - throw error if this fails)
@@ -174,10 +178,10 @@ export default function SolverProblemDetailPage() {
     if (isAlreadyClaimed) {
       return (
         <Link
-          href={`/solver/problem/${problemId}/work`}
-          className="px-6 py-2.5 bg-secondary hover:bg-accent text-white rounded-lg font-medium transition-colors shadow-sm inline-block"
-        >
-          Continue Working →
+            href={`/solver/workspace/${problemId}`}
+            className="px-6 py-2.5 bg-secondary..."
+          >
+            Continue Working →
         </Link>
       );
     }
@@ -331,8 +335,9 @@ export default function SolverProblemDetailPage() {
                 You have an active claim on this problem.
               </p>
             </div>
+            {/* 🚀 Change href from /problem/${problemId}/work to /workspace/${problemId} */}
             <Link
-              href={`/solver/problem/${problemId}/work`}
+              href={`/solver/workspace/${problemId}`}
               className="text-sm font-semibold text-secondary hover:text-accent transition-colors"
             >
               Go to workspace →
@@ -359,7 +364,7 @@ export default function SolverProblemDetailPage() {
             problem={problem}
             attempts={attempts} 
             canPropose={canPropose}
-            onPropose={(subtaskId) => openProposalModal(subtaskId)}
+            onPropose={(subtaskId: string) => openProposalModal(subtaskId)}
           />
         )}
 
@@ -370,7 +375,7 @@ export default function SolverProblemDetailPage() {
             isCompleted={isCompleted}
             isUnavailable={isUnavailable}
             myProposalStatus={myProposalStatus}
-            onForkRequest={(parentId, subtaskId) => openProposalModal(subtaskId, parentId)}
+            onForkRequest={(parentId: string, subtaskId: string) => openProposalModal(subtaskId, parentId)}
             onClaimNew={() => setActiveTab("subtasks")}
           />
           )}

@@ -5,37 +5,38 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import Portal from "@/components/portal";
-import { getProblemById, updateProblemStatus, deleteProblem } from "@/lib/api/problem";
+
+import { getProblemById , updateProblemStatus, deleteProblem } from "./api/problem";
 import type { ProblemResponse } from "@/types/problem";
 
 // 🚀 OPTIMIZATION: Lazy Load all 7 tabs.
 // The browser will only download the JavaScript for the active tab.
-const ProblemTab = dynamic(() => import("@/components/problem-detail-seeker/ProblemTab").then(mod => mod.ProblemTab), {
+const ProblemTab = dynamic(() => import("@/app/(authed)/seeker/problem/[id]/components/ProblemTab").then(mod => mod.ProblemTab), {
   loading: () => <div className="p-12 text-center text-gray-500 animate-pulse">Loading Problem Profile...</div>
 });
 
-const ProposalsTab = dynamic(() => import("@/components/problem-detail-seeker/ProposalsTab").then(mod => mod.ProposalsTab), {
+const ProposalsTab = dynamic(() => import("@/app/(authed)/seeker/problem/[id]/components/ProposalsTab").then(mod => mod.ProposalsTab), {
   loading: () => <div className="p-12 text-center text-gray-500 animate-pulse">Loading Proposals...</div>
 });
 
-const WorkspaceTab = dynamic(() => import("@/components/problem-detail-seeker/WorkspaceTab").then(mod => mod.WorkspaceTab), {
+const WorkspaceTab = dynamic(() => import("@/app/(authed)/seeker/problem/[id]/components/WorkspaceTab").then(mod => mod.WorkspaceTab), {
   loading: () => <div className="p-12 text-center text-gray-500 animate-pulse">Loading Workspace...</div>
 });
 
-const SolutionTreeTab = dynamic(() => import("@/components/problem-detail-seeker/SolutionTreeTab").then(mod => mod.SolutionTreeTab), {
+const SolutionTreeTab = dynamic(() => import("@/app/(authed)/seeker/problem/[id]/components/SolutionTreeTab").then(mod => mod.SolutionTreeTab), {
   loading: () => <div className="p-12 text-center text-gray-500 animate-pulse">Loading Solution Tree...</div>
 });
 
 // Note: AIInsightsTab was exported as default in your original code
-const AIInsightsTab = dynamic(() => import("@/components/problem-detail-seeker/AIInsightsTab"), {
+const AIInsightsTab = dynamic(() => import("@/app/(authed)/seeker/problem/[id]/components/AIInsightsTab"), {
   loading: () => <div className="p-12 text-center text-gray-500 animate-pulse">Loading AI Insights...</div>
 });
 
-const AuditTimelineTab = dynamic(() => import("@/components/problem-detail-seeker/AuditTimelineTab").then(mod => mod.AuditTimelineTab), {
+const AuditTimelineTab = dynamic(() => import("@/app/(authed)/seeker/problem/[id]/components/AuditTimelineTab").then(mod => mod.AuditTimelineTab), {
   loading: () => <div className="p-12 text-center text-gray-500 animate-pulse">Loading Timeline...</div>
 });
 
-const SettingsTab = dynamic(() => import("@/components/problem-detail-seeker/SettingsTab").then(mod => mod.SettingsTab), {
+const SettingsTab = dynamic(() => import("@/app/(authed)/seeker/problem/[id]/components/SettingsTab").then(mod => mod.SettingsTab), {
   loading: () => <div className="p-12 text-center text-gray-500 animate-pulse">Loading Settings...</div>
 });
 

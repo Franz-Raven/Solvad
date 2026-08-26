@@ -32,7 +32,6 @@ export interface SolutionAttemptResponse {
   parentAttemptName?: string | null;
   targetSubtaskId?: string | null;      // ADD
   targetSubtaskTitle?: string | null;   // ADD
-
   parentSolverName?: string | null;
   parentDescription?: string | null;
   parentFileUrls?: string[];
@@ -88,4 +87,13 @@ export interface ClaimRequestResponse {
   targetSubtaskId?: string;    // ADD
   targetSubtaskTitle?: string; // ADD
   parentAttemptId?: string;
+}
+
+
+export interface PaginatedAttemptsResponse {
+  attempts: SolutionAttemptResponse[];
+  currentPage: number;
+  totalPages: number;
+  totalElements: number;
+  size: number;
 }
