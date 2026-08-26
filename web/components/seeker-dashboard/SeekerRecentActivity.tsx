@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Activity, BellOff, Clock, Loader2, ChevronRight } from "lucide-react";
 import type { SeekerNotification } from "@/types/problem";
 import {
   Select,
@@ -22,11 +23,12 @@ import {
 
 interface SeekerRecentActivityProps {
   notifications: SeekerNotification[];
+  isLoading?: boolean; // 🚀 Added isLoading prop
 }
 
 const ITEMS_PER_PAGE = 10;
 
-export function SeekerRecentActivity({ notifications }: SeekerRecentActivityProps) {
+export function SeekerRecentActivity({ notifications, isLoading = false }: SeekerRecentActivityProps) {
   const [eventTypeFilter, setEventTypeFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(0);
 
@@ -52,11 +54,11 @@ export function SeekerRecentActivity({ notifications }: SeekerRecentActivityProp
   };
 
   const getUniqueEventTypes = () => {
-    const types = new Set(notifications.map(n => n.eventType));
+    const types = new Set(notifications.map((n) => n.eventType));
     return Array.from(types);
   };
 
-  const filteredNotifications = notifications.filter(n => {
+  const filteredNotifications = notifications.filter((n) => {
     if (eventTypeFilter === "all") return true;
     return n.eventType === eventTypeFilter;
   });
@@ -76,33 +78,41 @@ export function SeekerRecentActivity({ notifications }: SeekerRecentActivityProp
   }, {} as Record<string, SeekerNotification[]>);
 
   const timelineOrder = ["Today", "Yesterday", "This Week", "Earlier"];
-  const orderedGroups = timelineOrder.filter(group => groupedNotifications[group]);
-
+  const orderedGroups = timelineOrder.filter((group) => groupedNotifications[group]);
   const eventTypes = getUniqueEventTypes();
 
+  // 🚀 Clean Loading State
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 min-h-[400px] flex flex-col">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">Recent Activity</h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Loading your latest updates...
+          </p>
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center py-12">
+          <Loader2 className="w-10 h-10 text-accent animate-spin mb-4" />
+          <p className="text-gray-500 font-medium text-sm animate-pulse">Syncing timeline...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 🚀 Clean Empty State
   if (notifications.length === 0) {
     return (
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 min-h-[400px]">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">Recent Activity</h2>
-        <div className="text-center py-12">
-          <svg
-            className="w-16 h-16 mx-auto text-gray-400 mb-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-            />
-          </svg>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
+        <div className="text-center py-16 bg-gray-50 rounded-xl border border-dashed border-gray-200 mt-6">
+          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-gray-100">
+            <BellOff className="w-8 h-8 text-gray-400" />
+          </div>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">
             No recent activity
           </h3>
-          <p className="text-gray-600">
-            Updates will appear here when solvers interact with your problems
+          <p className="text-sm text-gray-500 max-w-sm mx-auto">
+            Updates will appear here when solvers interact with your problems, submit proposals, or complete tasks.
           </p>
         </div>
       </div>
@@ -110,22 +120,32 @@ export function SeekerRecentActivity({ notifications }: SeekerRecentActivityProp
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl border border-secondary/30 p-8">
-      <div className="flex items-center justify-between mb-6">
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+      {/* Header & Filters */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Recent Activity</h2>
-          <p className="text-sm text-gray-600 mt-1">
+          <h2 className="text-2xl font-bold text-gray-900 mb-1 flex items-center gap-2">
+            <Activity className="w-6 h-6 text-accent" />
+            Recent Activity
+          </h2>
+          <p className="text-sm text-gray-500">
             Updates when solvers claim your problems or statuses change.
           </p>
         </div>
-        <Select value={eventTypeFilter} onValueChange={(value) => { setEventTypeFilter(value); setCurrentPage(0); }}>
-          <SelectTrigger className="w-[200px] px-4 py-2.5 !h-auto rounded-lg border border-gray-300 text-sm">
-            <SelectValue />
+        <Select
+          value={eventTypeFilter}
+          onValueChange={(value) => {
+            setEventTypeFilter(value);
+            setCurrentPage(0);
+          }}
+        >
+          <SelectTrigger className="w-full md:w-[220px] px-4 py-2.5 bg-white rounded-lg border border-gray-300 text-sm shadow-sm">
+            <SelectValue placeholder="Filter by event..." />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all" className="py-2.5">All Events</SelectItem>
+            <SelectItem value="all">All Events</SelectItem>
             {eventTypes.map((type) => (
-              <SelectItem key={type} value={type} className="py-2.5">
+              <SelectItem key={type} value={type}>
                 {type.replace(/_/g, " ")}
               </SelectItem>
             ))}
@@ -134,43 +154,60 @@ export function SeekerRecentActivity({ notifications }: SeekerRecentActivityProp
       </div>
 
       {filteredNotifications.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-gray-600">No activities match the selected filter</p>
+        <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+          <p className="text-sm text-gray-500 font-medium">No activities match the selected filter.</p>
+          <button 
+            onClick={() => setEventTypeFilter("all")}
+            className="mt-3 text-accent text-sm hover:underline font-medium"
+          >
+            Clear filters
+          </button>
         </div>
       )}
 
+      {/* Timeline Content */}
       {orderedGroups.length > 0 && (
         <>
-          <div className="space-y-6">
+          <div className="space-y-8">
             {orderedGroups.map((group) => (
-              <div key={group}>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
-                  <div className="h-px flex-1 bg-gray-200"></div>
+              <div key={group} className="relative">
+                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-3">
+                  <div className="h-px flex-1 bg-gray-100"></div>
                   <span>{group}</span>
-                  <div className="h-px flex-1 bg-gray-200"></div>
+                  <div className="h-px flex-1 bg-gray-100"></div>
                 </h3>
                 <div className="space-y-3">
                   {groupedNotifications[group].map((n) => (
                     <Link
                       key={n.id}
                       href={`/seeker/problem/${n.problemId}`}
-                      className="block p-4 rounded-lg border border-gray-200 hover:border-accent hover:bg-accent/5 transition-colors"
+                      className="group block p-4 bg-white rounded-xl border border-gray-100 hover:border-accent/40 hover:shadow-md hover:bg-accent/5 transition-all"
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1">
-                          <p className="text-sm font-semibold text-gray-900">{n.problemTitle}</p>
-                          <p className="text-sm text-gray-700 mt-1">{n.message}</p>
-                          <div className="flex items-center gap-2 mt-2">
-                            <span className="text-xs text-gray-500">{n.actorName}</span>
-                            <span className="text-xs text-gray-400">•</span>
-                            <span className="text-xs px-2 py-0.5 bg-secondary/10 text-secondary rounded-full">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-gray-900 group-hover:text-accent transition-colors truncate">
+                            {n.problemTitle}
+                          </p>
+                          <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                            {n.message}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-3 mt-3">
+                            <span className="text-xs font-medium text-gray-700">
+                              {n.actorName}
+                            </span>
+                            <span className="w-1 h-1 rounded-full bg-gray-300"></span>
+                            <span className="text-[11px] font-bold px-2.5 py-0.5 bg-secondary/10 text-secondary border border-secondary/20 rounded-md uppercase tracking-wide">
                               {n.eventType.replace(/_/g, " ")}
                             </span>
                           </div>
                         </div>
-                        <span className="text-xs text-gray-400 whitespace-nowrap">
-                          {formatNotificationTime(n.timestamp)}
-                        </span>
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                          <span className="flex items-center gap-1 text-[11px] font-medium text-gray-400">
+                            <Clock className="w-3.5 h-3.5" />
+                            {formatNotificationTime(n.timestamp)}
+                          </span>
+                          <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-accent transition-colors mt-2" />
+                        </div>
                       </div>
                     </Link>
                   ))}
@@ -179,31 +216,21 @@ export function SeekerRecentActivity({ notifications }: SeekerRecentActivityProp
             ))}
           </div>
 
+          {/* 🚀 Refactored Pagination using UI Components */}
           {totalPages > 1 && (
-            <div className="mt-8">
-              <div
-                role="navigation"
-                aria-label="pagination"
-                data-slot="pagination"
-                className="mx-auto flex w-full justify-center"
-              >
-                <ul
-                  data-slot="pagination-content"
-                  className="flex items-center gap-0.5"
-                >
-                  <li data-slot="pagination-item">
-                    <button
-                      onClick={() => currentPage > 0 && setCurrentPage(currentPage - 1)}
-                      disabled={currentPage === 0}
-                      className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 gap-1 pl-2.5 pr-1.5 disabled:opacity-50"
-                      aria-label="Go to previous page"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                      </svg>
-                      <span className="hidden sm:block">Previous</span>
-                    </button>
-                  </li>
+            <div className="mt-8 pt-6 border-t border-gray-100">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage > 0) setCurrentPage(currentPage - 1);
+                      }}
+                      className={currentPage === 0 ? "pointer-events-none opacity-50" : ""}
+                    />
+                  </PaginationItem>
 
                   {Array.from({ length: totalPages }, (_, i) => i).map((page) => {
                     if (
@@ -212,52 +239,41 @@ export function SeekerRecentActivity({ notifications }: SeekerRecentActivityProp
                       (page >= currentPage - 1 && page <= currentPage + 1)
                     ) {
                       return (
-                        <li key={page} data-slot="pagination-item">
-                          <button
-                            onClick={() => setCurrentPage(page)}
-                            className={`inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 w-10 ${
-                              currentPage === page
-                                ? "border border-input bg-accent text-accent-foreground"
-                                : "border border-input bg-background hover:bg-accent hover:text-accent-foreground"
-                            }`}
-                            aria-current={currentPage === page ? "page" : undefined}
+                        <PaginationItem key={page}>
+                          <PaginationLink
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setCurrentPage(page);
+                            }}
+                            isActive={currentPage === page}
                           >
                             {page + 1}
-                          </button>
-                        </li>
+                          </PaginationLink>
+                        </PaginationItem>
                       );
-                    } else if (
-                      page === currentPage - 2 ||
-                      page === currentPage + 2
-                    ) {
+                    } else if (page === currentPage - 2 || page === currentPage + 2) {
                       return (
-                        <li key={page} data-slot="pagination-item">
-                          <span className="flex size-8 items-center justify-center">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 12h12" />
-                            </svg>
-                          </span>
-                        </li>
+                        <PaginationItem key={page}>
+                          <PaginationEllipsis />
+                        </PaginationItem>
                       );
                     }
                     return null;
                   })}
 
-                  <li data-slot="pagination-item">
-                    <button
-                      onClick={() => currentPage < totalPages - 1 && setCurrentPage(currentPage + 1)}
-                      disabled={currentPage === totalPages - 1}
-                      className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 gap-1 pl-1.5 pr-2.5 disabled:opacity-50"
-                      aria-label="Go to next page"
-                    >
-                      <span className="hidden sm:block">Next</span>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
-                  </li>
-                </ul>
-              </div>
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage < totalPages - 1) setCurrentPage(currentPage + 1);
+                      }}
+                      className={currentPage === totalPages - 1 ? "pointer-events-none opacity-50" : ""}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
             </div>
           )}
         </>
