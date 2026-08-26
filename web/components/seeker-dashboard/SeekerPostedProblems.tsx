@@ -253,7 +253,8 @@ export function SeekerPostedProblems({ onTotalChange }: SeekerPostedProblemsProp
                 
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-3 mb-2">
-                    <h4 className="font-bold text-gray-900 text-base truncate group-hover:text-accent transition-colors">
+                    {/* 🚀 FIX: Removed 'truncate' from here */}
+                    <h4 className="font-bold text-gray-900 text-base group-hover:text-accent transition-colors">
                       {problem.title}
                     </h4>
                     <span className={`px-2.5 py-0.5 text-[11px] font-bold rounded-md border uppercase tracking-wide ${getStatusBadge(problem.status)}`}>

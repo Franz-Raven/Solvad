@@ -105,7 +105,8 @@ export function ExploreProblems() {
                 
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                    <h4 className="font-semibold text-gray-900 text-base truncate group-hover:text-accent transition-colors">
+                    {/* 🚀 FIX: Removed 'truncate' from here */}
+                    <h4 className="font-semibold text-gray-900 text-base group-hover:text-accent transition-colors">
                       {problem.title}
                     </h4>
                     <span className={`text-[11px] px-2 py-0.5 rounded-md font-semibold border ${
