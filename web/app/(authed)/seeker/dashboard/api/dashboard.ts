@@ -5,18 +5,13 @@ import type {
   SeekerProblemListResponse,
 } from "@/types/problem";
 
-/**
- * Fetches all problems for the seeker to calculate overview statistics.
- */
+
 export async function getMyProblems(): Promise<ProblemResponse[]> {
   return apiRequest<ProblemResponse[]>("/problems/my-problems", {
     method: "GET",
   });
 }
 
-/**
- * Fetches the paginated list of problems for the Seeker's "Posted Problems" tab.
- */
 export async function getSeekerProblemList(
   query?: string,
   sdgFilter?: string,
@@ -37,9 +32,6 @@ export async function getSeekerProblemList(
   );
 }
 
-/**
- * Fetches recent activity/notifications for the Seeker's timeline.
- */
 export async function getSeekerNotifications(): Promise<SeekerNotification[]> {
   return apiRequest<SeekerNotification[]>("/problems/notifications", {
     method: "GET",

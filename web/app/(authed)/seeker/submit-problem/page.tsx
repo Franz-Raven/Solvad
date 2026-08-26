@@ -5,11 +5,11 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { generateScope, createProblem } from "@/lib/api/problem";
 import type { ProblemPayload, SubProblem, EnhancedProblem, AttachmentRequirement } from "@/types/problem";
-import ProblemFormFields from "@/components/add-problem/ProblemFormFields";
-import FileAttachmentUploader from "@/components/add-problem/FileAttachmentUploader";
-import EnhancedProblemPreview from "@/components/add-problem/EnhancedProblemPreview";
-import SubproblemsList from "@/components/add-problem/SubproblemsList";
-import SubmissionRequirements from "@/components/add-problem/SubmissionRequirements";
+import ProblemFormFields from "./components/ProblemFormFields";
+import FileAttachmentUploader from "./components/FileAttachmentUploader";
+import EnhancedProblemPreview from "./components/EnhancedProblemPreview";
+import SubproblemsList from "./components/SubproblemsList";
+import SubmissionRequirements from "./components/SubmissionRequirements";
 
 type ViewState = "FORM_VIEW" | "LOADING_VIEW" | "PREVIEW_VIEW" | "SUCCESS_VIEW";
 

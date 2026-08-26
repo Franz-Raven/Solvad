@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { getProblemById } from "@/lib/api/problem";
+import { getProblemById } from "./api/problem";
 import { apiRequest } from "@/lib/api";
 import { getMyAttempt, getAllAttempts } from "@/lib/api/attempts";
 import type { ProblemResponse } from "@/types/problem";

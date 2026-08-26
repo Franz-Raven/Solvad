@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { getAllAttempts } from "@/lib/api/attempts";
-import { updateProblemMaxSolvers } from "@/lib/api/problem"; // Ensure this is exported in your api file
+import { getAllAttempts } from "../api/problem";
+import { updateProblemMaxSolvers } from "../api/problem";
 import type { SolutionAttemptResponse } from "@/types/attempt";
-import type { ProblemResponse } from "@/types/problem";
+import type { ProblemResponse } from "../types/problemType";
 
 interface WorkspaceTabProps {
   problem: ProblemResponse;

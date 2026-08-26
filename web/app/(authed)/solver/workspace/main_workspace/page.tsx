@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { getProblemById } from "@/lib/api/problem";
+import { getProblemById } from "../../problem/[id]/api/problem";
 import { getMyAttempt, abandonClaim, submitFullAttempt } from "@/lib/api/attempts";
 import type { ProblemResponse } from "@/types/problem";
 import type { SolutionAttemptResponse } from "@/types/attempt";

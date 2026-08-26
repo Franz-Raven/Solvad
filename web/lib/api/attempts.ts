@@ -123,13 +123,6 @@ export async function completeAttempt(attemptId: string): Promise<SolutionAttemp
 }
 
 
-export async function getAllAttempts(
-  problemId: string
-): Promise<SolutionAttemptResponse[]> {
-  return apiRequest<SolutionAttemptResponse[]>(`/problems/${problemId}/attempts`, {
-    method: "GET",
-  });
-}
 
 /**
  * Get a single attempt by ID

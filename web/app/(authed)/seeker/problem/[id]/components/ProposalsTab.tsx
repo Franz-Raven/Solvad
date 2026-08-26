@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { getPendingProposals, evaluateProposal } from "@/lib/api/problem";
-import { getAllAttempts } from "@/lib/api/attempts";
+import { evaluateProposal } from "../api/problem";
+import { getPendingProposals } from "../api/problem";
+import { getAllAttempts } from "../api/problem";
 import type { ClaimRequestResponse, SolutionAttemptResponse } from "@/types/attempt";
-import type { ProblemResponse } from "@/types/problem";
+import type { ProblemResponse } from "@/types/problem"
 
 type SortOrder = "newest-first" | "oldest-first";
 
