@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { saveSubtaskDraft, submitSubtaskSolution } from "@/lib/api/attempts";
+import { submitSubtaskSolution } from "@/lib/api/attempts";
+import { saveSubtaskDraft, submitSubtaskFinal } from "../api/workspace";
 import type { SubtaskResponse, AttachmentRequirement } from "@/types/problem";
 
 interface SubtaskFormProps {

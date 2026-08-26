@@ -4,10 +4,12 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { getProblemById } from "./api/problem";
-import { apiRequest } from "@/lib/api";
-import { getMyAttempt } from "@/lib/api/attempts";
-import { getAllAttempts } from "@/app/(authed)/seeker/problem/[id]/api/problem";
+import { 
+  getProblemById, 
+  getAllAttempts, 
+  getMyAttempt, 
+  getMyProposalStatus 
+} from "./api/problem";
 
 import type { ProblemResponse } from "@/types/problem";
 import type { SolutionAttemptResponse } from "@/types/attempt";
@@ -84,7 +86,7 @@ export default function SolverProblemDetailPage() {
         getProblemById(problemId),
         getMyAttempt(problemId),
         getAllAttempts(problemId),
-        apiRequest<{ status: string }>(`/problems/${problemId}/proposals/my-status`)
+        getMyProposalStatus(problemId)
       ]);
 
       // 1. Handle Problem Data (Required - throw error if this fails)
@@ -176,10 +178,10 @@ export default function SolverProblemDetailPage() {
     if (isAlreadyClaimed) {
       return (
         <Link
-          href={`/solver/problem/${problemId}/work`}
-          className="px-6 py-2.5 bg-secondary hover:bg-accent text-white rounded-lg font-medium transition-colors shadow-sm inline-block"
-        >
-          Continue Working →
+            href={`/solver/workspace/${problemId}`}
+            className="px-6 py-2.5 bg-secondary..."
+          >
+            Continue Working →
         </Link>
       );
     }

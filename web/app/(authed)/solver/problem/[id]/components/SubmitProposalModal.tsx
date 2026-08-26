@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { submitProposal } from "@/lib/api/attempts";
+import { submitProposal } from "../api/problem";
 
 interface SubmitProposalModalProps {
   problemId: string;
-  subtaskId: string;          // ADD — required now
+  subtaskId: string;         
   parentAttemptId?: string;
   onClose: () => void;
   onSuccess: () => void;

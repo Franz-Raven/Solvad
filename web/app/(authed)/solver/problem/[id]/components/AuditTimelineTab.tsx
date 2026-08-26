@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getAuditLog } from "@/lib/api/attempts";
+import { getAuditLog } from "../api/problem";
 import type { AuditLogEntry, AuditEventType } from "@/types/attempt";
 
 // ─── Audit event config ───────────────────────────────────────────────────────

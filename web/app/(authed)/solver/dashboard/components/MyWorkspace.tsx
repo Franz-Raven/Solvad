@@ -90,7 +90,6 @@ export function MyWorkspace() {
             <h3 className="text-xl font-bold text-gray-900 mb-2">No {activeTab.toLowerCase()} attempts</h3>
             <p className="text-gray-500 mb-6">
               {activeTab === "ACTIVE" && "You don't have any active problems right now. Go find one!"}
-              {/* 🚀 Change this text back! */}
               {activeTab === "PENDING" && "You have no proposals waiting for approval."}
               {activeTab === "HISTORY" && "You haven't completed or abandoned any problems yet."}
             </p>
@@ -110,21 +109,19 @@ export function MyWorkspace() {
               {displayedAttempts.map((attempt) => (
                 <div key={attempt.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col md:flex-row items-start md:items-center gap-6 hover:border-accent/30 hover:shadow-md transition-all group">
                   <div className="w-12 h-12 bg-gradient-to-br from-secondary/80 to-accent rounded-xl flex items-center justify-center text-white shrink-0">
-                    {/* 🚀 FIX: Clean Lucide icons */}
                     {attempt.status === "ACTIVE" ? <Rocket className="w-6 h-6" /> : attempt.status === "COMPLETED" ? <CheckCircle2 className="w-6 h-6" /> : <Hourglass className="w-6 h-6" />}
                   </div>
                   
                   <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-3 mb-1.5">
-                      <h3 className="text-base font-bold text-gray-900 truncate group-hover:text-accent transition-colors">
+                    <div className="flex flex-wrap items-start md:items-center gap-3 mb-1.5">
+                      <h3 className="text-base font-bold text-gray-900 group-hover:text-accent transition-colors leading-tight">
                         {attempt.problemTitle || "Untitled Problem"}
                       </h3>
-                      <span className={`text-[11px] px-2.5 py-0.5 rounded-md font-bold border ${
+                      <span className={`text-[11px] px-2.5 py-0.5 rounded-md font-bold border shrink-0 ${
                         attempt.status === "ACTIVE" ? "bg-blue-50 text-blue-700 border-blue-200" :
                         attempt.status === "COMPLETED" ? "bg-green-50 text-green-700 border-green-200" :
                         attempt.status === "TERMINATED" || attempt.status === "ABANDONED" ? "bg-red-50 text-red-700 border-red-200" : "bg-amber-50 text-amber-700 border-amber-200"
                       }`}>
-                        {/* 🚀 FIX: Format PENDING_REVIEW text so it looks nice */}
                         {attempt.status.replace("_", " ")}
                       </span>
                     </div>
@@ -145,11 +142,11 @@ export function MyWorkspace() {
 
                   <div className="w-full md:w-auto shrink-0 flex justify-end">
                     {attempt.status === "ACTIVE" ? (
-                      <Link href={`/solver/problem/${attempt.problemId}/work`} className="w-full md:w-auto px-5 py-2.5 bg-secondary hover:bg-accent text-white text-sm font-medium rounded-lg text-center flex items-center justify-center gap-2 transition-colors">
+                      <Link href={`/solver/workspace/${attempt.problemId}`} className="w-full md:w-auto px-5 py-2.5 bg-secondary hover:bg-accent text-white text-sm font-medium rounded-lg text-center flex items-center justify-center gap-2 transition-colors shadow-sm">
                         Enter Workspace <ArrowRight className="w-4 h-4" />
                       </Link>
                     ) : (
-                      <Link href={`/solver/problem/${attempt.problemId}`} className="w-full md:w-auto px-5 py-2.5 bg-white hover:bg-gray-50 hover:text-accent border border-gray-300 text-sm font-medium rounded-lg text-center flex items-center justify-center gap-2 transition-colors">
+                      <Link href={`/solver/problem/${attempt.problemId}`} className="w-full md:w-auto px-5 py-2.5 bg-white hover:bg-gray-50 hover:text-accent border border-gray-300 text-sm font-medium rounded-lg text-center flex items-center justify-center gap-2 transition-colors shadow-sm">
                         <Eye className="w-4 h-4" /> View Problem
                       </Link>
                     )}

@@ -4,10 +4,13 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getProblemById } from "../../problem/[id]/api/problem";
-import { getMyAttempt, abandonClaim, submitFullAttempt } from "@/lib/api/attempts";
+
+import { getMyAttempt } from "./api/workspace";
+
+import { abandonClaim, submitFullAttempt } from "./api/workspace";
 import type { ProblemResponse } from "@/types/problem";
 import type { SolutionAttemptResponse } from "@/types/attempt";
-import { SubtaskForm } from "@/components/solver-workspace/SubtaskForm";
+import { SubtaskForm } from "./component/SubtaskForm";
 
 
 type ModalType = "abandon" | "submit" | null;

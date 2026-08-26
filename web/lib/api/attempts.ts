@@ -28,11 +28,7 @@ export async function abandonClaim(attemptId: string): Promise<void> {
 /**
  * Get solver's active attempt on a problem
  */
-export async function getMyAttempt(problemId: string): Promise<SolutionAttemptResponse> {
-  return apiRequest<SolutionAttemptResponse>(`/problems/${problemId}/my-attempt`, {
-    method: "GET",
-  });
-}
+
 
 export async function deleteFileFromSubmission(
   submissionId: string,
@@ -157,13 +153,7 @@ export async function getMyActiveAttempts(): Promise<SolutionAttemptResponse[]> 
  * Calls POST /api/attempts/{attemptId}/complete — the backend's finalize endpoint.
  * Requires at least one subtask to be SUBMITTED, or the backend returns 400.
  */
-export async function submitFullAttempt(
-  attemptId: string
-): Promise<SolutionAttemptResponse> {
-  return apiRequest<SolutionAttemptResponse>(`/attempts/${attemptId}/complete`, {
-    method: "POST",
-  });
-}
+
 
 /**
  * Check solver's own proposal status for a problem (read-only, no side effects)
