@@ -30,7 +30,6 @@ public class GapAnalysisController {
         }
     }
 
-     // GET /api/gap-analysis?newProblemId={id}&historicalProblemId={id}
     @GetMapping
     @PreAuthorize("hasAnyRole('SEEKER', 'SOLVER', 'ADMIN')")
     public ResponseEntity<GapAnalysisResponse> getGapAnalysis(

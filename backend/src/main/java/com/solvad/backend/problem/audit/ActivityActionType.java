@@ -1,4 +1,4 @@
-package com.solvad.backend.audit;
+package com.solvad.backend.problem.audit;
 
 public enum ActivityActionType {
     STATUS_CHANGE,

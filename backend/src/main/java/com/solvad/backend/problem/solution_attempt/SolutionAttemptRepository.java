@@ -18,38 +18,21 @@ import java.util.UUID;
 @Repository
 public interface SolutionAttemptRepository extends JpaRepository<SolutionAttempt, UUID> {
 
-    boolean existsByProblemAndStatus(Problem problem, SolutionAttemptStatus status);
-
-    // Single active attempt — used by getMyAttempt
-    Optional<SolutionAttempt> findFirstByProblemAndSolverAndStatusOrderByClaimedAtDesc(
-            Problem problem, SolverProfile solver, SolutionAttemptStatus status);
-
-    // List of active attempts — used by getMyActiveAttemptsForProblem
     List<SolutionAttempt> findByProblemAndSolverAndStatus(
             Problem problem, SolverProfile solver, SolutionAttemptStatus status);
-
-    boolean existsByProblemAndSolverAndStatus(
-            Problem problem, SolverProfile solver, SolutionAttemptStatus status);
-
     List<SolutionAttempt> findByProblemOrderByClaimedAtDesc(Problem problem);
-
     List<SolutionAttempt> findBySolverOrderByClaimedAtDesc(SolverProfile solver);
-
     List<SolutionAttempt> findByProblemAndStatus(
             Problem problem, SolutionAttemptStatus status);
+    List<SolutionAttempt> findByProblemIdAndTargetSubtaskIdOrderByClaimedAtAsc(UUID problemId, UUID subtaskId);
 
     long countByProblemAndStatus(Problem problem, SolutionAttemptStatus status);
 
     @Query("SELECT COUNT(a) FROM SolutionAttempt a WHERE a.problem.id = :problemId AND a.targetSubtask.id = :subtaskId AND a.status = 'ACTIVE'")
     int countActiveSolversBySubtaskId(@Param("problemId") UUID problemId, @Param("subtaskId") UUID subtaskId);
 
-    List<SolutionAttempt> findByProblemIdAndTargetSubtaskIdOrderByClaimedAtAsc(UUID problemId, UUID subtaskId);
-
     boolean existsByProblemAndTargetSubtaskAndSolverAndStatus(
             Problem problem, ProblemSubtask targetSubtask, SolverProfile solver, SolutionAttemptStatus status);
-
-    Optional<SolutionAttempt> findFirstByProblemAndSolverOrderByClaimedAtDesc(
-            Problem problem, SolverProfile solver);
 
     Page<SolutionAttempt> findBySolverAndStatusInOrderByClaimedAtDesc(
             SolverProfile solver,

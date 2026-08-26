@@ -1,4 +1,4 @@
-package com.solvad.backend.audit;
+package com.solvad.backend.problem.audit;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -9,7 +9,7 @@ import java.util.UUID;
 
 public interface AuditLogRepository extends JpaRepository<AuditLog, UUID> {
 
-    // Oldest-first so the frontend can render aaa proper chronological timeline
+
     List<AuditLog> findByProblemIdOrderByTimestampAsc(UUID problemId);
 
     @Query("""

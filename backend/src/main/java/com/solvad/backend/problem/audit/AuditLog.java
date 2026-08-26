@@ -1,4 +1,4 @@
-package com.solvad.backend.audit;
+package com.solvad.backend.problem.audit;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;

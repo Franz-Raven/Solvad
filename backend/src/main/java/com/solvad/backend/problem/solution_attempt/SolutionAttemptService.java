@@ -1,6 +1,6 @@
 package com.solvad.backend.problem.solution_attempt;
 
-import com.solvad.backend.audit.AuditEventType;
+import com.solvad.backend.problem.audit.AuditEventType;
 import com.solvad.backend.problem.attachment.ProblemAttachmentRepository;
 import com.solvad.backend.problem.attachment.AttachmentRequirementResponse;
 import com.solvad.backend.problem.claim.ClaimRequestRepository;
@@ -15,7 +15,7 @@ import com.solvad.backend.profile.seeker.SeekerProfileRepository;
 import com.solvad.backend.profile.seeker.SeekerProfile;
 import com.solvad.backend.profile.solver.SolverProfile;
 import com.solvad.backend.profile.solver.SolverProfileRepository;
-import com.solvad.backend.audit.AuditService;
+import com.solvad.backend.problem.audit.AuditService;
 import com.solvad.backend.storage.CloudinaryService;
 import com.solvad.backend.problem.similarity.MatchmakingService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -694,11 +694,11 @@ public class SolutionAttemptService {
                             ))
                             .collect(Collectors.toList());
                     return new SubtaskResponse(
-                            s.getId(), 
-                            s.getTitle(), 
+                            s.getId(),
+                            s.getTitle(),
                             s.getDepartmentFocus(),
-                            s.getSdgFocus(), 
-                            s.getDescription(), 
+                            s.getSdgFocus(),
+                            s.getDescription(),
                             attachments
                     );
                 })

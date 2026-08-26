@@ -1,4 +1,4 @@
-package com.solvad.backend.audit;
+package com.solvad.backend.problem.audit;
 
 import com.solvad.backend.profile.seeker.SeekerNotificationResponse;
 import org.springframework.transaction.annotation.Transactional;
