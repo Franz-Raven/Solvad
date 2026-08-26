@@ -15,12 +15,19 @@ export default function SeekerDashboardPage() {
   const [problems, setProblems] = useState<ProblemResponse[]>([]);
   const [notifications, setNotifications] = useState<SeekerNotification[]>([]);
   const [totalProblems, setTotalProblems] = useState(0);
+  const [isFetchingNotifications, setIsFetchingNotifications] = useState(true);
 
   useEffect(() => {
+    // Ensure it starts as true when fetching begins
+    setIsFetchingNotifications(true);
+    
     Promise.all([
       getMyProblems().then(setProblems).catch(() => {}),
       getSeekerNotifications().then(setNotifications).catch(() => []),
-    ]);
+    ]).finally(() => {
+      // 🚀 FIX: Turn off the loading state once both promises resolve or fail
+      setIsFetchingNotifications(false);
+    });
   }, []);
 
   return (
@@ -35,7 +42,11 @@ export default function SeekerDashboardPage() {
         )}
 
         {activeTab === "activity" && (
-          <SeekerRecentActivity notifications={notifications} />
+                    
+          <SeekerRecentActivity 
+            notifications={notifications} 
+            isLoading={isFetchingNotifications} 
+          />
         )}
       </div>
     </div>

@@ -89,6 +89,17 @@ export default function AuthedNavigation() {
                 >
                   Home
                 </Link>
+
+                {/* 🚀 ADD THE NEW WORKSPACE LINK HERE */}
+                <Link
+                  href="/solver/workspace"
+                  className={`text-gray-900 font-medium hover:text-primary-foreground transition-colors ${
+                    isActive("/solver/workspace") ? "border-b-2 border-accent pb-1" : ""
+                  }`}
+                >
+                  Workspace
+                </Link>
+                
                 <Link
                   href="/solver/dashboard?tab=overview"
                   className={`text-gray-900 font-medium hover:text-primary-foreground transition-colors ${

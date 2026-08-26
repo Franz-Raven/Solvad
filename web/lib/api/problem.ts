@@ -190,3 +190,20 @@ export async function updateProblemMaxSolvers(problemId: string, maxSolvers: num
     throw new Error(errorMessage || "Failed to update maximum concurrent solvers");
   }
 }
+
+/**
+ * Fetches server-side paginated problems for the solver explore page.
+ */
+export async function getDiscoverableProblems(
+  page: number = 0,
+  size: number = 5
+): Promise<PaginatedProblemsResponse> {
+  const params = new URLSearchParams();
+  params.set("page", page.toString());
+  params.set("size", size.toString());
+  
+  return apiRequest<PaginatedProblemsResponse>(
+    `/problems/discover?${params.toString()}`,
+    { method: "GET" }
+  );
+}

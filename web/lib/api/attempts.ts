@@ -223,3 +223,27 @@ export async function getAttemptsForSubtask(
     { method: "GET" }
   );
 }
+
+export interface PaginatedAttemptsResponse {
+  attempts: SolutionAttemptResponse[];
+  currentPage: number;
+  totalPages: number;
+  totalElements: number;
+  size: number;
+}
+
+export async function getWorkspaceAttempts(
+  tab: "ACTIVE" | "PENDING" | "HISTORY",
+  page: number = 0,
+  size: number = 5
+): Promise<PaginatedAttemptsResponse> {
+  const params = new URLSearchParams();
+  params.set("tab", tab);
+  params.set("page", page.toString());
+  params.set("size", size.toString());
+  
+  return apiRequest<PaginatedAttemptsResponse>(
+    `/attempts/workspace?${params.toString()}`,
+    { method: "GET" }
+  );
+}

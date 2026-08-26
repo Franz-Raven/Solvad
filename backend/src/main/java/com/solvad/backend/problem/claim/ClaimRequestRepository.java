@@ -11,6 +11,9 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import com.solvad.backend.profile.solver.SolverProfile;
 
 @Repository
 public interface ClaimRequestRepository extends JpaRepository<ClaimRequest, UUID> {
@@ -39,4 +42,11 @@ public interface ClaimRequestRepository extends JpaRepository<ClaimRequest, UUID
 
     List<ClaimRequest> findByProblemAndTargetSubtaskAndStatus(
             Problem problem, ProblemSubtask targetSubtask, ClaimRequestStatus status);
+
+    // Add this inside ClaimRequestRepository
+    Page<ClaimRequest> findBySolverAndStatusOrderByCreatedAtDesc(
+            SolverProfile solver,
+            ClaimRequestStatus status,
+            Pageable pageable
+    );
 }

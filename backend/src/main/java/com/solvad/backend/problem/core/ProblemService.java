@@ -37,10 +37,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+
+
 
 @Service
 public class ProblemService {
@@ -555,5 +558,40 @@ public class ProblemService {
                 .collect(Collectors.toList());
 
         return new SeekerProblemListResponse(responses, page, problemPage.getTotalPages(), (int) problemPage.getTotalElements(), size);
+    }
+
+    @Transactional(readOnly = true)
+    public PaginatedProblemsResponse getDiscoverableProblems(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        List<ProblemStatus> visibleStatuses = Arrays.asList(
+                ProblemStatus.OPEN,
+                ProblemStatus.CLAIMED,
+                ProblemStatus.IN_PROGRESS,
+                ProblemStatus.SOLVED_OPEN_FOR_IMPROVEMENT
+        );
+
+
+        Page<Problem> problemPage = problemRepository.findByStatusIn(visibleStatuses, pageable);
+        if (!problemPage.hasContent()) {
+            return new PaginatedProblemsResponse(List.of(), page, 0, 0, size);
+        }
+
+
+        List<ProblemResponse> content = problemPage.getContent().stream()
+                .map(problem -> {
+                    List<ProblemSubtask> subtasks = subtaskRepository.findByProblem(problem);
+                    return mapToResponse(problem, subtasks, problem.getSeeker());
+                })
+                .collect(Collectors.toList());
+
+
+        return new PaginatedProblemsResponse(
+                content,
+                page,
+                problemPage.getTotalPages(),
+                problemPage.getTotalElements(),
+                size
+        );
     }
 }

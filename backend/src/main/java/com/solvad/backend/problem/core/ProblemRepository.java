@@ -7,7 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -16,9 +15,10 @@ import java.util.UUID;
 public interface ProblemRepository extends JpaRepository<Problem, UUID> {
     List<Problem> findBySeeker(SeekerProfile seeker);
     List<Problem> findBySeekerId(UUID seekerId);
-    List<Problem> findByStatus(ProblemStatus status);
-    List<Problem> findByStatusIn(List<ProblemStatus> statuses);
+    Page<Problem> findByStatus(ProblemStatus status, Pageable pageable);
+    Page<Problem> findByStatusIn(List<ProblemStatus> statuses, Pageable pageable);
 
+    List<Problem> findByStatusIn(List<ProblemStatus> statuses);
     Page<Problem> findBySeeker(SeekerProfile seeker, Pageable pageable);
     Page<Problem> findBySeekerAndCreatedAtAfter(SeekerProfile seeker, LocalDateTime after, Pageable pageable);
     Page<Problem> findBySeekerAndSdgFocus(SeekerProfile seeker, String sdgFocus, Pageable pageable);

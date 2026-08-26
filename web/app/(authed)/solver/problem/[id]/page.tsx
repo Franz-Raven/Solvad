@@ -3,18 +3,35 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { getProblemById } from "@/lib/api/problem";
 import { apiRequest } from "@/lib/api";
 import { getMyAttempt, getAllAttempts } from "@/lib/api/attempts";
 import type { ProblemResponse } from "@/types/problem";
 import type { SolutionAttemptResponse } from "@/types/attempt";
 
-// Extracted Components
-import { BlueprintTab } from "@/components/problem-detail-solver/BlueprintTab";
-import { SubtasksTab } from "@/components/problem-detail-solver/SubtasksTab";
-import { SolutionTreeTab } from "@/components/problem-detail-solver/SolutionTreeTab";
-import { AuditTimelineTab } from "@/components/problem-detail-solver/AuditTimelineTab";
-import SubmitProposalModal from "@/components/problem-detail-solver/SubmitProposalModal";
+// 🚀 OPTIMIZATION: Lazy Load all tab components. 
+// The browser will NOT download the code for these until the user clicks the specific tab.
+const BlueprintTab = dynamic(() => import("@/components/problem-detail-solver/BlueprintTab").then(mod => mod.BlueprintTab), {
+  loading: () => <div className="p-12 text-center text-gray-500 animate-pulse">Loading Blueprint...</div>
+});
+
+const SubtasksTab = dynamic(() => import("@/components/problem-detail-solver/SubtasksTab").then(mod => mod.SubtasksTab), {
+  loading: () => <div className="p-12 text-center text-gray-500 animate-pulse">Loading Subtasks...</div>
+});
+
+const SolutionTreeTab = dynamic(() => import("@/components/problem-detail-solver/SolutionTreeTab").then(mod => mod.SolutionTreeTab), {
+  loading: () => <div className="p-12 text-center text-gray-500 animate-pulse">Loading Solution Tree...</div>
+});
+
+const AuditTimelineTab = dynamic(() => import("@/components/problem-detail-solver/AuditTimelineTab").then(mod => mod.AuditTimelineTab), {
+  loading: () => <div className="p-12 text-center text-gray-500 animate-pulse">Loading History...</div>
+});
+
+// Modals are perfect for lazy loading and disabling SSR since they are heavily interactive
+const SubmitProposalModal = dynamic(() => import("@/components/problem-detail-solver/SubmitProposalModal"), {
+  ssr: false,
+});
 
 type TabType = "blueprint" | "subtasks" | "tree" | "history";
 
@@ -55,30 +72,31 @@ export default function SolverProblemDetailPage() {
       setLoading(true);
       setError(null);
 
-      const problemData = await getProblemById(problemId);
-      setProblem(problemData);
+      // 🚀 OPTIMIZATION: Fire all 4 network requests simultaneously!
+      const [
+        problemResult,
+        myAttemptResult,
+        allAttemptsResult,
+        proposalStatusResult
+      ] = await Promise.allSettled([
+        getProblemById(problemId),
+        getMyAttempt(problemId),
+        getAllAttempts(problemId),
+        apiRequest<{ status: string }>(`/problems/${problemId}/proposals/my-status`)
+      ]);
 
-      try {
-        setMyAttempt(await getMyAttempt(problemId));
-      } catch {
-        setMyAttempt(null);
+      // 1. Handle Problem Data (Required - throw error if this fails)
+      if (problemResult.status === "fulfilled") {
+        setProblem(problemResult.value);
+      } else {
+        throw new Error("Failed to load problem details.");
       }
 
-      try {
-        setAttempts(await getAllAttempts(problemId));
-      } catch (err) {
-        console.error("Failed to load history", err);
-      }
+      // 2. Handle Optional Data (Fail gracefully by setting to null/empty array)
+      setMyAttempt(myAttemptResult.status === "fulfilled" ? myAttemptResult.value : null);
+      setAttempts(allAttemptsResult.status === "fulfilled" ? allAttemptsResult.value : []);
+      setMyProposalStatus(proposalStatusResult.status === "fulfilled" ? proposalStatusResult.value.status : null);
 
-      // Fetch solver's own proposal status for this problem
-      try {
-        const statusRes = await apiRequest<{ status: string }>(
-          `/problems/${problemId}/proposals/my-status`
-        );
-        setMyProposalStatus(statusRes.status);
-      } catch {
-        setMyProposalStatus(null);
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load problem");
     } finally {
@@ -86,13 +104,11 @@ export default function SolverProblemDetailPage() {
     }
   };
 
- const openProposalModal = (subtaskId: string, parentId?: string) => {
-  setProposalSubtaskId(subtaskId);
-  setForkParentId(parentId);
-  setShowProposalModal(true);
-};
-
-
+  const openProposalModal = (subtaskId: string, parentId?: string) => {
+    setProposalSubtaskId(subtaskId);
+    setForkParentId(parentId);
+    setShowProposalModal(true);
+  };
 
   if (loading) {
     return (
@@ -119,9 +135,11 @@ export default function SolverProblemDetailPage() {
       </div>
     );
   }
-const isAlreadyClaimed = myAttempt?.status === "ACTIVE";
+
+  const isAlreadyClaimed = myAttempt?.status === "ACTIVE";
   const isCompleted = myAttempt?.status === "COMPLETED";
-// 1. Check how many solvers are currently active across ALL subtasks
+  
+  // 1. Check how many solvers are currently active across ALL subtasks
   const activeSolversCount = attempts.filter((a) => a.status === "ACTIVE").length;
   
   // 2. The backend enforces limit PER SUBTASK, so total problem capacity is (limit * subtask count)
@@ -163,8 +181,6 @@ const isAlreadyClaimed = myAttempt?.status === "ACTIVE";
         </Link>
       );
     }
-
-
 
     if (myProposalStatus === "PENDING") {
       return (
@@ -335,12 +351,13 @@ const isAlreadyClaimed = myAttempt?.status === "ACTIVE";
           </div>
         )}
 
+        {/* 🚀 These tabs will now ONLY download when they evaluate to true! */}
         {activeTab === "blueprint" && <BlueprintTab problem={problem} />}
 
         {activeTab === "subtasks" && (
           <SubtasksTab
             problem={problem}
-            attempts={attempts} // <-- Added this line
+            attempts={attempts} 
             canPropose={canPropose}
             onPropose={(subtaskId) => openProposalModal(subtaskId)}
           />
