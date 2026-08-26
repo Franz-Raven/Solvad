@@ -14,7 +14,7 @@ import {
   ArrowRight
 } from "lucide-react";
 import type { ProblemSummaryResponse, SeekerProblemListResponse } from "@/types/problem";
-import { getSeekerProblemList } from "@/lib/api/problem";
+import { getSeekerProblemList } from "../api/dashboard";
 import { getAllSDGs } from "@/lib/data/sdgs";
 import {
   Pagination,
