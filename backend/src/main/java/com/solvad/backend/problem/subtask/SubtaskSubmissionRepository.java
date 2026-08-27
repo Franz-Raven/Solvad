@@ -15,4 +15,5 @@ public interface SubtaskSubmissionRepository extends JpaRepository<SubtaskSubmis
 
     Optional<SubtaskSubmission> findByAttemptAndSubtask(SolutionAttempt attempt, ProblemSubtask subtask);
 
+    boolean existsByAttemptAndSubtask(SolutionAttempt attempt, ProblemSubtask subtask);
 }

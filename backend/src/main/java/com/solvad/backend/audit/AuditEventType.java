@@ -1,4 +1,4 @@
-package com.solvad.backend.problem.audit;
+package com.solvad.backend.audit;
 
 public enum AuditEventType {
     PROBLEM_CREATED,

@@ -1,6 +1,6 @@
 package com.solvad.backend.problem.claim;
 
-import com.solvad.backend.problem.audit.AuditEventType;
+import com.solvad.backend.audit.AuditEventType;
 import com.solvad.backend.problem.core.Problem;
 import com.solvad.backend.problem.core.ProblemRepository;
 import com.solvad.backend.problem.core.ProblemStatus;
@@ -10,7 +10,7 @@ import com.solvad.backend.profile.seeker.SeekerProfileRepository;
 import com.solvad.backend.profile.seeker.SeekerProfile;
 import com.solvad.backend.profile.solver.SolverProfile;
 import com.solvad.backend.profile.solver.SolverProfileRepository;
-import com.solvad.backend.problem.audit.AuditService;
+import com.solvad.backend.audit.AuditService;
 import com.solvad.backend.storage.CloudinaryService;
 import com.solvad.backend.problem.solution_attempt.SolutionAttemptService;
 import com.solvad.backend.problem.solution_attempt.SolutionAttempt;

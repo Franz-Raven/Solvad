@@ -1,8 +1,8 @@
 package com.solvad.backend.problem.core;
 
 import com.solvad.backend.ai.GeminiService;
-import com.solvad.backend.problem.audit.AuditEventType;
-import com.solvad.backend.problem.audit.AuditService;
+import com.solvad.backend.audit.AuditEventType;
+import com.solvad.backend.audit.AuditService;
 import com.solvad.backend.problem.scope.GenerateScopeRequest;
 import com.solvad.backend.problem.scope.GenerateScopeResponse;
 import com.solvad.backend.problem.search.PaginatedProblemsResponse;
