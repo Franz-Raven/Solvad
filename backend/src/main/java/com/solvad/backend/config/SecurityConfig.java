@@ -51,7 +51,7 @@ public class SecurityConfig {
                 "http://localhost:5173",
                 "http://localhost:3001",
                 "https://*.vercel.app",
-                "https://your-production-domain.vercel.app"
+                "https://solvad.vercel.app"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "CONNECT"));
         config.setAllowedHeaders(List.of("*"));
