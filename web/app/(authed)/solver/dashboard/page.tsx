@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { Suspense, useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { getDiscoveryDashboard } from "./api/dashboard";
 import { getMyActiveAttempts } from "./api/dashboard";
@@ -15,13 +15,21 @@ import { ExploreProblems } from "./components/ExploreProblems";
 import { MyWorkspace } from "./components/MyWorkspace";
 
 export default function SolverDashboardPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-linear-to-br from-accent/20 via-background to-accent/10 p-8" />}>
+      <SolverDashboardContent />
+    </Suspense>
+  );
+}
+
+function SolverDashboardContent() {
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab") || "home";
 
   const [recommended, setRecommended] = useState<ProblemResponse[]>([]);
   const [solverCourse, setSolverCourse] = useState("");
   const [myAttempts, setMyAttempts] = useState<SolutionAttemptResponse[]>([]);
-  
+
   const [isAttemptsLoading, setIsAttemptsLoading] = useState(true);
   const [isRecommendationsLoading, setIsRecommendationsLoading] = useState(true);
 
@@ -72,14 +80,14 @@ export default function SolverDashboardPage() {
               </p>
             </div>
 
-            <WorkspaceBanner 
-              isLoading={isAttemptsLoading} 
-              activeCount={activeAttempts.length} 
+            <WorkspaceBanner
+              isLoading={isAttemptsLoading}
+              activeCount={activeAttempts.length}
             />
 
-            <RecommendationsList 
-              isLoading={isRecommendationsLoading} 
-              recommendations={recommended} 
+            <RecommendationsList
+              isLoading={isRecommendationsLoading}
+              recommendations={recommended}
             />
 
             <ExploreProblems />
@@ -90,11 +98,9 @@ export default function SolverDashboardPage() {
           <SolverOverview attempts={myAttempts} loading={isAttemptsLoading} />
         )}
 
-    
         {activeTab === "workspace" && (
           <MyWorkspace />
         )}
-
       </div>
     </div>
   );

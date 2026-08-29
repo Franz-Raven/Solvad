@@ -6,7 +6,7 @@ interface ProfileSidebarProps {
   solverData: { institution: string; degreeProgram: string; };
   seekerData: { organizationName: string; contactPerson: string; };
   isUploadingImage: boolean;
-  fileInputRef: RefObject<HTMLInputElement>;
+  fileInputRef: RefObject<HTMLInputElement | null>;
   onUploadPicture: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 

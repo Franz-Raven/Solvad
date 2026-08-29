@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { getMyProblems } from "./api/dashboard";
 import { getSeekerNotifications } from "./api/dashboard";
@@ -10,23 +10,29 @@ import { SeekerRecentActivity } from "./components/SeekerRecentActivity";
 import { SeekerPostedProblems } from "./components/SeekerPostedProblems";
 
 export default function SeekerDashboardPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-accent/20 via-background to-accent/10 p-8" />}>
+      <SeekerDashboardContent />
+    </Suspense>
+  );
+}
+
+function SeekerDashboardContent() {
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab") || "home";
-  
+
   const [problems, setProblems] = useState<ProblemResponse[]>([]);
   const [notifications, setNotifications] = useState<SeekerNotification[]>([]);
   const [totalProblems, setTotalProblems] = useState(0);
   const [isFetchingNotifications, setIsFetchingNotifications] = useState(true);
 
   useEffect(() => {
-    // Ensure it starts as true when fetching begins
     setIsFetchingNotifications(true);
-    
+
     Promise.all([
       getMyProblems().then(setProblems).catch(() => {}),
       getSeekerNotifications().then(setNotifications).catch(() => []),
     ]).finally(() => {
-      // 🚀 FIX: Turn off the loading state once both promises resolve or fail
       setIsFetchingNotifications(false);
     });
   }, []);
@@ -43,10 +49,9 @@ export default function SeekerDashboardPage() {
         )}
 
         {activeTab === "activity" && (
-                    
-          <SeekerRecentActivity 
-            notifications={notifications} 
-            isLoading={isFetchingNotifications} 
+          <SeekerRecentActivity
+            notifications={notifications}
+            isLoading={isFetchingNotifications}
           />
         )}
       </div>

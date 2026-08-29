@@ -22,7 +22,7 @@ export default function ProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState<"profile" | "settings">("profile");
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [seekerData, setSeekerData] = useState({ organizationName: "", contactPerson: "", contactNumber: "" });
   const [solverData, setSolverData] = useState({ firstName: "", lastName: "", institution: "", degreeProgram: "", skills: "" });
