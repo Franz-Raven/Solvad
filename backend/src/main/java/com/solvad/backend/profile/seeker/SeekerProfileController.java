@@ -13,7 +13,10 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/seeker-profiles")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = {
+    "http://localhost:3000",
+    "https://solvad.vercel.app"
+})
 public class SeekerProfileController {
 
     @Autowired

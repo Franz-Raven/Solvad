@@ -16,7 +16,10 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = {
+    "http://localhost:3000",
+    "https://solvad.vercel.app"
+})
 public class ClaimRequestController {
 
     @Autowired
