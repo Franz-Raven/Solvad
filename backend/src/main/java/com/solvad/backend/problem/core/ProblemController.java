@@ -18,7 +18,10 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/problems")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = {
+    "http://localhost:3000",
+    "https://solvad.vercel.app"
+})
 public class ProblemController {
 
     @Autowired
