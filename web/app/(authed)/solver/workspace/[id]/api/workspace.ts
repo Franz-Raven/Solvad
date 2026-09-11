@@ -34,9 +34,7 @@ export async function deleteFileFromSubmission(
   );
 }
 
-/**
- * Save a subtask solution as a draft
- */
+
 export async function saveSubtaskDraft(
   attemptId: string,
   subtaskId: string,
@@ -55,9 +53,6 @@ export async function saveSubtaskDraft(
   });
 }
 
-/**
- * Lock and Submit a subtask solution final
- */
 export async function submitSubtaskFinal(
   attemptId: string,
   subtaskId: string,
@@ -67,32 +62,22 @@ export async function submitSubtaskFinal(
 ): Promise<SubtaskSubmissionResponse> {
   const formData = new FormData();
   formData.append("description", description);
+  
   if (deltaDescription) formData.append("deltaDescription", deltaDescription);
   if (files && files.length > 0) {
     files.forEach((file) => formData.append("files", file));
   }
 
-  // Uses fetch directly to handle FormData and file uploads correctly
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"}/attempts/${attemptId}/subtasks/${subtaskId}/submit`,
+
+  return apiRequest<SubtaskSubmissionResponse>(
+    `/attempts/${attemptId}/subtasks/${subtaskId}/submit`,
     {
       method: "POST",
-      headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
       body: formData,
     }
   );
-
-  const data = await res.json().catch(() => res.text());
-  if (!res.ok) throw new Error(data.message || data.error || "Failed to submit subtask");
-  return data as SubtaskSubmissionResponse;
 }
 
-/**
- * Submit the entire solution attempt to complete it
- */
 export async function submitFullAttempt(
   attemptId: string
 ): Promise<SolutionAttemptResponse> {
