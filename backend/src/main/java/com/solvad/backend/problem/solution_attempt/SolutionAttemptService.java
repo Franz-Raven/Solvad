@@ -125,12 +125,14 @@ public class SolutionAttemptService {
                     solverFullName + "'s proposal was approved. Active workspace created for sub-problem \""
                             + targetSubtask.getTitle() + "\"."
             );
+
             if (problem.getStatus() == ProblemStatus.OPEN) {
-                problem.setStatus(ProblemStatus.CLAIMED);
+                problem.setStatus(ProblemStatus.IN_PROGRESS);
                 problemRepository.save(problem);
+
                 auditService.log(
                         problem.getId(), null, "SYSTEM", "SYSTEM", AuditEventType.STATUS_CHANGED,
-                        "Status automatically changed from OPEN → CLAIMED after first proposal was approved."
+                        "Status automatically changed from OPEN → IN_PROGRESS after a solver's proposal was approved."
                 );
             }
 
