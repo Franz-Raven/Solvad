@@ -1,9 +1,7 @@
 import { apiRequest } from "@/lib/api";
 import type { SolutionAttemptResponse, SubtaskSubmissionResponse } from "@/types/attempt";
 
-/**
- * Get a single attempt by ID to load the workspace
- */
+
 export async function getAttemptById(
   attemptId: string
 ): Promise<SolutionAttemptResponse> {
@@ -12,18 +10,12 @@ export async function getAttemptById(
   });
 }
 
-/**
- * Abandon an active claim
- */
 export async function abandonClaim(attemptId: string): Promise<void> {
   await apiRequest(`/attempts/${attemptId}/abandon`, {
     method: "DELETE",
   });
 }
 
-/**
- * Delete a file from a draft submission
- */
 export async function deleteFileFromSubmission(
   submissionId: string,
   fileUrl: string
@@ -33,7 +25,6 @@ export async function deleteFileFromSubmission(
     { method: "DELETE" }
   );
 }
-
 
 export async function saveSubtaskDraft(
   attemptId: string,
@@ -68,7 +59,6 @@ export async function submitSubtaskFinal(
     files.forEach((file) => formData.append("files", file));
   }
 
-
   return apiRequest<SubtaskSubmissionResponse>(
     `/attempts/${attemptId}/subtasks/${subtaskId}/submit`,
     {
@@ -77,6 +67,7 @@ export async function submitSubtaskFinal(
     }
   );
 }
+
 
 export async function submitFullAttempt(
   attemptId: string
