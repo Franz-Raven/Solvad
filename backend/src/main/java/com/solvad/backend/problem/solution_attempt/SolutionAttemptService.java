@@ -126,15 +126,7 @@ public class SolutionAttemptService {
                             + targetSubtask.getTitle() + "\"."
             );
 
-            if (problem.getStatus() == ProblemStatus.OPEN) {
-                problem.setStatus(ProblemStatus.IN_PROGRESS);
-                problemRepository.save(problem);
-
-                auditService.log(
-                        problem.getId(), null, "SYSTEM", "SYSTEM", AuditEventType.STATUS_CHANGED,
-                        "Status automatically changed from OPEN → IN_PROGRESS after a solver's proposal was approved."
-                );
-            }
+           
 
             List<SubtaskSubmission> submissions = submissionRepository.findByAttempt(savedAttempt);
             return mapToResponse(savedAttempt, submissions);
