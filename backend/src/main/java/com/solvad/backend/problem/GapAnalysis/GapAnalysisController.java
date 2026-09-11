@@ -7,7 +7,10 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/gap-analysis")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = {
+    "http://localhost:3000",
+    "https://solvad.vercel.app"
+})
 public class GapAnalysisController {
 
     @Autowired
