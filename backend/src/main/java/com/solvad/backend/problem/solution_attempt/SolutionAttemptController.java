@@ -15,10 +15,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@CrossOrigin(origins = {
-    "http://localhost:3000",
-    "https://solvad.vercel.app"
-})
+@CrossOrigin(origins = "*")
 public class SolutionAttemptController {
 
     @Autowired
