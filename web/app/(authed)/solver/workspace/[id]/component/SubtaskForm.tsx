@@ -183,6 +183,8 @@ export function SubtaskForm({
   };
 
   const executeAction = async (action: "SAVE_DRAFT" | "SUBMIT") => {
+    if (isDeletingFile) return;
+
     setShowConfirmModal(false);
     setError(null);
     
@@ -497,14 +499,16 @@ export function SubtaskForm({
           <div className="flex gap-3">
              <button 
                 onClick={() => executeAction("SAVE_DRAFT")} 
-                disabled={isSaving || isSubmitting || !description.trim()} 
+                // 🚀 FIX 2: Added !!isDeletingFile
+                disabled={isSaving || isSubmitting || !!isDeletingFile || !description.trim()} 
                 className="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-100 transition-colors disabled:opacity-50 shadow-sm text-sm"
               >
               {isSaving ? "Saving..." : "Save Draft"}
             </button>
             <button 
               onClick={() => setShowConfirmModal(true)} 
-              disabled={isSubmitting || isSaving || !canSubmit} 
+              // 🚀 FIX 3: Added !!isDeletingFile
+              disabled={isSubmitting || isSaving || !!isDeletingFile || !canSubmit} 
               className="px-6 py-2.5 bg-secondary text-white font-semibold rounded-xl hover:bg-accent transition-colors disabled:opacity-50 shadow-sm text-sm flex items-center gap-2"
             >
               {isSubmitting && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
