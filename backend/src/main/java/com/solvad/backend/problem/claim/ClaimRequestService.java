@@ -58,11 +58,6 @@ public class ClaimRequestService {
     private CloudinaryService cloudinaryService;
 
 
-
-    // -------------------------------------------------------------------------
-    // SUBMIT PROPOSAL (Solver Action)
-    // Now scoped to aaa specific subtask instead of the whole problem.
-    // -------------------------------------------------------------------------
     @Transactional
     public ClaimRequest submitProposal(UUID solverUserId, ProposalDTO proposalDTO, List<MultipartFile> files) {
         Problem problem = problemRepository.findById(proposalDTO.getProblemId())
@@ -176,8 +171,8 @@ public class ClaimRequestService {
 
     // -------------------------------------------------------------------------
     // EVALUATE PROPOSAL (Seeker Action)
-    // Concurrency limit is now per-subtask and uses the problem's
-    // seeker-configured maxConcurrentSolvers value.
+    // Concurrency limit is now per-subtask and uses the configured
+    // maxConcurrentSolvers value directly from the target subtask.
     // -------------------------------------------------------------------------
     @Transactional
     public void evaluateProposal(UUID seekerUserId, UUID requestId, boolean isApproved) {
@@ -197,7 +192,7 @@ public class ClaimRequestService {
             throw new RuntimeException("You do not own this problem.");
         }
 
-        // Ensure the proposal has aaa target subtask
+        // Ensure the proposal has a target subtask
         ProblemSubtask targetSubtask = request.getTargetSubtask();
         if (targetSubtask == null) {
             throw new RuntimeException("This proposal has no associated sub-problem.");
@@ -222,11 +217,12 @@ public class ClaimRequestService {
             return;
         }
 
-        // Check active solvers for this specific subtask against the problem's configured limit
+        // Check active solvers for this specific subtask
         int currentActiveSolvers = attemptRepository.countActiveSolversBySubtaskId(
                 problem.getId(), targetSubtask.getId());
 
-        int maxAllowed = problem.getMaxConcurrentSolvers();
+        // 🚀 FIX: Pull the capacity limit from the Subtask, NOT the Problem
+        int maxAllowed = targetSubtask.getMaxConcurrentSolvers() != null ? targetSubtask.getMaxConcurrentSolvers() : 3;
 
         if (currentActiveSolvers >= maxAllowed) {
             throw new RuntimeException(
@@ -270,10 +266,6 @@ public class ClaimRequestService {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // GET PENDING PROPOSALS FOR A PROBLEM (Seeker Action)
-    // Returns all pending proposals across all subtasks for aaa problem.
-    // -------------------------------------------------------------------------
     @Transactional(readOnly = true)
     public List<ClaimRequest> getPendingProposalsForProblem(UUID problemId) {
         Problem problem = problemRepository.findById(problemId)

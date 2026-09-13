@@ -294,7 +294,8 @@ public class ProblemService {
                             subtask.getDepartmentFocus(),
                             subtask.getSdgFocus(),
                             subtask.getDescription(),
-                            attachmentResponses // <-- Now attached to the payload
+                            attachmentResponses,
+                            subtask.getMaxConcurrentSolvers()
                     );
                 })
                 .collect(Collectors.toList());
@@ -461,7 +462,7 @@ public class ProblemService {
     }
 
     @Transactional
-    public void updateMaxConcurrentSolvers(UUID seekerUserId, UUID problemId, int maxSolvers) {
+    public SubtaskResponse updateSubtaskMaxSolvers(UUID seekerUserId, UUID problemId, UUID subtaskId, int maxSolvers) {
         Problem problem = problemRepository.findById(problemId)
                 .orElseThrow(() -> new RuntimeException("Problem not found"));
 
@@ -472,18 +473,44 @@ public class ProblemService {
             throw new RuntimeException("You do not own this problem.");
         }
 
-        if (maxSolvers < 1) {
-            throw new RuntimeException("Max solvers must be at least 1.");
+        ProblemSubtask subtask = subtaskRepository.findById(subtaskId)
+                .orElseThrow(() -> new RuntimeException("Sub-problem not found"));
+
+        if (!subtask.getProblem().getId().equals(problem.getId())) {
+            throw new RuntimeException("Sub-problem does not belong to this problem.");
         }
 
-        problem.setMaxConcurrentSolvers(maxSolvers);
-        problemRepository.save(problem);
+        if (maxSolvers < 1) {
+            throw new RuntimeException("Capacity must be at least 1.");
+        }
 
-        // Optional: Log it to the Audit service
+        // 🚀 BACKEND GUARDRAIL: Check active solvers on THIS specific subtask
+        long activeCount = attemptRepository.countByProblemAndTargetSubtaskAndStatus(
+                problem, subtask, SolutionAttemptStatus.ACTIVE);
+
+        if (maxSolvers < activeCount) {
+            throw new RuntimeException("Action denied. This sub-problem already has "
+                    + activeCount + " active solvers. You cannot lower the capacity below this number.");
+        }
+
+        subtask.setMaxConcurrentSolvers(maxSolvers);
+        ProblemSubtask savedSubtask = subtaskRepository.save(subtask);
+
         auditService.log(
                 problemId, seekerUserId, seeker.getOrganizationName(), "SEEKER",
                 AuditEventType.PROBLEM_UPDATED,
-                "Updated concurrent solver limit to " + maxSolvers
+                "Updated capacity limit for sub-problem '" + subtask.getTitle() + "' to " + maxSolvers
+        );
+
+        // Fetch attachments to return a complete SubtaskResponse
+        List<AttachmentRequirementResponse> attachmentResponses = attachmentRepository.findBySubtask(savedSubtask)
+                .stream()
+                .map(att -> new AttachmentRequirementResponse(att.getId(), att.getAttachmentTitle(), att.getAttachmentType()))
+                .collect(Collectors.toList());
+
+        return new SubtaskResponse(
+                savedSubtask.getId(), savedSubtask.getTitle(), savedSubtask.getDepartmentFocus(),
+                savedSubtask.getSdgFocus(), savedSubtask.getDescription(), attachmentResponses, savedSubtask.getMaxConcurrentSolvers()
         );
     }
 

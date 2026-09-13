@@ -17,6 +17,7 @@ public class SubtaskSubmissionResponse {
     private LocalDateTime updatedAt;
     private LocalDateTime submittedAt;
     private String deltaDescription;
+    private Integer maxConcurrentSolvers;
 
     public SubtaskSubmissionResponse() {
     }
