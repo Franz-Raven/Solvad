@@ -194,7 +194,6 @@ export function SubtaskForm({
     try {
       const allFiles: File[] = [...files];
       
-      // 🚀 Flattens all specific requirement files into a single array for Spring Boot
       Object.values(requirementStates).forEach(state => {
         allFiles.push(...state.files);
       });
@@ -205,15 +204,8 @@ export function SubtaskForm({
         await submitSubtaskFinal(attemptId, subtask.id, description, deltaDescription, allFiles);
       }
       
-      // Clear local state since files are now securely on the server
-      setFiles([]); 
-      setRequirementStates(prev => {
-        const updated: Record<string, RequirementUploadState> = {};
-        Object.entries(prev).forEach(([id, state]) => {
-          updated[id] = { ...state, files: [], error: null };
-        });
-        return updated;
-      });
+      // 🚀 FIX 1: DELETE the manual setFiles([]) and setRequirementStates() clear here!
+      // Let the useEffect handle it naturally when onSuccess finishes fetching.
       
       onSuccess();
     } catch (err: any) {
