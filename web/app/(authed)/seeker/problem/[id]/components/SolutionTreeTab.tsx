@@ -4,15 +4,15 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { getAllAttempts } from "../api/problem";
 import type { SolutionAttemptResponse, TreeAttemptNode } from "@/types/attempt";
+import { Lock, FileText, Calendar, CheckCircle2, GitFork, X, History } from "lucide-react";
 
-// ─── Portal helper ────────────────────────────────────────────────────────────
+
 function Portal({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
   return mounted ? createPortal(children, document.body) : null;
 }
 
-// ─── Build parent→children hierarchy ─────────────────────────────────────────
 function buildHierarchyTree(flatList: SolutionAttemptResponse[]): TreeAttemptNode[] {
   const map: Record<string, TreeAttemptNode> = {};
   const roots: TreeAttemptNode[] = [];
@@ -28,7 +28,7 @@ function buildHierarchyTree(flatList: SolutionAttemptResponse[]): TreeAttemptNod
   return roots;
 }
 
-// ─── Read-only Attempt Detail Modal ──────────────────────────────────────────
+
 function AttemptDetailModal({
   node,
   flatAttemptsList,
@@ -50,6 +50,12 @@ function AttemptDetailModal({
     ? parentRec.submissions.find((ps) => ps.subtaskId === activeSub.subtaskId)
     : null;
 
+  const isConfidential = activeSub?.status === "DRAFT" || activeSub?.description?.includes("Confidential Workspace");
+
+  const educationInfo = [node.degreeProgram, node.institution].filter(Boolean).join(" · ");
+  const initials = `${node.solverFirstName?.[0] || ""}${node.solverLastName?.[0] || ""}`.toUpperCase() || "S";
+  const submittedCount = node.submissions.filter((s) => s.status === "SUBMITTED").length;
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", handler);
@@ -61,200 +67,269 @@ function AttemptDetailModal({
     return () => { document.body.style.overflow = ""; };
   }, []);
 
+
   useEffect(() => { setViewPanel("current"); }, [activeSubIdx]);
 
   return (
     <Portal>
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200"
         onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       >
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[88vh] flex flex-col overflow-hidden border border-gray-200">
+        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[88vh] flex flex-col overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+          
           {/* Header */}
-          <div className="flex items-start justify-between p-5 border-b border-gray-100 flex-shrink-0">
-            <div className="flex-1 min-w-0 pr-4">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-lg font-bold text-gray-900">
-                  {node.solverFirstName} {node.solverLastName}
-                </h2>
-                <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
-                  node.status === "COMPLETED"
-                    ? "bg-green-100 text-green-700 border-green-200"
-                    : (node.status === "ABANDONED" || node.status === "TERMINATED")
-                    ? "bg-red-100 text-red-700 border-red-200"
-                    : "bg-yellow-100 text-yellow-700 border-yellow-200"
-                }`}>
-                  {node.status}
-                </span>
-              </div>
-              <p className="text-xs text-gray-500 mt-0.5">
-                {node.degreeProgram} · {node.institution}
-              </p>
-              <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                {node.parentAttemptId && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 border border-blue-100 text-blue-700 text-[11px] font-semibold rounded-full">
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7l-2 2m2-2l2 2m4 4v-4a2 2 0 00-2-2h-6" />
-                    </svg>
-                    Forked from {node.parentSolverName}
+          <div className="p-6 border-b border-slate-100 flex items-start justify-between gap-4 bg-slate-50/50">
+            <div className="flex items-center gap-3.5 min-w-0">
+              {node.profilePictureUrl ? (
+                <img
+                  src={node.profilePictureUrl}
+                  alt=""
+                  className="w-11 h-11 rounded-2xl object-cover ring-1 ring-slate-200 shrink-0"
+                />
+              ) : (
+                <div className="w-11 h-11 rounded-2xl bg-slate-900 text-white font-semibold text-sm flex items-center justify-center shrink-0 shadow-sm">
+                  {initials}
+                </div>
+              )}
+
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-semibold text-slate-900 truncate">
+                    {node.solverFirstName} {node.solverLastName}
+                  </h2>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider ${
+                    node.status === "COMPLETED"
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      : node.status === "ABANDONED" || node.status === "TERMINATED"
+                      ? "bg-rose-50 text-rose-700 border-rose-200"
+                      : "bg-amber-50 text-amber-700 border-amber-200"
+                  }`}>
+                    {node.status}
                   </span>
+                </div>
+
+                {educationInfo && (
+                  <p className="text-xs text-slate-500 truncate mt-0.5">{educationInfo}</p>
                 )}
-                <span className="text-[11px] text-gray-400">
-                  {attemptDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
-                </span>
-                <span className="text-[11px] text-gray-500">
-                  {node.submissions.filter((s) => s.status === "SUBMITTED").length}/{node.submissions.length} subtasks submitted
-                </span>
+
+                <div className="flex items-center gap-3 mt-2 text-[11px] text-slate-400">
+                  <span className="flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5" />
+                    {attemptDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                  </span>
+                  <span>•</span>
+                  <span className="flex items-center gap-1 font-medium text-slate-600">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    {submittedCount} of {node.submissions.length} completed
+                  </span>
+                  {node.parentAttemptId && (
+                    <>
+                      <span>•</span>
+                      <span className="flex items-center gap-1 text-blue-600 font-medium truncate">
+                        <GitFork className="w-3.5 h-3.5" />
+                        from {node.parentSolverName}
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
+
             <button
               onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors flex-shrink-0"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors shrink-0"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <X className="w-4 h-4" />
             </button>
           </div>
 
-          {node.submissions.length === 0 ? (
-            <div className="flex-1 flex items-center justify-center p-12">
-              <p className="text-gray-400 text-sm">No subtask submissions yet.</p>
-            </div>
-          ) : (
-            <>
-              {/* Subtask Tabs */}
-              <div className="flex gap-2 px-5 pt-4 pb-3 border-b border-gray-100 flex-shrink-0 flex-wrap">
-                {node.submissions.map((sub, idx) => (
+          {/* Subtask Switcher Tabs */}
+          {node.submissions.length > 0 && (
+            <div className="px-6 pt-5 pb-4 border-b border-slate-100 overflow-x-auto flex gap-3 no-scrollbar items-stretch bg-slate-50/30">
+              {node.submissions.map((sub, idx) => {
+                const isActive = activeSubIdx === idx;
+                const isSubmitted = sub.status === "SUBMITTED";
+                
+                return (
                   <button
                     key={sub.id}
                     onClick={() => setActiveSubIdx(idx)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                      activeSubIdx === idx
-                        ? "bg-accent text-white border-accent shadow-sm"
-                        : "bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:text-gray-900"
+                    className={`flex items-start p-4 rounded-2xl transition-all border text-left shrink-0 w-[280px] sm:w-[340px] ${
+                      isActive
+                        ? "bg-white border-slate-900 shadow-sm ring-1 ring-slate-900/5"
+                        : "bg-slate-50/80 border-slate-200/80 hover:bg-white hover:border-slate-300 hover:shadow-sm"
                     }`}
                   >
-                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                      sub.status === "SUBMITTED"
-                        ? activeSubIdx === idx ? "bg-white" : "bg-green-500"
-                        : activeSubIdx === idx ? "bg-white/60" : "bg-gray-300"
+                    {/* Status Dot aligned with text */}
+                    <div className={`mt-1.5 w-2 h-2 rounded-full shrink-0 mr-3 ${
+                      isSubmitted ? "bg-emerald-500" : "bg-amber-500"
                     }`} />
-                    {sub.subtaskTitle}
-                  </button>
-                ))}
-              </div>
-
-              {/* Body */}
-              <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 p-5 space-y-4">
-                {activeSub && (
-                  <>
-                    <div className="flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${activeSub.status === "SUBMITTED" ? "bg-green-500" : "bg-gray-300"}`} />
-                      <span className="text-sm font-semibold text-gray-800 truncate">{activeSub.subtaskTitle}</span>
-                      <span className="ml-auto flex-shrink-0 text-xs px-2.5 py-1 bg-gray-50 border border-gray-200 text-gray-500 rounded-full">
-                        {activeSub.status}
+                    
+                    {/* Title and Badge Column */}
+                    <div className="flex flex-col gap-3 flex-1 min-w-0">
+                      <span className={`text-sm leading-snug ${isActive ? "text-slate-900 font-semibold" : "text-slate-600 font-medium"}`}>
+                        {sub.subtaskTitle}
                       </span>
-                    </div>
-
-                    {activeSub.deltaDescription && (
-                      <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
-                        <p className="text-xs font-bold text-blue-700 uppercase tracking-wide mb-1">What changed from the parent solution </p>
-                        <p className="text-sm text-blue-900 italic leading-relaxed break-words">{activeSub.deltaDescription}</p>
+                      
+                      <div className="flex">
+                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md shrink-0 ${
+                          isActive
+                            ? isSubmitted 
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-100" 
+                              : "bg-amber-50 text-amber-700 border border-amber-100"
+                            : "bg-slate-100 text-slate-500 border border-slate-200"
+                        }`}>
+                          {sub.status}
+                        </span>
                       </div>
-                    )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
-                    {predecessorSub ? (
-                      <>
-                        <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-lg w-fit">
-                          <button
-                            onClick={() => setViewPanel("current")}
-                            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                              viewPanel === "current"
-                                ? "bg-white text-gray-900 shadow-sm border border-gray-200"
-                                : "text-gray-500 hover:text-gray-800"
-                            }`}
-                          >
-                            ⏭ Current Solution
-                          </button>
-                          <button
-                            onClick={() => setViewPanel("previous")}
-                            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                              viewPanel === "previous"
-                                ? "bg-white text-gray-900 shadow-sm border border-gray-200"
-                                : "text-gray-500 hover:text-gray-800"
-                            }`}
-                          >
-                            ⏮ Previous ({node.parentSolverName})
-                          </button>
-                        </div>
+          {/* Body Content */}
+          <div className="p-6 overflow-y-auto flex-1 bg-white">
+            {!activeSub ? (
+              <div className="py-12 text-center text-slate-400 text-sm">
+                No subtask selected.
+              </div>
+            ) : isConfidential ? (
+              /* Confidential Lock Card */
+              <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50/60 p-10 flex flex-col items-center text-center mt-2">
+                <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-400 mb-4">
+                  <Lock className="w-6 h-6" />
+                </div>
+                <h3 className="text-base font-semibold text-slate-900">
+                  Workspace in Draft Mode
+                </h3>
+                <p className="text-sm text-slate-500 max-w-sm mt-2 leading-relaxed">
+                  The solver is currently drafting their solution. The narrative and project attachments will become visible once the solver finalizes and locks this module.
+                </p>
+                <div className="mt-5 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-200/50 text-slate-600 text-xs font-medium">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                  Protected by privacy policy
+                </div>
+              </div>
+            ) : (
+              /* Submitted Content */
+              <div className="space-y-5">
+                
+                {/* Differential Highlight */}
+                {activeSub.deltaDescription && (
+                  <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-5">
+                    <p className="text-[11px] font-bold text-blue-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      <GitFork className="w-3.5 h-3.5" /> What changed from original solution
+                    </p>
+                    <p className="text-sm text-blue-900/90 leading-relaxed break-words">
+                      {activeSub.deltaDescription}
+                    </p>
+                  </div>
+                )}
 
-                        {viewPanel === "current" && (
-                          <div className="bg-green-50/40 border border-green-100 rounded-xl p-4">
-                            <p className="text-xs font-bold text-green-700 uppercase tracking-wide mb-2">
-                              {node.solverFirstName}'s Solution
-                            </p>
-                            <p className="text-sm text-gray-800 whitespace-pre-wrap break-words leading-relaxed">
-                              {activeSub.description || "No description provided."}
-                            </p>
-                            {activeSub.fileUrls && activeSub.fileUrls.length > 0 && (
-                              <div className="mt-3 pt-3 border-t border-green-100 space-y-1.5">
-                                <p className="text-xs font-bold text-green-700 uppercase">Files</p>
-                                {activeSub.fileUrls.map((url, idx) => (
-                                  <a key={idx} href={url} target="_blank" rel="noopener noreferrer"
-                                    className="flex items-center gap-1.5 text-xs text-green-700 hover:underline min-w-0">
-                                    📎 <span className="truncate">Modified File {idx + 1}</span>
-                                  </a>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        )}
+                {/* Predecessor Toggle (Sleek Segmented Control) */}
+                {predecessorSub && (
+                  <div className="flex items-center p-1 bg-slate-100/80 rounded-xl w-fit">
+                    <button
+                      onClick={() => setViewPanel("current")}
+                      className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 ${
+                        viewPanel === "current"
+                          ? "bg-white text-slate-900 shadow-sm border border-slate-200/60"
+                          : "text-slate-500 hover:text-slate-800"
+                      }`}
+                    >
+                      Current Solution
+                    </button>
+                    <button
+                      onClick={() => setViewPanel("previous")}
+                      className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 ${
+                        viewPanel === "previous"
+                          ? "bg-white text-slate-900 shadow-sm border border-slate-200/60"
+                          : "text-slate-500 hover:text-slate-800"
+                      }`}
+                    >
+                      <History className="w-3.5 h-3.5" />
+                      Original ({node.parentSolverName})
+                    </button>
+                  </div>
+                )}
 
-                        {viewPanel === "previous" && (
-                          <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-                            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
-                              {node.parentSolverName}'s Original
-                            </p>
-                            <p className="text-sm text-gray-600 whitespace-pre-wrap break-words leading-relaxed">
-                              {predecessorSub.description || "No description provided."}
-                            </p>
-                            {predecessorSub.fileUrls && predecessorSub.fileUrls.length > 0 && (
-                              <div className="mt-3 pt-3 border-t border-gray-200 space-y-1.5">
-                                <p className="text-xs font-bold text-gray-400 uppercase">Files</p>
-                                {predecessorSub.fileUrls.map((url, idx) => (
-                                  <a key={idx} href={url} target="_blank" rel="noopener noreferrer"
-                                    className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-blue-500 min-w-0">
-                                    📎 <span className="truncate">Original File {idx + 1}</span>
-                                  </a>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-                        <p className="text-sm text-gray-800 whitespace-pre-wrap break-words leading-relaxed">
-                          {activeSub.description || "No description provided."}
-                        </p>
-                        {activeSub.fileUrls && activeSub.fileUrls.length > 0 && (
-                          <div className="mt-3 pt-3 border-t border-gray-200 flex flex-wrap gap-2">
+                {/* Content Viewer (Animated transition between current and previous) */}
+                <div key={viewPanel} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  {viewPanel === "current" ? (
+                    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">
+                        {predecessorSub ? `${node.solverFirstName}'s Modified Narrative` : "Submitted Narrative"}
+                      </p>
+                      <p className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">
+                        {activeSub.description || "No narrative provided."}
+                      </p>
+
+                      {activeSub.fileUrls && activeSub.fileUrls.length > 0 && (
+                        <div className="mt-6 pt-5 border-t border-slate-100 space-y-3">
+                          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                            Attachments
+                          </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             {activeSub.fileUrls.map((url, idx) => (
-                              <a key={idx} href={url} target="_blank" rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-xs bg-white border border-gray-200 px-2.5 py-1.5 rounded-lg text-gray-600 hover:text-blue-500 hover:border-blue-200 transition-colors">
-                                📎 File {idx + 1}
+                              <a
+                                key={idx}
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 hover:border-slate-300 hover:bg-white hover:shadow-sm transition-all group"
+                              >
+                                <div className="p-1.5 bg-white rounded-lg border border-slate-100 group-hover:text-blue-600 transition-colors">
+                                  <FileText className="w-4 h-4" />
+                                </div>
+                                <span className="truncate flex-1">Document {idx + 1}</span>
                               </a>
                             ))}
                           </div>
-                        )}
-                      </div>
-                    )}
-                  </>
-                )}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-6">
+                      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">
+                        {node.parentSolverName}'s Original Narrative
+                      </p>
+                      <p className="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed opacity-90">
+                        {predecessorSub?.description || "No narrative provided."}
+                      </p>
+
+                      {predecessorSub?.fileUrls && predecessorSub.fileUrls.length > 0 && (
+                        <div className="mt-6 pt-5 border-t border-slate-200/60 space-y-3">
+                          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                            Original Attachments
+                          </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {predecessorSub.fileUrls.map((url, idx) => (
+                              <a
+                                key={idx}
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-800 transition-all"
+                              >
+                                <div className="p-1.5 bg-slate-50 rounded-lg border border-slate-100">
+                                  <FileText className="w-4 h-4" />
+                                </div>
+                                <span className="truncate flex-1">Original Document {idx + 1}</span>
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
               </div>
-            </>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </Portal>

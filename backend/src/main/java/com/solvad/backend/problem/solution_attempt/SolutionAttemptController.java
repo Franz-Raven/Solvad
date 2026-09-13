@@ -172,31 +172,28 @@ public class SolutionAttemptController {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // ALL ATTEMPTS — Seeker views attempt tree for their problem
-    // GET /api/problems/{problemId}/attempts
-    // -------------------------------------------------------------------------
     @GetMapping("/api/problems/{problemId}/attempts")
     @PreAuthorize("hasAnyRole('SEEKER', 'SOLVER', 'ADMIN')")
-    public ResponseEntity<?> getAllAttempts(@PathVariable UUID problemId) {
+    public ResponseEntity<?> getAllAttempts(
+            @RequestHeader("Authorization") String authHeader, // 👈 Add this line
+            @PathVariable UUID problemId) {
         try {
-            // We no longer need to extract the seekerUserId here
-            List<SolutionAttemptResponse> responses = attemptService.getAllAttemptsForProblem(problemId);
+            UUID currentUserId = extractUserId(authHeader); // 👈 Add this line
+            List<SolutionAttemptResponse> responses = attemptService.getAllAttemptsForProblem(problemId, currentUserId);
             return ResponseEntity.ok(responses);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
-    // -------------------------------------------------------------------------
-    // ATTEMPT DETAIL — Anyone with access views aaa single attempt's full details
-    // GET /api/attempts/{attemptId}
-    // -------------------------------------------------------------------------
     @GetMapping("/api/attempts/{attemptId}")
     @PreAuthorize("hasAnyRole('SOLVER', 'SEEKER', 'ADMIN')")
-    public ResponseEntity<?> getAttemptById(@PathVariable UUID attemptId) {
+    public ResponseEntity<?> getAttemptById(
+            @RequestHeader("Authorization") String authHeader, // 👈 Add this line
+            @PathVariable UUID attemptId) {
         try {
-            SolutionAttemptResponse response = attemptService.getAttemptById(attemptId);
+            UUID currentUserId = extractUserId(authHeader); // 👈 Add this line
+            SolutionAttemptResponse response = attemptService.getAttemptById(attemptId, currentUserId);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -245,14 +242,15 @@ public class SolutionAttemptController {
         }
     }
 
-    // ADD this new endpoint
     @GetMapping("/api/problems/{problemId}/subtasks/{subtaskId}/attempts")
     @PreAuthorize("hasAnyRole('SEEKER', 'SOLVER', 'ADMIN')")
     public ResponseEntity<?> getAttemptsForSubtask(
+            @RequestHeader("Authorization") String authHeader, // 👈 Add this line
             @PathVariable UUID problemId,
             @PathVariable UUID subtaskId) {
         try {
-            List<SolutionAttemptResponse> responses = attemptService.getAttemptsForSubtask(problemId, subtaskId);
+            UUID currentUserId = extractUserId(authHeader); // 👈 Add this line
+            List<SolutionAttemptResponse> responses = attemptService.getAttemptsForSubtask(problemId, subtaskId, currentUserId);
             return ResponseEntity.ok(responses);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
