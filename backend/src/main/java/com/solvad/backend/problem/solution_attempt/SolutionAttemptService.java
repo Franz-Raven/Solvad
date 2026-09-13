@@ -66,7 +66,7 @@ public class SolutionAttemptService {
     @Autowired
     private ClaimRequestRepository claimRequestRepository;
 
-    
+
     @Transactional
     public SolutionAttemptResponse initializeApprovedAttempt(ClaimRequest request) {
         Problem problem = request.getProblem();
@@ -149,9 +149,6 @@ public class SolutionAttemptService {
         return mapToResponse(targetAttempt, submissions, solverUserId);
     }
 
-    // -------------------------------------------------------------------------
-    // GETTERS & DASHBOARD QUERIES
-    // -------------------------------------------------------------------------
 
     @Transactional(readOnly = true)
     public List<SolutionAttemptResponse> getMyAttempts(UUID solverUserId) {
@@ -161,9 +158,19 @@ public class SolutionAttemptService {
         List<SolutionAttempt> attempts = attemptRepository
                 .findBySolverOrderByClaimedAtDesc(solver);
 
+        if (attempts.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // Batch fetch submissions
+        List<SubtaskSubmission> allSubmissions = submissionRepository.findByAttemptIn(attempts);
+        Map<UUID, List<SubtaskSubmission>> submissionsByAttemptId = allSubmissions.stream()
+                .collect(Collectors.groupingBy(sub -> sub.getAttempt().getId()));
+
         return attempts.stream().map(attempt -> {
-            List<SubtaskSubmission> submissions = submissionRepository.findByAttempt(attempt);
-            return mapToResponse(attempt, submissions, solverUserId);
+            List<SubtaskSubmission> attemptSubmissions = submissionsByAttemptId
+                    .getOrDefault(attempt.getId(), new ArrayList<>());
+            return mapToResponse(attempt, attemptSubmissions, solverUserId);
         }).collect(Collectors.toList());
     }
 
@@ -172,9 +179,19 @@ public class SolutionAttemptService {
         List<SolutionAttempt> attempts = attemptRepository
                 .findByProblemIdAndTargetSubtaskIdOrderByClaimedAtAsc(problemId, subtaskId);
 
+        if (attempts.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // Batch fetch submissions
+        List<SubtaskSubmission> allSubmissions = submissionRepository.findByAttemptIn(attempts);
+        Map<UUID, List<SubtaskSubmission>> submissionsByAttemptId = allSubmissions.stream()
+                .collect(Collectors.groupingBy(sub -> sub.getAttempt().getId()));
+
         return attempts.stream().map(attempt -> {
-            List<SubtaskSubmission> submissions = submissionRepository.findByAttempt(attempt);
-            return mapToResponse(attempt, submissions, currentUserId);
+            List<SubtaskSubmission> attemptSubmissions = submissionsByAttemptId
+                    .getOrDefault(attempt.getId(), new ArrayList<>());
+            return mapToResponse(attempt, attemptSubmissions, currentUserId);
         }).collect(Collectors.toList());
     }
 
@@ -186,9 +203,19 @@ public class SolutionAttemptService {
         List<SolutionAttempt> attempts = attemptRepository
                 .findByProblemOrderByClaimedAtDesc(problem);
 
+        if (attempts.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<SubtaskSubmission> allSubmissions = submissionRepository.findByAttemptIn(attempts);
+
+        Map<UUID, List<SubtaskSubmission>> submissionsByAttemptId = allSubmissions.stream()
+                .collect(Collectors.groupingBy(sub -> sub.getAttempt().getId()));
+
         return attempts.stream().map(attempt -> {
-            List<SubtaskSubmission> submissions = submissionRepository.findByAttempt(attempt);
-            return mapToResponse(attempt, submissions, currentUserId);
+            List<SubtaskSubmission> attemptSubmissions = submissionsByAttemptId
+                    .getOrDefault(attempt.getId(), new ArrayList<>());
+            return mapToResponse(attempt, attemptSubmissions, currentUserId);
         }).collect(Collectors.toList());
     }
 
@@ -227,6 +254,7 @@ public class SolutionAttemptService {
 
         Pageable pageable = PageRequest.of(page, size);
 
+        // ... (Keep your existing PENDING tab if-statement block here) ...
         if ("PENDING".equalsIgnoreCase(tab)) {
             Page<ClaimRequest> claimPage = claimRequestRepository.findBySolverAndStatusOrderByCreatedAtDesc(
                     solver, ClaimRequestStatus.PENDING, pageable);
@@ -267,20 +295,26 @@ public class SolutionAttemptService {
         }
 
         Page<SolutionAttempt> attemptPage = solutionAttemptRepository.findBySolverAndStatusInOrderByClaimedAtDesc(solver, statuses, pageable);
+        List<SolutionAttempt> attempts = attemptPage.getContent();
 
-        List<SolutionAttemptResponse> content = attemptPage.getContent().stream()
-                .map(attempt -> {
-                    List<SubtaskSubmission> submissions = submissionRepository.findByAttempt(attempt);
-                    return mapToResponse(attempt, submissions, solverUserId);
-                })
-                .collect(Collectors.toList());
+        List<SolutionAttemptResponse> content;
+        if (attempts.isEmpty()) {
+            content = Collections.emptyList();
+        } else {
+            // Batch fetch submissions
+            List<SubtaskSubmission> allSubmissions = submissionRepository.findByAttemptIn(attempts);
+            Map<UUID, List<SubtaskSubmission>> submissionsByAttemptId = allSubmissions.stream()
+                    .collect(Collectors.groupingBy(sub -> sub.getAttempt().getId()));
+
+            content = attempts.stream().map(attempt -> {
+                List<SubtaskSubmission> attemptSubmissions = submissionsByAttemptId
+                        .getOrDefault(attempt.getId(), new ArrayList<>());
+                return mapToResponse(attempt, attemptSubmissions, solverUserId);
+            }).collect(Collectors.toList());
+        }
 
         return new PaginatedAttemptsResponse(content, page, attemptPage.getTotalPages(), attemptPage.getTotalElements(), size);
     }
-
-    // -------------------------------------------------------------------------
-    // WORKSPACE MUTATIONS (Actions)
-    // -------------------------------------------------------------------------
 
     @Transactional
     public SubtaskSubmissionResponse deleteFileFromSubmission(UUID solverUserId, UUID submissionId, String fileUrl) {

@@ -12,8 +12,6 @@ import java.util.UUID;
 public interface SubtaskSubmissionRepository extends JpaRepository<SubtaskSubmission, UUID> {
 
     List<SubtaskSubmission> findByAttempt(SolutionAttempt attempt);
-
     Optional<SubtaskSubmission> findByAttemptAndSubtask(SolutionAttempt attempt, ProblemSubtask subtask);
-
-    boolean existsByAttemptAndSubtask(SolutionAttempt attempt, ProblemSubtask subtask);
+    List<SubtaskSubmission> findByAttemptIn(List<SolutionAttempt> attempts);
 }
