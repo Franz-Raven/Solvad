@@ -1,7 +1,7 @@
 import { apiRequest } from "@/lib/api";
 import type {
   ProblemResponse,
-  SeekerNotification,
+  PaginatedNotificationsResponse,
   SeekerProblemListResponse,
   PaginatedProblemsResponse
 } from "@/types/problem";
@@ -33,8 +33,17 @@ export async function getSeekerProblemList(
   );
 }
 
-export async function getSeekerNotifications(): Promise<SeekerNotification[]> {
-  return apiRequest<SeekerNotification[]>("/problems/notifications", {
+export async function getSeekerNotifications(
+  eventType: string = "all",
+  page: number = 0,
+  size: number = 10
+): Promise<PaginatedNotificationsResponse> {
+  const params = new URLSearchParams();
+  if (eventType && eventType !== "all") params.set("eventType", eventType);
+  params.set("page", page.toString());
+  params.set("size", size.toString());
+
+  return apiRequest<PaginatedNotificationsResponse>(`/problems/notifications?${params.toString()}`, {
     method: "GET",
   });
 }

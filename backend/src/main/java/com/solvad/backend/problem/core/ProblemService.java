@@ -16,11 +16,8 @@ import com.solvad.backend.problem.similarity.VectorSimilarityService;
 import com.solvad.backend.problem.subtask.ProblemSubtask;
 import com.solvad.backend.problem.subtask.SubtaskRequest;
 import com.solvad.backend.problem.subtask.SubtaskResponse;
-import com.solvad.backend.profile.seeker.SeekerNotificationResponse;
-import com.solvad.backend.profile.seeker.SeekerProblemListResponse;
-import com.solvad.backend.profile.seeker.SeekerProfile;
+import com.solvad.backend.profile.seeker.*;
 import com.solvad.backend.problem.subtask.ProblemSubtaskRepository;
-import com.solvad.backend.profile.seeker.SeekerProfileRepository;
 import com.solvad.backend.problem.solution_attempt.SolutionAttemptRepository;
 import com.solvad.backend.problem.attachment.ProblemAttachmentRepository;
 import com.solvad.backend.problem.solution_attempt.SolutionAttempt;
@@ -323,20 +320,39 @@ public class ProblemService {
     }
 
     @Transactional(readOnly = true)
-    public List<SeekerNotificationResponse> getSeekerNotifications(UUID seekerUserId) {
+    public PaginatedNotificationsResponse getSeekerNotifications(UUID seekerUserId, String eventType, int page, int size) {
         SeekerProfile seeker = seekerProfileRepository.findByUserId(seekerUserId)
                 .orElseThrow(() -> new RuntimeException("Seeker profile not found"));
 
         List<Problem> problems = problemRepository.findBySeeker(seeker);
         if (problems.isEmpty()) {
-            return List.of();
+            return new PaginatedNotificationsResponse(List.of(), page, 0, 0, size);
         }
 
         List<UUID> problemIds = problems.stream().map(Problem::getId).collect(Collectors.toList());
         Map<UUID, String> titles = problems.stream()
                 .collect(Collectors.toMap(Problem::getId, Problem::getTitle));
 
-        return auditService.getRecentNotificationsForProblems(problemIds, titles);
+        List<SeekerNotificationResponse> allNotifications = auditService.getRecentNotificationsForProblems(problemIds, titles);
+
+        // Apply event type filter server-side
+        if (eventType != null && !eventType.trim().isEmpty() && !eventType.equalsIgnoreCase("all")) {
+            allNotifications = allNotifications.stream()
+                    .filter(n -> eventType.equalsIgnoreCase(n.getEventType()))
+                    .collect(Collectors.toList());
+        }
+
+        long totalElements = allNotifications.size();
+        int totalPages = (int) Math.ceil((double) totalElements / size);
+        int fromIndex = page * size;
+
+        // Extract only the current page
+        List<SeekerNotificationResponse> paginated = allNotifications.stream()
+                .skip(fromIndex)
+                .limit(size)
+                .collect(Collectors.toList());
+
+        return new PaginatedNotificationsResponse(paginated, page, totalPages, totalElements, size);
     }
 
     @Transactional(readOnly = true)

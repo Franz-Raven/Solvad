@@ -141,3 +141,10 @@ export interface SubtaskResponse {
   attachments?: AttachmentRequirement[];
 }
 
+export interface PaginatedNotificationsResponse {
+  notifications: SeekerNotification[];
+  currentPage: number;
+  totalPages: number;
+  totalElements: number;
+  size: number;
+}
