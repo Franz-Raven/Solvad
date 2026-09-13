@@ -6,11 +6,12 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import Portal from "@/components/portal";
 
-import { getProblemById , updateProblemStatus, deleteProblem } from "./api/problem";
+// 🚀 FIX: Imported getAllAttempts to track active solvers
+import { getProblemById, updateProblemStatus, deleteProblem, getAllAttempts } from "./api/problem";
 import type { ProblemResponse } from "@/types/problem";
+import type { SolutionAttemptResponse } from "@/types/attempt";
 
-// 🚀 OPTIMIZATION: Lazy Load all 7 tabs.
-// The browser will only download the JavaScript for the active tab.
+// Lazy Load all 7 tabs
 const ProblemTab = dynamic(() => import("@/app/(authed)/seeker/problem/[id]/components/ProblemTab").then(mod => mod.ProblemTab), {
   loading: () => <div className="p-12 text-center text-gray-500 animate-pulse">Loading Problem Profile...</div>
 });
@@ -27,7 +28,6 @@ const SolutionTreeTab = dynamic(() => import("@/app/(authed)/seeker/problem/[id]
   loading: () => <div className="p-12 text-center text-gray-500 animate-pulse">Loading Solution Tree...</div>
 });
 
-// Note: AIInsightsTab was exported as default in your original code
 const AIInsightsTab = dynamic(() => import("@/app/(authed)/seeker/problem/[id]/components/AIInsightsTab"), {
   loading: () => <div className="p-12 text-center text-gray-500 animate-pulse">Loading AI Insights...</div>
 });
@@ -72,7 +72,9 @@ export default function ProblemDetailPage() {
   const problemId = params.id as string;
 
   const [problem, setProblem] = useState<ProblemResponse | null>(null);
+  const [activeAttemptsCount, setActiveAttemptsCount] = useState(0); // 🚀 FIX: Track active solvers
   const [loading, setLoading] = useState(true);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false); // 🚀 FIX: Loading state for dropdown
   const [error, setError] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<TabType>("problem");
@@ -88,8 +90,13 @@ export default function ProblemDetailPage() {
     try {
       setLoading(true);
       setError(null);
-      const data = await getProblemById(problemId);
+      // 🚀 FIX: Fetch problem and attempts in parallel to accurately count active solvers
+      const [data, attempts] = await Promise.all([
+        getProblemById(problemId),
+        getAllAttempts(problemId).catch(() => []) 
+      ]);
       setProblem(data);
+      setActiveAttemptsCount(attempts.filter((a: SolutionAttemptResponse) => a.status === "ACTIVE").length);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load problem");
     } finally {
@@ -101,7 +108,8 @@ export default function ProblemDetailPage() {
     setShowStatusDropdown(false);
     setPendingStatus(newStatus);
 
-    const solverIsActive = problem?.status === "CLAIMED" || problem?.status === "IN_PROGRESS";
+    // 🚀 FIX: Uses actual database attempt count instead of unreliable problem.status string
+    const solverIsActive = activeAttemptsCount > 0;
     const isClosingAction = newStatus === "COMPLETED" || newStatus === "CLOSED";
 
     if (isClosingAction && solverIsActive) {
@@ -118,13 +126,19 @@ export default function ProblemDetailPage() {
 
   const executeStatusChange = async (status: string) => {
     try {
+      setIsUpdatingStatus(true);
       const updatedProblem = await updateProblemStatus(problemId, status);
       setProblem(updatedProblem);
+
+      // Refresh attempts count to reflect the backend terminations
+      const attempts = await getAllAttempts(problemId).catch(() => []);
+      setActiveAttemptsCount(attempts.filter((a: SolutionAttemptResponse) => a.status === "ACTIVE").length);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to update status");
     } finally {
       setPendingStatus(null);
       setModalMode(null);
+      setIsUpdatingStatus(false);
     }
   };
 
@@ -245,22 +259,23 @@ export default function ProblemDetailPage() {
             </div>
 
             <div className="relative flex-shrink-0">
+              {/* 🚀 FIX: Removed the blocking API call to make opening instant and added loading spinner */}
               <button
-                onClick={async () => {
-                  const fresh = await getProblemById(problemId);
-                  setProblem(fresh);
-                  setShowStatusDropdown(!showStatusDropdown);
-                }}
-                className="px-4 py-2.5 bg-secondary hover:bg-accent text-white rounded-lg font-medium transition-colors flex items-center gap-2 shadow-sm"
+                onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+                disabled={isUpdatingStatus}
+                className="px-4 py-2.5 bg-secondary hover:bg-accent text-white rounded-lg font-medium transition-colors flex items-center gap-2 shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                Change Status
+                {isUpdatingStatus ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : null}
+                {isUpdatingStatus ? "Updating..." : "Change Status"}
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
               </button>
               {showStatusDropdown && (
                 <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-20">
                   {(["OPEN", "SOLVED_OPEN_FOR_IMPROVEMENT", "COMPLETED", "CLOSED"] as const).map((status) => {
                     const isDestructive = status === "COMPLETED" || status === "CLOSED";
-                    const solverIsActive = problem.status === "CLAIMED" || problem.status === "IN_PROGRESS";
+                    const solverIsActive = activeAttemptsCount > 0;
                     const willTerminate = isDestructive && solverIsActive;
                     return (
                       <button
