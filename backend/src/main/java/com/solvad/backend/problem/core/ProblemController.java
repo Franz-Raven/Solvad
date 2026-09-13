@@ -5,6 +5,7 @@ import com.solvad.backend.audit.AuditLogResponse;
 import com.solvad.backend.problem.scope.GenerateScopeRequest;
 import com.solvad.backend.problem.scope.GenerateScopeResponse;
 import com.solvad.backend.problem.search.PaginatedProblemsResponse;
+import com.solvad.backend.problem.subtask.SubtaskResponse;
 import com.solvad.backend.security.JwtService;
 import com.solvad.backend.audit.AuditService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -105,11 +106,17 @@ public class ProblemController {
 
     @GetMapping("/notifications")
     @PreAuthorize("hasRole('SEEKER')")
-    public ResponseEntity<?> getSeekerNotifications(@RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<?> getSeekerNotifications(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam(required = false, defaultValue = "all") String eventType,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
         try {
             String token = authHeader.substring(7);
             UUID seekerUserId = jwtService.extractUserId(token);
-            return ResponseEntity.ok(problemService.getSeekerNotifications(seekerUserId));
+
+            // Note: Make sure to import PaginatedNotificationsResponse at the top of your controller
+            return ResponseEntity.ok(problemService.getSeekerNotifications(seekerUserId, eventType, page, size));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -198,16 +205,17 @@ public class ProblemController {
         }
     }
 
-    @PutMapping("/{problemId}/max-solvers")
+    @PutMapping("/{problemId}/subtasks/{subtaskId}/max-solvers")
     @PreAuthorize("hasRole('SEEKER')")
-    public ResponseEntity<?> updateMaxConcurrentSolvers(
+    public ResponseEntity<?> updateSubtaskMaxSolvers(
             @RequestHeader("Authorization") String authHeader,
             @PathVariable UUID problemId,
+            @PathVariable UUID subtaskId,
             @RequestParam int maxSolvers) {
         try {
             UUID seekerUserId = jwtService.extractUserId(authHeader.substring(7));
-            problemService.updateMaxConcurrentSolvers(seekerUserId, problemId, maxSolvers);
-            return ResponseEntity.ok("Limit updated successfully");
+            SubtaskResponse updatedSubtask = problemService.updateSubtaskMaxSolvers(seekerUserId, problemId, subtaskId, maxSolvers);
+            return ResponseEntity.ok(updatedSubtask);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }

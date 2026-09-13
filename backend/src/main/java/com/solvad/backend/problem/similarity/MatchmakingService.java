@@ -190,7 +190,15 @@ public class MatchmakingService {
 
     private ProblemResponse mapProblem(Problem problem, List<ProblemSubtask> subtasks, Set<String> tagSet) {
         List<SubtaskResponse> subtaskResponses = subtasks.stream()
-                .map(s -> new SubtaskResponse(s.getId(), s.getTitle(), s.getDepartmentFocus(), s.getSdgFocus(), s.getDescription()))
+                .map(s -> new SubtaskResponse(
+                        s.getId(),
+                        s.getTitle(),
+                        s.getDepartmentFocus(),
+                        s.getSdgFocus(),
+                        s.getDescription(),
+                        new ArrayList<>(),
+                        s.getMaxConcurrentSolvers()
+                ))
                 .collect(Collectors.toList());
 
         List<String> tags = new ArrayList<>(tagSet);

@@ -16,11 +16,8 @@ import com.solvad.backend.problem.similarity.VectorSimilarityService;
 import com.solvad.backend.problem.subtask.ProblemSubtask;
 import com.solvad.backend.problem.subtask.SubtaskRequest;
 import com.solvad.backend.problem.subtask.SubtaskResponse;
-import com.solvad.backend.profile.seeker.SeekerNotificationResponse;
-import com.solvad.backend.profile.seeker.SeekerProblemListResponse;
-import com.solvad.backend.profile.seeker.SeekerProfile;
+import com.solvad.backend.profile.seeker.*;
 import com.solvad.backend.problem.subtask.ProblemSubtaskRepository;
-import com.solvad.backend.profile.seeker.SeekerProfileRepository;
 import com.solvad.backend.problem.solution_attempt.SolutionAttemptRepository;
 import com.solvad.backend.problem.attachment.ProblemAttachmentRepository;
 import com.solvad.backend.problem.solution_attempt.SolutionAttempt;
@@ -294,7 +291,8 @@ public class ProblemService {
                             subtask.getDepartmentFocus(),
                             subtask.getSdgFocus(),
                             subtask.getDescription(),
-                            attachmentResponses // <-- Now attached to the payload
+                            attachmentResponses,
+                            subtask.getMaxConcurrentSolvers()
                     );
                 })
                 .collect(Collectors.toList());
@@ -322,20 +320,39 @@ public class ProblemService {
     }
 
     @Transactional(readOnly = true)
-    public List<SeekerNotificationResponse> getSeekerNotifications(UUID seekerUserId) {
+    public PaginatedNotificationsResponse getSeekerNotifications(UUID seekerUserId, String eventType, int page, int size) {
         SeekerProfile seeker = seekerProfileRepository.findByUserId(seekerUserId)
                 .orElseThrow(() -> new RuntimeException("Seeker profile not found"));
 
         List<Problem> problems = problemRepository.findBySeeker(seeker);
         if (problems.isEmpty()) {
-            return List.of();
+            return new PaginatedNotificationsResponse(List.of(), page, 0, 0, size);
         }
 
         List<UUID> problemIds = problems.stream().map(Problem::getId).collect(Collectors.toList());
         Map<UUID, String> titles = problems.stream()
                 .collect(Collectors.toMap(Problem::getId, Problem::getTitle));
 
-        return auditService.getRecentNotificationsForProblems(problemIds, titles);
+        List<SeekerNotificationResponse> allNotifications = auditService.getRecentNotificationsForProblems(problemIds, titles);
+
+        // Apply event type filter server-side
+        if (eventType != null && !eventType.trim().isEmpty() && !eventType.equalsIgnoreCase("all")) {
+            allNotifications = allNotifications.stream()
+                    .filter(n -> eventType.equalsIgnoreCase(n.getEventType()))
+                    .collect(Collectors.toList());
+        }
+
+        long totalElements = allNotifications.size();
+        int totalPages = (int) Math.ceil((double) totalElements / size);
+        int fromIndex = page * size;
+
+        // Extract only the current page
+        List<SeekerNotificationResponse> paginated = allNotifications.stream()
+                .skip(fromIndex)
+                .limit(size)
+                .collect(Collectors.toList());
+
+        return new PaginatedNotificationsResponse(paginated, page, totalPages, totalElements, size);
     }
 
     @Transactional(readOnly = true)
@@ -461,7 +478,7 @@ public class ProblemService {
     }
 
     @Transactional
-    public void updateMaxConcurrentSolvers(UUID seekerUserId, UUID problemId, int maxSolvers) {
+    public SubtaskResponse updateSubtaskMaxSolvers(UUID seekerUserId, UUID problemId, UUID subtaskId, int maxSolvers) {
         Problem problem = problemRepository.findById(problemId)
                 .orElseThrow(() -> new RuntimeException("Problem not found"));
 
@@ -472,18 +489,44 @@ public class ProblemService {
             throw new RuntimeException("You do not own this problem.");
         }
 
-        if (maxSolvers < 1) {
-            throw new RuntimeException("Max solvers must be at least 1.");
+        ProblemSubtask subtask = subtaskRepository.findById(subtaskId)
+                .orElseThrow(() -> new RuntimeException("Sub-problem not found"));
+
+        if (!subtask.getProblem().getId().equals(problem.getId())) {
+            throw new RuntimeException("Sub-problem does not belong to this problem.");
         }
 
-        problem.setMaxConcurrentSolvers(maxSolvers);
-        problemRepository.save(problem);
+        if (maxSolvers < 1) {
+            throw new RuntimeException("Capacity must be at least 1.");
+        }
 
-        // Optional: Log it to the Audit service
+        // 🚀 BACKEND GUARDRAIL: Check active solvers on THIS specific subtask
+        long activeCount = attemptRepository.countByProblemAndTargetSubtaskAndStatus(
+                problem, subtask, SolutionAttemptStatus.ACTIVE);
+
+        if (maxSolvers < activeCount) {
+            throw new RuntimeException("Action denied. This sub-problem already has "
+                    + activeCount + " active solvers. You cannot lower the capacity below this number.");
+        }
+
+        subtask.setMaxConcurrentSolvers(maxSolvers);
+        ProblemSubtask savedSubtask = subtaskRepository.save(subtask);
+
         auditService.log(
                 problemId, seekerUserId, seeker.getOrganizationName(), "SEEKER",
                 AuditEventType.PROBLEM_UPDATED,
-                "Updated concurrent solver limit to " + maxSolvers
+                "Updated capacity limit for sub-problem '" + subtask.getTitle() + "' to " + maxSolvers
+        );
+
+        // Fetch attachments to return a complete SubtaskResponse
+        List<AttachmentRequirementResponse> attachmentResponses = attachmentRepository.findBySubtask(savedSubtask)
+                .stream()
+                .map(att -> new AttachmentRequirementResponse(att.getId(), att.getAttachmentTitle(), att.getAttachmentType()))
+                .collect(Collectors.toList());
+
+        return new SubtaskResponse(
+                savedSubtask.getId(), savedSubtask.getTitle(), savedSubtask.getDepartmentFocus(),
+                savedSubtask.getSdgFocus(), savedSubtask.getDescription(), attachmentResponses, savedSubtask.getMaxConcurrentSolvers()
         );
     }
 

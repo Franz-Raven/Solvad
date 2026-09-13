@@ -3,8 +3,7 @@
 import { Suspense, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { getMyProblems } from "./api/dashboard";
-import { getSeekerNotifications } from "./api/dashboard";
-import type { ProblemResponse, SeekerNotification } from "@/types/problem";
+import type { ProblemResponse } from "@/types/problem";
 import { SeekerOverview } from "./components/SeekerOverview";
 import { SeekerRecentActivity } from "./components/SeekerRecentActivity";
 import { SeekerPostedProblems } from "./components/SeekerPostedProblems";
@@ -22,19 +21,14 @@ function SeekerDashboardContent() {
   const activeTab = searchParams.get("tab") || "home";
 
   const [problems, setProblems] = useState<ProblemResponse[]>([]);
-  const [notifications, setNotifications] = useState<SeekerNotification[]>([]);
-  const [totalProblems, setTotalProblems] = useState(0);
-  const [isFetchingNotifications, setIsFetchingNotifications] = useState(true);
+  const [, setTotalProblems] = useState(0);
 
   useEffect(() => {
-    setIsFetchingNotifications(true);
-
-    Promise.all([
-      getMyProblems().then(setProblems).catch(() => {}),
-      getSeekerNotifications().then(setNotifications).catch(() => []),
-    ]).finally(() => {
-      setIsFetchingNotifications(false);
-    });
+    // 🚀 FIX: We only fetch the problems here now. 
+    // SeekerRecentActivity autonomously manages its own paginated notifications.
+    getMyProblems()
+      .then(setProblems)
+      .catch((err) => console.error("Failed to load problems:", err));
   }, []);
 
   return (
@@ -49,10 +43,8 @@ function SeekerDashboardContent() {
         )}
 
         {activeTab === "activity" && (
-          <SeekerRecentActivity
-            notifications={notifications}
-            isLoading={isFetchingNotifications}
-          />
+          // 🚀 FIX: Removed the conflicting props. The component fetches its own data now.
+          <SeekerRecentActivity />
         )}
       </div>
     </div>

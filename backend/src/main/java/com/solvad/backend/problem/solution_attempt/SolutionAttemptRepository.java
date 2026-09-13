@@ -18,18 +18,6 @@ import java.util.UUID;
 @Repository
 public interface SolutionAttemptRepository extends JpaRepository<SolutionAttempt, UUID> {
 
-    boolean existsByProblemAndStatus(Problem problem, SolutionAttemptStatus status);
-
-    // Single active attempt — used by getMyAttempt
-    Optional<SolutionAttempt> findFirstByProblemAndSolverAndStatusOrderByClaimedAtDesc(
-            Problem problem, SolverProfile solver, SolutionAttemptStatus status);
-
-    // List of active attempts — used by getMyActiveAttemptsForProblem
-    List<SolutionAttempt> findByProblemAndSolverAndStatus(
-            Problem problem, SolverProfile solver, SolutionAttemptStatus status);
-
-    boolean existsByProblemAndSolverAndStatus(
-            Problem problem, SolverProfile solver, SolutionAttemptStatus status);
 
     List<SolutionAttempt> findByProblemOrderByClaimedAtDesc(Problem problem);
 
@@ -56,6 +44,8 @@ public interface SolutionAttemptRepository extends JpaRepository<SolutionAttempt
             List<SolutionAttemptStatus> statuses,
             Pageable pageable
     );
+
+    long countByProblemAndTargetSubtaskAndStatus(Problem problem, ProblemSubtask targetSubtask, SolutionAttemptStatus status);
 
 
 }

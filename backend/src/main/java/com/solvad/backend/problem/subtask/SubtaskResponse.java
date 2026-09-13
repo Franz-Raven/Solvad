@@ -12,26 +12,28 @@ public class SubtaskResponse {
     private String sdgFocus;
     private String description;
     private List<AttachmentRequirementResponse> attachments;
+    private Integer maxConcurrentSolvers;
 
     public SubtaskResponse() {
     }
 
-    public SubtaskResponse(UUID id, String title, String departmentFocus, String sdgFocus, String description) {
-        this.id = id;
-        this.title = title;
-        this.departmentFocus = departmentFocus;
-        this.sdgFocus = sdgFocus;
-        this.description = description;
-        this.attachments = null;
+    // Backward-compatible constructor defaulting to 3
+    public SubtaskResponse(UUID id, String title, String departmentFocus, String sdgFocus,
+                           String description, List<AttachmentRequirementResponse> attachments) {
+        this(id, title, departmentFocus, sdgFocus, description, attachments, 3);
     }
 
-    public SubtaskResponse(UUID id, String title, String departmentFocus, String sdgFocus, String description, List<AttachmentRequirementResponse> attachments) {
+    // Full constructor including maxConcurrentSolvers
+    public SubtaskResponse(UUID id, String title, String departmentFocus, String sdgFocus,
+                           String description, List<AttachmentRequirementResponse> attachments,
+                           Integer maxConcurrentSolvers) {
         this.id = id;
         this.title = title;
         this.departmentFocus = departmentFocus;
         this.sdgFocus = sdgFocus;
         this.description = description;
         this.attachments = attachments;
+        this.maxConcurrentSolvers = maxConcurrentSolvers != null ? maxConcurrentSolvers : 3;
     }
 
     public UUID getId() {
@@ -80,5 +82,13 @@ public class SubtaskResponse {
 
     public void setAttachments(List<AttachmentRequirementResponse> attachments) {
         this.attachments = attachments;
+    }
+
+    public Integer getMaxConcurrentSolvers() {
+        return maxConcurrentSolvers;
+    }
+
+    public void setMaxConcurrentSolvers(Integer maxConcurrentSolvers) {
+        this.maxConcurrentSolvers = maxConcurrentSolvers != null ? maxConcurrentSolvers : 3;
     }
 }

@@ -13,6 +13,9 @@ public class ProblemSubtask {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Column(nullable = false)
+    private Integer maxConcurrentSolvers = 3;
+
     @ManyToOne
     @JoinColumn(name = "problem_id", nullable = false)
     private Problem problem;
@@ -87,4 +90,14 @@ public class ProblemSubtask {
     public void setTitle(String title) {
         this.title = title;
     }
+
+
+    public Integer getMaxConcurrentSolvers() {
+        return maxConcurrentSolvers;
+    }
+
+    public void setMaxConcurrentSolvers(Integer maxConcurrentSolvers) {
+        this.maxConcurrentSolvers = maxConcurrentSolvers;
+    }
+
 }

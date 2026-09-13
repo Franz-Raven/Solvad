@@ -46,24 +46,17 @@ export async function markAsSolved(
   });
 }
 
-export async function updateProblemMaxSolvers(
-  problemId: string, 
-  maxSolvers: number
-): Promise<void> {
-  const token = localStorage.getItem("token"); 
-
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/api/problems/${problemId}/max-solvers?maxSolvers=${maxSolvers}`, {
+export async function updateSubtaskMaxSolvers(problemId: string, subtaskId: string, maxSolvers: number) {
+  const token = localStorage.getItem("token");
+  const res = await fetch(`http://localhost:8080/api/problems/${problemId}/subtasks/${subtaskId}/max-solvers?maxSolvers=${maxSolvers}`, {
     method: "PUT",
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
+    headers: { Authorization: `Bearer ${token}` },
   });
-
-  if (!response.ok) {
-    const errorMessage = await response.text();
-    throw new Error(errorMessage || "Failed to update maximum concurrent solvers");
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(errorText || "Failed to update limit");
   }
+  return res.json();
 }
 
 export async function updateProblemStatus(
