@@ -9,7 +9,7 @@ import type { PaginatedNotificationsResponse } from "@/types/problem";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 5;
 
 // Hardcoded available event types since pagination prevents dynamic extraction
 const EVENT_TYPES = [
