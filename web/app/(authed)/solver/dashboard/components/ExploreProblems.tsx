@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Search, ChevronRight, Hash, Calendar, Building2, GraduationCap } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -38,23 +38,34 @@ export function ExploreProblems() {
     setExplorePage(0);
   }, [debouncedSearch]);
 
-  const loadPaginatedData = useCallback(async () => {
-    try {
-      setLoading(true);
-      const paginatedData = await getDiscoverableProblems(explorePage, EXPLORE_PAGE_SIZE);
-      setPaginatedProblems(paginatedData.problems);
-      setTotalPages(paginatedData.totalPages);
-      setTotalElements(paginatedData.totalElements);
-    } catch (err) {
-      console.error("Failed to load paginated problems", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [explorePage, debouncedSearch]);
-
   useEffect(() => {
+    // 🚀 FIX: Prevent race conditions if the user clicks pagination quickly
+    let isMounted = true;
+
+    const loadPaginatedData = async () => {
+      try {
+        setLoading(true);
+        // Note: If you eventually add search parsing to this API, pass debouncedSearch here
+        const paginatedData = await getDiscoverableProblems(explorePage, EXPLORE_PAGE_SIZE);
+        
+        if (isMounted) {
+          setPaginatedProblems(paginatedData.problems);
+          setTotalPages(paginatedData.totalPages);
+          setTotalElements(paginatedData.totalElements);
+        }
+      } catch (err) {
+        if (isMounted) console.error("Failed to load paginated problems", err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
     loadPaginatedData();
-  }, [loadPaginatedData]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [explorePage, debouncedSearch]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -84,14 +95,15 @@ export function ExploreProblems() {
         Problems matching your course are listed first.
       </p>
 
-      {loading ? (
+      {/* 🚀 FIX: Smooth Loading State Logic */}
+      {loading && paginatedProblems.length === 0 ? (
         <div className="flex justify-center py-12">
           <div className="w-10 h-10 border-4 border-accent border-t-transparent rounded-full animate-spin" />
         </div>
       ) : paginatedProblems.length === 0 ? (
         <p className="text-gray-500 text-center py-8">No problems match your criteria.</p>
       ) : (
-        <>
+        <div className={`transition-opacity duration-200 ${loading ? "opacity-50 pointer-events-none" : "opacity-100"}`}>
           <p className="text-xs text-gray-500 mb-4 font-medium">
             Showing {exploreRangeStart}–{exploreRangeEnd} of {totalElements} problem{totalElements === 1 ? "" : "s"}
           </p>
@@ -105,7 +117,6 @@ export function ExploreProblems() {
                 
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                    {/* 🚀 FIX: Removed 'truncate' from here */}
                     <h4 className="font-semibold text-gray-900 text-base group-hover:text-accent transition-colors">
                       {problem.title}
                     </h4>
@@ -181,7 +192,7 @@ export function ExploreProblems() {
               </Pagination>
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );

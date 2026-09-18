@@ -1,192 +1,215 @@
-import { apiRequest } from "../api";
-import type {
-  DiscoveryDashboardResponse,
-  GenerateScopeRequest,
-  GenerateScopeResponse,
-  ProblemRequest,
-  ProblemResponse,
-  SeekerNotification,
-  PaginatedProblemsResponse,
-  SeekerProblemListResponse,
-} from "@/types/problem";
-import type { ClaimRequestResponse } from "@/types/attempt";
+"use client";
 
-export async function generateScope(
-  data: GenerateScopeRequest
-): Promise<GenerateScopeResponse> {
-  console.log("=== GENERATE SCOPE REQUEST ===");
-  console.log("Request Data:", data);
-  console.log("Attachments count:", data.attachments?.length || 0);
-  
-  const formData = new FormData();
-  
-  // Add the JSON data as a string
-  const { attachments, ...requestData } = data;
-  formData.append('data', JSON.stringify(requestData));
-  
-  // Add file attachments if present
-  if (attachments && attachments.length > 0) {
-    attachments.forEach((file) => {
-      console.log(`Attaching file: ${file.name} (${file.type}, ${file.size} bytes)`);
-      formData.append('attachments', file);
-    });
-  }
-  
-  // Use FormData instead of JSON
-  const response = await apiRequest<GenerateScopeResponse>("/problems/generate-scope", {
-    method: "POST",
-    body: formData,
-    // Don't set Content-Type header - FormData will set it with boundary
-  });
-  
-  console.log("=== GENERATE SCOPE RESPONSE ===");
-  console.log("Generated Subtasks:", response.generatedSubtasks);
-  console.log("Subtasks count:", response.generatedSubtasks?.length || 0);
-  
-  return response;
-}
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { 
+  Rocket, CheckCircle2, Hourglass, Inbox, Calendar, GitBranch, ArrowRight, Eye 
+} from "lucide-react";
+import { getWorkspaceAttempts } from "../api/dashboard";
+import { PaginatedAttemptsResponse } from "@/types/attempt";
 
-export async function createProblem(
-  data: ProblemRequest
-): Promise<ProblemResponse> {
-  return apiRequest<ProblemResponse>("/problems", {
-    method: "POST",
-    body: JSON.stringify(data),
-  });
-}
+import {
+  Pagination, PaginationContent, PaginationEllipsis, PaginationItem,
+  PaginationLink, PaginationNext, PaginationPrevious,
+} from "@/components/ui/pagination";
 
-export async function getMyProblems(): Promise<ProblemResponse[]> {
-  return apiRequest<ProblemResponse[]>("/problems/my-problems", { method: "GET" });
-}
+type WorkspaceTab = "ACTIVE" | "PENDING" | "HISTORY";
+const ITEMS_PER_PAGE = 5;
 
-export async function searchMyProblems(
-  query?: string,
-  sdgFilter?: string,
-  dateSort?: string,
-  page: number = 0,
-  size: number = 20
-): Promise<PaginatedProblemsResponse> {
-  const params = new URLSearchParams();
-  if (query) params.set("query", query);
-  if (sdgFilter) params.set("sdgFilter", sdgFilter);
-  if (dateSort) params.set("dateSort", dateSort);
-  params.set("page", page.toString());
-  params.set("size", size.toString());
+export function MyWorkspace() {
+  const [paginatedData, setPaginatedData] = useState<PaginatedAttemptsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
-  return apiRequest<PaginatedProblemsResponse>(
-    `/problems/my-problems/search?${params.toString()}`,
-    { method: "GET" }
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>("ACTIVE");
+  const [currentPage, setCurrentPage] = useState(0);
+
+  useEffect(() => {
+    // 🚀 FIX: Flag to prevent race conditions when switching tabs fast
+    let isMounted = true;
+
+    const loadAttempts = async () => {
+      try {
+        setLoading(true);
+        const data = await getWorkspaceAttempts(activeTab, currentPage, ITEMS_PER_PAGE);
+        
+        // Only update state if the user hasn't switched tabs while waiting
+        if (isMounted) {
+          setPaginatedData(data);
+          setError(null);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(err instanceof Error ? err.message : "Failed to load workspace");
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadAttempts();
+
+    // 🚀 FIX: Cleanup function kills the stale request state if dependencies change
+    return () => {
+      isMounted = false;
+    };
+  }, [activeTab, currentPage]);
+
+  const handleTabChange = (tab: WorkspaceTab) => {
+    if (activeTab === tab) return; // Ignore clicks on the active tab
+    setActiveTab(tab);
+    setCurrentPage(0);
+    setPaginatedData(null); // Optional: instantly clear old data for snappier UI feel
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  };
+
+  const displayedAttempts = paginatedData?.attempts || [];
+  const totalElements = paginatedData?.totalElements || 0;
+  const totalPages = paginatedData?.totalPages || 0;
+  
+  const rangeStart = totalElements === 0 ? 0 : (currentPage * ITEMS_PER_PAGE) + 1;
+  const rangeEnd = Math.min((currentPage + 1) * ITEMS_PER_PAGE, totalElements);
+
+  return (
+    <div className="max-w-5xl mx-auto w-full animate-in fade-in duration-300">
+      <div className="mb-8">
+        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">My Workspace</h1>
+        <p className="text-gray-600">Manage your active solutions, pending reviews, and past work.</p>
+
+        {error && <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm mt-6">{error}</div>}
+
+        {/* Custom Tab Navigation */}
+        <div className="flex space-x-1 bg-gray-100 p-1 rounded-xl mb-8 mt-8 w-fit">
+          {(["ACTIVE", "PENDING", "HISTORY"] as WorkspaceTab[]).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => handleTabChange(tab)}
+              className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all capitalize ${
+                activeTab === tab ? "bg-white text-secondary shadow-sm" : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"
+              }`}
+            >
+              {tab.toLowerCase()}
+            </button>
+          ))}
+        </div>
+
+        {loading && displayedAttempts.length === 0 ? (
+          <div className="flex justify-center py-20">
+            <div className="w-10 h-10 border-4 border-accent border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : displayedAttempts.length === 0 ? (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-16 text-center animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400">
+              <Inbox className="w-8 h-8" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">No {activeTab.toLowerCase()} attempts</h3>
+            <p className="text-gray-500 mb-6">
+              {activeTab === "ACTIVE" && "You don't have any active problems right now. Go find one!"}
+              {activeTab === "PENDING" && "You have no proposals waiting for approval."}
+              {activeTab === "HISTORY" && "You haven't completed or abandoned any problems yet."}
+            </p>
+            {activeTab === "ACTIVE" && (
+              <Link href="/solver/dashboard" className="px-6 py-2.5 bg-secondary hover:bg-accent text-white font-medium rounded-lg inline-block transition-colors">
+                Browse Open Problems
+              </Link>
+            )}
+          </div>
+        ) : (
+          <div className={`transition-opacity duration-200 ${loading ? "opacity-50 pointer-events-none" : "opacity-100"}`}>
+            <p className="text-xs text-gray-500 mb-4 font-medium">
+              Showing {rangeStart}–{rangeEnd} of {totalElements} attempt{totalElements === 1 ? "" : "s"}
+            </p>
+
+            <div className="space-y-4">
+              {displayedAttempts.map((attempt) => (
+                <div key={attempt.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col md:flex-row items-start md:items-center gap-6 hover:border-accent/30 hover:shadow-md transition-all group">
+                  <div className="w-12 h-12 bg-gradient-to-br from-secondary/80 to-accent rounded-xl flex items-center justify-center text-white shrink-0">
+                    {attempt.status === "ACTIVE" ? <Rocket className="w-6 h-6" /> : attempt.status === "COMPLETED" ? <CheckCircle2 className="w-6 h-6" /> : <Hourglass className="w-6 h-6" />}
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-start md:items-center gap-3 mb-1.5">
+                      <h3 className="text-base font-bold text-gray-900 group-hover:text-accent transition-colors leading-tight">
+                        {attempt.problemTitle || "Untitled Problem"}
+                      </h3>
+                      <span className={`text-[11px] px-2.5 py-0.5 rounded-md font-bold border shrink-0 ${
+                        attempt.status === "ACTIVE" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                        attempt.status === "COMPLETED" ? "bg-green-50 text-green-700 border-green-200" :
+                        attempt.status === "TERMINATED" || attempt.status === "ABANDONED" ? "bg-red-50 text-red-700 border-red-200" : "bg-amber-50 text-amber-700 border-amber-200"
+                      }`}>
+                        {attempt.status.replace("_", " ")}
+                      </span>
+                    </div>
+                    
+                    <p className="text-sm text-gray-600 mb-3 font-medium">
+                      {attempt.targetSubtaskTitle ? `Subtask: ${attempt.targetSubtaskTitle}` : "Full Problem"}
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-gray-500">
+                      <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-gray-400" /> Started {formatDate(attempt.claimedAt)}</span>
+                      {attempt.parentAttemptId && (
+                        <span className="flex items-center gap-1.5 text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
+                          <GitBranch className="w-3.5 h-3.5" /> Forked Attempt
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="w-full md:w-auto shrink-0 flex justify-end">
+                    {attempt.status === "ACTIVE" ? (
+                      <Link href={`/solver/workspace/${attempt.problemId}`} className="w-full md:w-auto px-5 py-2.5 bg-secondary hover:bg-accent text-white text-sm font-medium rounded-lg text-center flex items-center justify-center gap-2 transition-colors shadow-sm">
+                        Enter Workspace <ArrowRight className="w-4 h-4" />
+                      </Link>
+                    ) : (
+                      <Link href={`/solver/problem/${attempt.problemId}`} className="w-full md:w-auto px-5 py-2.5 bg-white hover:bg-gray-50 hover:text-accent border border-gray-300 text-sm font-medium rounded-lg text-center flex items-center justify-center gap-2 transition-colors shadow-sm">
+                        <Eye className="w-4 h-4" /> View Problem
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="mt-8">
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); if (currentPage > 0) setCurrentPage(currentPage - 1); }} className={currentPage === 0 ? "pointer-events-none opacity-50" : ""} />
+                    </PaginationItem>
+
+                    {Array.from({ length: totalPages }, (_, i) => i).map((page) => {
+                      if (page === 0 || page === totalPages - 1 || (page >= currentPage - 1 && page <= currentPage + 1)) {
+                        return (
+                          <PaginationItem key={page}>
+                            <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(page); }} isActive={currentPage === page}>
+                              {page + 1}
+                            </PaginationLink>
+                          </PaginationItem>
+                        );
+                      }
+                      if (page === currentPage - 2 || page === currentPage + 2) {
+                        return <PaginationItem key={page}><PaginationEllipsis /></PaginationItem>;
+                      }
+                      return null;
+                    })}
+
+                    <PaginationItem>
+                      <PaginationNext href="#" onClick={(e) => { e.preventDefault(); if (currentPage < totalPages - 1) setCurrentPage(currentPage + 1); }} className={currentPage === totalPages - 1 ? "pointer-events-none opacity-50" : ""} />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
   );
-}
-
-export async function getProblemById(
-  problemId: string
-): Promise<ProblemResponse> {
-  return apiRequest<ProblemResponse>(`/problems/${problemId}`, {
-    method: "GET",
-  });
-}
-
-export async function updateProblemStatus(
-  problemId: string,
-  status: string
-): Promise<ProblemResponse> {
-  return apiRequest<ProblemResponse>(`/problems/${problemId}/status`, {
-    method: "PATCH",
-    body: JSON.stringify({ status }),
-  });
-}
-
-export async function deleteProblem(problemId: string): Promise<void> {
-  return apiRequest<void>(`/problems/${problemId}`, {
-    method: "DELETE",
-  });
-}
-
-/**
- * Get all OPEN problems (solver browse)
- */
-export async function getOpenProblems(): Promise<ProblemResponse[]> {
-  return apiRequest<ProblemResponse[]>("/problems/open", {
-    method: "GET",
-  });
-}
-
-export interface DiscoveryQuery {
-  search?: string;
-  tags?: string;
-}
-
-/**
- * Module 2 — discovery dashboard with recommendations and filters
- */
-export async function getDiscoveryDashboard(
-  query: DiscoveryQuery = {}
-): Promise<DiscoveryDashboardResponse> {
-  const params = new URLSearchParams();
-  if (query.search) params.set("search", query.search);
-  if (query.tags) params.set("tags", query.tags);
-  const qs = params.toString();
-  return apiRequest<DiscoveryDashboardResponse>(
-    `/problems/discovery${qs ? `?${qs}` : ""}`,
-    { method: "GET" }
-  );
-}
-
-/**
- * Module 2 — seeker notifications (claims, status changes)
- */
-export async function getSeekerNotifications(): Promise<SeekerNotification[]> {
-  return apiRequest<SeekerNotification[]>("/problems/notifications", {
-    method: "GET",
-  });
-}
-
-export async function getPendingProposals(problemId: string): Promise<ClaimRequestResponse[]> {
-  return apiRequest(`/problems/${problemId}/proposals/pending`);
-}
-
-/**
- * Evaluates a proposal. If approved, the backend generates the active workspace.
- */
-export async function evaluateProposal(proposalId: string, isApproved: boolean): Promise<string> {
-  return apiRequest(`/proposals/${proposalId}/evaluate?isApproved=${isApproved}`, {
-    method: "POST",
-  });
-}
-
-export async function getSeekerProblemList(
-  query?: string,
-  sdgFilter?: string,
-  dateSort?: string,
-  page: number = 0,
-  size: number = 5
-): Promise<SeekerProblemListResponse> {
-  const params = new URLSearchParams();
-  if (query) params.set("query", query);
-  if (sdgFilter) params.set("sdgFilter", sdgFilter);
-  if (dateSort) params.set("dateSort", dateSort);
-  params.set("page", page.toString());
-  params.set("size", size.toString());
-  return apiRequest<SeekerProblemListResponse>(
-    `/problems/seeker/list?${params.toString()}`,
-    { method: "GET" }
-  );
-}
-
-export async function updateProblemMaxSolvers(problemId: string, maxSolvers: number): Promise<void> {
-  const token = localStorage.getItem("token"); // Adjust this to match how you store your JWT
-
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/api/problems/${problemId}/max-solvers?maxSolvers=${maxSolvers}`, {
-    method: "PUT",
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-  });
-
-  if (!response.ok) {
-    const errorMessage = await response.text();
-    throw new Error(errorMessage || "Failed to update maximum concurrent solvers");
-  }
 }
