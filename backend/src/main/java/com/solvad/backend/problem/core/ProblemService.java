@@ -335,10 +335,16 @@ public class ProblemService {
 
         List<SeekerNotificationResponse> allNotifications = auditService.getRecentNotificationsForProblems(problemIds, titles);
 
-        // Apply event type filter server-side
+        // 🚀 FIX: Bulletproof server-side filter that normalizes both sides
         if (eventType != null && !eventType.trim().isEmpty() && !eventType.equalsIgnoreCase("all")) {
+            String normalizedFilter = eventType.replace(" ", "_").toUpperCase();
+
             allNotifications = allNotifications.stream()
-                    .filter(n -> eventType.equalsIgnoreCase(n.getEventType()))
+                    .filter(n -> {
+                        if (n.getEventType() == null) return false;
+                        String normalizedEvent = n.getEventType().replace(" ", "_").toUpperCase();
+                        return normalizedFilter.equals(normalizedEvent);
+                    })
                     .collect(Collectors.toList());
         }
 
