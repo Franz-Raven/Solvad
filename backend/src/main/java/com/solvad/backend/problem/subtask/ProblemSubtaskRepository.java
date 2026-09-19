@@ -12,4 +12,5 @@ public interface ProblemSubtaskRepository extends JpaRepository<ProblemSubtask, 
     List<ProblemSubtask> findByProblem(Problem problem);
     List<ProblemSubtask> findByProblemId(UUID problemId);
     List<ProblemSubtask> findByProblemIn(List<Problem> problems);
+
 }

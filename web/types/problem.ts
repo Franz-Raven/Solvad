@@ -5,6 +5,7 @@ export interface SubProblem {
   sdgFocus?: string;
   description: string;
   attachments?: AttachmentRequirement[];
+  maxConcurrentSolvers?: number;
 }
 
 export interface ProblemPayload {
@@ -139,6 +140,7 @@ export interface SubtaskResponse {
   sdgFocus?: string;
   description: string;
   attachments?: AttachmentRequirement[];
+  maxConcurrentSolvers?: number;
 }
 
 export interface PaginatedNotificationsResponse {

@@ -169,11 +169,6 @@ public class ClaimRequestService {
         return savedRequest;
     }
 
-    // -------------------------------------------------------------------------
-    // EVALUATE PROPOSAL (Seeker Action)
-    // Concurrency limit is now per-subtask and uses the configured
-    // maxConcurrentSolvers value directly from the target subtask.
-    // -------------------------------------------------------------------------
     @Transactional
     public void evaluateProposal(UUID seekerUserId, UUID requestId, boolean isApproved) {
         ClaimRequest request = claimRequestRepository.findById(requestId)
@@ -217,11 +212,10 @@ public class ClaimRequestService {
             return;
         }
 
-        // Check active solvers for this specific subtask
         int currentActiveSolvers = attemptRepository.countActiveSolversBySubtaskId(
                 problem.getId(), targetSubtask.getId());
 
-        // 🚀 FIX: Pull the capacity limit from the Subtask, NOT the Problem
+
         int maxAllowed = targetSubtask.getMaxConcurrentSolvers() != null ? targetSubtask.getMaxConcurrentSolvers() : 3;
 
         if (currentActiveSolvers >= maxAllowed) {
@@ -234,7 +228,7 @@ public class ClaimRequestService {
         request.setStatus(ClaimRequestStatus.APPROVED);
         claimRequestRepository.save(request);
 
-        // Delegate workspace generation to SolutionAttemptService
+
         solutionAttemptService.initializeApprovedAttempt(request);
 
         auditService.log(
@@ -248,7 +242,7 @@ public class ClaimRequestService {
                         + " for sub-problem \"" + targetSubtask.getTitle() + "\"."
         );
 
-        // If capacity is now full for this subtask, cancel remaining pending proposals for it
+
         if (currentActiveSolvers + 1 >= maxAllowed) {
             claimRequestRepository.cancelRemainingPendingRequestsForSubtask(
                     problem.getId(), targetSubtask.getId());
@@ -263,6 +257,31 @@ public class ClaimRequestService {
                             + targetSubtask.getTitle()
                             + "\". Remaining pending proposals automatically cancelled."
             );
+
+            // Check if ALL subtasks for this problem are now completely full
+            List<ProblemSubtask> allSubtasks = subtaskRepository.findByProblem(problem);
+            boolean allSubtasksFull = true;
+
+            for (ProblemSubtask st : allSubtasks) {
+                int activeCount = attemptRepository.countActiveSolversBySubtaskId(problem.getId(), st.getId());
+                int limit = st.getMaxConcurrentSolvers() != null ? st.getMaxConcurrentSolvers() : 3;
+
+                if (activeCount < limit) {
+                    allSubtasksFull = false;
+                    break;
+                }
+            }
+
+
+            if (allSubtasksFull && problem.getStatus() == ProblemStatus.OPEN) {
+                problem.setStatus(ProblemStatus.IN_PROGRESS);
+                problemRepository.save(problem);
+
+                auditService.log(
+                        problem.getId(), null, "SYSTEM", "SYSTEM", AuditEventType.STATUS_CHANGED,
+                        "All sub-problems have reached maximum capacity. Problem automatically moved to IN_PROGRESS."
+                );
+            }
         }
     }
 
@@ -274,9 +293,7 @@ public class ClaimRequestService {
         return claimRequestRepository.findByProblemAndStatus(problem, ClaimRequestStatus.PENDING);
     }
 
-    // -------------------------------------------------------------------------
-    // GET PENDING PROPOSALS FOR A SPECIFIC SUBTASK (Seeker Action)
-    // -------------------------------------------------------------------------
+
     @Transactional(readOnly = true)
     public List<ClaimRequest> getPendingProposalsForSubtask(UUID problemId, UUID subtaskId) {
         Problem problem = problemRepository.findById(problemId)
@@ -289,9 +306,7 @@ public class ClaimRequestService {
                 problem, subtask, ClaimRequestStatus.PENDING);
     }
 
-    // -------------------------------------------------------------------------
-    // GET MY PROPOSAL STATUS FOR A SPECIFIC SUBTASK (Solver Action)
-    // -------------------------------------------------------------------------
+
     @Transactional(readOnly = true)
     public Optional<ClaimRequestStatus> getMyProposalStatus(UUID solverUserId, UUID problemId, UUID subtaskId) {
         SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)

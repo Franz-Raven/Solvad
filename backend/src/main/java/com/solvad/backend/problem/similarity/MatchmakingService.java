@@ -16,6 +16,7 @@ import com.solvad.backend.util.KeywordUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.solvad.backend.problem.solution_attempt.SolutionAttempt;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -59,22 +60,57 @@ public class MatchmakingService {
                 ProblemStatus.SOLVED_OPEN_FOR_IMPROVEMENT
         );
 
+        // 1. Fetch ALL open problems
         List<Problem> openProblems = problemRepository.findByStatusIn(visibleStatuses);
+
+        // 🚀 FIX: Declare as final and assign exactly once so the lambda compiler is happy
+        final Map<UUID, List<ProblemSubtask>> subtasksByProblem;
+        final Map<UUID, List<SolutionAttempt>> activeAttemptsByProblem;
+
+        if (openProblems.isEmpty()) {
+            subtasksByProblem = Collections.emptyMap();
+            activeAttemptsByProblem = Collections.emptyMap();
+        } else {
+            // Fetch all subtasks for all open problems in ONE query
+            subtasksByProblem = subtaskRepository.findByProblemIn(openProblems).stream()
+                    .collect(Collectors.groupingBy(s -> s.getProblem().getId()));
+
+            // Fetch all active attempts for all open problems in ONE query
+            activeAttemptsByProblem = attemptRepository.findByProblemInAndStatus(openProblems, SolutionAttemptStatus.ACTIVE).stream()
+                    .collect(Collectors.groupingBy(a -> a.getProblem().getId()));
+        }
+
         Set<String> filterTags = KeywordUtils.fromCommaList(tagFilter);
         String searchLower = search != null ? search.trim().toLowerCase(Locale.ROOT) : "";
 
         List<ScoredProblem> scored = new ArrayList<>();
 
         for (Problem problem : openProblems) {
-            List<ProblemSubtask> subtasks = subtaskRepository.findByProblem(problem);
+            // 🚀 Read from our bulk-fetched memory maps instantly (Zero DB calls inside the loop!)
+            List<ProblemSubtask> subtasks = subtasksByProblem.getOrDefault(problem.getId(), new ArrayList<>());
+            List<SolutionAttempt> activeAttempts = activeAttemptsByProblem.getOrDefault(problem.getId(), new ArrayList<>());
+
             Set<String> problemTags = resolveProblemTags(problem, subtasks);
 
-            long activeSolvers = attemptRepository.countByProblemAndStatus(problem, SolutionAttemptStatus.ACTIVE);
-            if (activeSolvers >= problem.getMaxConcurrentSolvers()) {
-                continue; // Skip this problem because all slots are filled
+            // Map capacities instantly in memory
+            Map<UUID, Long> activeCountBySubtask = activeAttempts.stream()
+                    .filter(a -> a.getTargetSubtask() != null)
+                    .collect(Collectors.groupingBy(a -> a.getTargetSubtask().getId(), Collectors.counting()));
+
+            boolean hasAvailableSlot = false;
+            for (ProblemSubtask subtask : subtasks) {
+                long activeOnSubtask = activeCountBySubtask.getOrDefault(subtask.getId(), 0L);
+                int limit = subtask.getMaxConcurrentSolvers() != null ? subtask.getMaxConcurrentSolvers() : 3;
+
+                if (activeOnSubtask < limit) {
+                    hasAvailableSlot = true;
+                    break;
+                }
             }
 
-
+            if (!hasAvailableSlot) {
+                continue; // Skip this problem because all subtasks are full
+            }
 
             if (!filterTags.isEmpty() && filterTags.stream().noneMatch(problemTags::contains)) {
                 continue;
@@ -115,7 +151,7 @@ public class MatchmakingService {
                 .collect(Collectors.toList());
 
         List<String> availableTags = openProblems.stream()
-                .flatMap(p -> resolveProblemTags(p, subtaskRepository.findByProblem(p)).stream())
+                .flatMap(p -> resolveProblemTags(p, subtasksByProblem.getOrDefault(p.getId(), new ArrayList<>())).stream())
                 .distinct()
                 .sorted()
                 .collect(Collectors.toList());
