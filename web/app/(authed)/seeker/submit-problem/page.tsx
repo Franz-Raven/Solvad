@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { generateScope, createProblem } from "@/lib/api/problem";
+import { generateScope, createProblem  } from "./api/submit";
 import type { ProblemPayload, SubProblem, EnhancedProblem, AttachmentRequirement } from "@/types/problem";
 import ProblemFormFields from "./components/ProblemFormFields";
 import FileAttachmentUploader from "./components/FileAttachmentUploader";
