@@ -71,9 +71,11 @@ export function MyWorkspace() {
 
   const handleTabChange = (tab: WorkspaceTab) => {
     if (activeTab === tab) return;
+    
+    setLoading(true); 
+    setPaginatedData(null); 
     setActiveTab(tab);
     setCurrentPage(0);
-    setPaginatedData(null); // Instantly trigger skeleton loaders when switching tabs
   };
 
   const formatDate = (dateString: string) => {

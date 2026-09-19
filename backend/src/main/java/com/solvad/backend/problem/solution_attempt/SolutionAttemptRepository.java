@@ -36,9 +36,6 @@ public interface SolutionAttemptRepository extends JpaRepository<SolutionAttempt
     boolean existsByProblemAndTargetSubtaskAndSolverAndStatus(
             Problem problem, ProblemSubtask targetSubtask, SolverProfile solver, SolutionAttemptStatus status);
 
-    Optional<SolutionAttempt> findFirstByProblemAndSolverOrderByClaimedAtDesc(
-            Problem problem, SolverProfile solver);
-
     Page<SolutionAttempt> findBySolverAndStatusInOrderByClaimedAtDesc(
             SolverProfile solver,
             List<SolutionAttemptStatus> statuses,
@@ -46,6 +43,6 @@ public interface SolutionAttemptRepository extends JpaRepository<SolutionAttempt
     );
 
     long countByProblemAndTargetSubtaskAndStatus(Problem problem, ProblemSubtask targetSubtask, SolutionAttemptStatus status);
-
+    List<SolutionAttempt> findByProblemInAndStatus(List<Problem> problems, SolutionAttemptStatus status);
 
 }
