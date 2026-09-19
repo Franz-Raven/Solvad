@@ -18,10 +18,6 @@ public class AuditService {
     @Autowired
     private AuditLogRepository auditLogRepository;
 
-    /**
-     * Write one immutable audit entry. Call this inside any @Transactional
-     * mutation — it will commit with the same transaction.
-     */
     public void log(UUID problemId, UUID actorId, String actorName,
                     String actorRole, AuditEventType eventType, String delta) {
         AuditLog entry = new AuditLog(problemId, actorId, actorName,
@@ -29,16 +25,7 @@ public class AuditService {
         auditLogRepository.save(entry);
     }
 
-    /**
-     * Read the full chronological ledger for one problem.
-     */
-    public List<AuditLogResponse> getLogsForProblem(UUID problemId) {
-        return auditLogRepository
-                .findByProblemIdOrderByTimestampAsc(problemId)
-                .stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
-    }
+
 
     public List<SeekerNotificationResponse> getRecentNotificationsForProblems(
             List<UUID> problemIds,
@@ -47,12 +34,16 @@ public class AuditService {
         List<AuditEventType> notifyTypes = Arrays.asList(
                 AuditEventType.ATTEMPT_CLAIMED,
                 AuditEventType.ATTEMPT_FORKED,
-                AuditEventType.STATUS_CHANGED
+                AuditEventType.STATUS_CHANGED,
+                AuditEventType.PROPOSAL_SUBMITTED,
+                AuditEventType.PROPOSAL_APPROVED,
+                AuditEventType.PROPOSAL_REJECTED,
+                AuditEventType.CAPACITY_REACHED
         );
 
         return auditLogRepository.findNotificationsForProblems(problemIds, notifyTypes)
                 .stream()
-                .limit(30)
+                .limit(30) // Consider increasing this if Seeker activity is high (e.g., 50 or 100)
                 .map(log -> new SeekerNotificationResponse(
                         log.getId(),
                         log.getProblemId(),
@@ -64,7 +55,6 @@ public class AuditService {
                 ))
                 .collect(Collectors.toList());
     }
-
     private AuditLogResponse mapToResponse(AuditLog log) {
         return new AuditLogResponse(
                 log.getId(),

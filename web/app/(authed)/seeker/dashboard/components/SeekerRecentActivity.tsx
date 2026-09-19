@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Activity, BellOff, Clock, Loader2, ChevronRight } from "lucide-react";
+import { Activity, BellOff, Clock, ChevronRight } from "lucide-react";
 import type { SeekerNotification } from "@/types/problem";
 import { getSeekerNotifications } from "../api/dashboard";
 import type { PaginatedNotificationsResponse } from "@/types/problem";
@@ -11,19 +11,37 @@ import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, Pagi
 
 const ITEMS_PER_PAGE = 5;
 
-// Hardcoded available event types since pagination prevents dynamic extraction
+// 🚀 FIX: Added ATTEMPT_CLAIMED to match the actual database logs shown in your screenshot
 const EVENT_TYPES = [
-  "PROBLEM_CREATED",
-  "PROBLEM_UPDATED",
-  "STATUS_CHANGED",
   "PROPOSAL_SUBMITTED",
   "PROPOSAL_APPROVED",
   "PROPOSAL_REJECTED",
-  "CAPACITY_REACHED"
+  "ATTEMPT_CLAIMED", 
+  "CAPACITY_REACHED",
+  "STATUS_CHANGED"
 ];
 
+const SkeletonNotification = () => (
+  <div className="p-4 bg-slate-50/50 rounded-xl border border-slate-100 mb-3">
+    <div className="flex items-start justify-between gap-4">
+      <div className="flex-1 min-w-0 space-y-2.5">
+        <div className="h-4 bg-slate-200 rounded-md w-1/3 animate-pulse" />
+        <div className="h-3 bg-slate-100 rounded-md w-3/4 animate-pulse" />
+        <div className="flex gap-3 mt-3">
+          <div className="h-5 bg-slate-200 rounded-md w-24 animate-pulse" />
+          <div className="h-5 bg-slate-200 rounded-md w-32 animate-pulse" />
+        </div>
+      </div>
+      <div className="flex flex-col items-end gap-2 shrink-0">
+        <div className="h-3 bg-slate-200 rounded-md w-16 animate-pulse" />
+        <div className="h-4 w-4 bg-slate-200 rounded-md animate-pulse mt-1" />
+      </div>
+    </div>
+  </div>
+);
+
 export function SeekerRecentActivity() {
-  const [data, setData] = useState<PaginatedNotificationsResponse | null>(null);
+  const [data, setData] = useState<PaginatedNotificationsResponse | any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [eventTypeFilter, setEventTypeFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(0);
@@ -31,11 +49,14 @@ export function SeekerRecentActivity() {
   useEffect(() => {
     let isMounted = true;
     setIsLoading(true);
+    
     getSeekerNotifications(eventTypeFilter, currentPage, ITEMS_PER_PAGE)
       .then((res) => {
         if (isMounted) setData(res);
       })
-      .catch((err) => console.error("Failed to fetch notifications", err))
+      .catch((err) => {
+        if (isMounted) console.error("Failed to fetch notifications", err);
+      })
       .finally(() => {
         if (isMounted) setIsLoading(false);
       });
@@ -43,23 +64,57 @@ export function SeekerRecentActivity() {
     return () => { isMounted = false; };
   }, [eventTypeFilter, currentPage]);
 
-  const formatNotificationTime = (dateString: string) => {
+  const handleFilterChange = (value: string) => {
+    setEventTypeFilter(value);
+    setCurrentPage(0);
+  };
+
+  const formatNotificationTime = (dateString: string | undefined) => {
+    if (!dateString) return "Just now";
     return new Date(dateString).toLocaleString(undefined, {
       month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
     });
   };
 
-  const getTimelineGroup = (dateString: string): string => {
+  const getTimelineGroup = (dateString: string | undefined): string => {
+    if (!dateString) return "Today"; 
     const diffDays = Math.floor((new Date().getTime() - new Date(dateString).getTime()) / (1000 * 60 * 60 * 24));
-    if (diffDays === 0) return "Today";
+    
+    if (diffDays <= 0) return "Today"; 
     if (diffDays === 1) return "Yesterday";
     if (diffDays < 7) return "This Week";
     return "Earlier";
   };
 
-  const notifications = data?.notifications || [];
+  // 🚀 FIX: Added theme color mapping for ATTEMPT_CLAIMED
+  const getEventBadge = (type: string) => {
+    switch (type) {
+      case "PROPOSAL_APPROVED": 
+      case "ATTEMPT_CLAIMED": 
+        return "bg-emerald-50 text-emerald-700 border-emerald-200";
+      case "PROPOSAL_REJECTED": 
+        return "bg-rose-50 text-rose-700 border-rose-200";
+      case "PROPOSAL_SUBMITTED": 
+        return "bg-accent/10 text-accent border-accent/20";
+      case "CAPACITY_REACHED": 
+        return "bg-amber-50 text-amber-700 border-amber-200";
+      case "STATUS_CHANGED": 
+        return "bg-slate-100 text-slate-700 border-slate-200";
+      default: 
+        return "bg-slate-50 text-slate-700 border-slate-200";
+    }
+  };
+
+  const notifications: SeekerNotification[] = Array.isArray(data) 
+    ? data 
+    : (data?.notifications || data?.content || []);
+    
+  const totalPages = Array.isArray(data) ? 1 : (data?.totalPages || 0);
+
   const groupedNotifications = notifications.reduce((acc, notification) => {
-    const group = getTimelineGroup(notification.timestamp);
+    const timeValue = notification.timestamp || (notification as any).createdAt;
+    const group = getTimelineGroup(timeValue);
+    
     if (!acc[group]) acc[group] = [];
     acc[group].push(notification);
     return acc;
@@ -67,52 +122,25 @@ export function SeekerRecentActivity() {
 
   const orderedGroups = ["Today", "Yesterday", "This Week", "Earlier"].filter((g) => groupedNotifications[g]);
 
-  if (isLoading && !data) {
-    return (
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 min-h-[400px] flex flex-col">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Recent Activity</h2>
-          <p className="text-sm text-gray-500 mt-1">Loading your latest updates...</p>
-        </div>
-        <div className="flex-1 flex flex-col items-center justify-center py-12">
-          <Loader2 className="w-10 h-10 text-accent animate-spin mb-4" />
-          <p className="text-gray-500 font-medium text-sm animate-pulse">Syncing timeline...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 relative">
+    <div className="bg-white rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.04)] border border-slate-100 p-6 md:p-8 relative animate-in fade-in duration-300">
       
-      {isLoading && (
-        <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-10 flex items-center justify-center rounded-2xl">
-          <Loader2 className="w-8 h-8 text-accent animate-spin" />
-        </div>
-      )}
-
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-1 flex items-center gap-2">
+          <h2 className="text-2xl font-bold text-slate-900 mb-1 flex items-center gap-2">
             <Activity className="w-6 h-6 text-accent" />
             Recent Activity
           </h2>
-          <p className="text-sm text-gray-500">Updates when solvers claim your problems or statuses change.</p>
+          <p className="text-sm text-slate-500">Updates when solvers claim your problems or statuses change.</p>
         </div>
-        <Select
-          value={eventTypeFilter}
-          onValueChange={(value) => {
-            setEventTypeFilter(value);
-            setCurrentPage(0);
-          }}
-        >
-          <SelectTrigger className="w-full md:w-[220px] px-4 py-2.5 bg-white rounded-lg border border-gray-300 text-sm shadow-sm">
+        <Select value={eventTypeFilter} onValueChange={handleFilterChange}>
+          <SelectTrigger className="w-full md:w-[220px] px-4 py-2.5 bg-white rounded-lg border border-slate-200 text-sm shadow-sm font-medium cursor-pointer">
             <SelectValue placeholder="Filter by event..." />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Events</SelectItem>
+            <SelectItem value="all" className="cursor-pointer">All Events</SelectItem>
             {EVENT_TYPES.map((type) => (
-              <SelectItem key={type} value={type}>
+              <SelectItem key={type} value={type} className="cursor-pointer">
                 {type.replace(/_/g, " ")}
               </SelectItem>
             ))}
@@ -120,70 +148,105 @@ export function SeekerRecentActivity() {
         </Select>
       </div>
 
-      {notifications.length === 0 ? (
-        <div className="text-center py-16 bg-gray-50 rounded-xl border border-dashed border-gray-200 mt-6">
-          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-gray-100">
-            <BellOff className="w-8 h-8 text-gray-400" />
+      {isLoading && notifications.length === 0 ? (
+        <div className="space-y-8">
+          <div>
+            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-4 flex items-center gap-3">
+              <div className="h-px flex-1 bg-slate-100"></div>
+              <span>Loading...</span>
+              <div className="h-px flex-1 bg-slate-100"></div>
+            </h3>
+            {[...Array(ITEMS_PER_PAGE)].map((_, i) => <SkeletonNotification key={i} />)}
           </div>
-          <h3 className="text-lg font-bold text-gray-900 mb-2">No recent activity</h3>
-          <p className="text-sm text-gray-500 max-w-sm mx-auto">
+        </div>
+      ) : notifications.length === 0 ? (
+        <div className="text-center py-16 bg-slate-50 rounded-2xl border border-dashed border-slate-200 mt-6 animate-in fade-in zoom-in-95 duration-200">
+          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-100">
+            <BellOff className="w-8 h-8 text-slate-400" />
+          </div>
+          <h3 className="text-lg font-bold text-slate-900 mb-2">No recent activity</h3>
+          <p className="text-sm text-slate-500 max-w-sm mx-auto font-medium">
             {eventTypeFilter !== "all" 
               ? "No activities match the selected filter." 
               : "Updates will appear here when solvers interact with your problems, submit proposals, or complete tasks."}
           </p>
           {eventTypeFilter !== "all" && (
-            <button onClick={() => setEventTypeFilter("all")} className="mt-4 text-accent text-sm hover:underline font-bold">
+            <button onClick={() => handleFilterChange("all")} className="mt-4 text-accent text-sm hover:underline font-bold cursor-pointer">
               Clear filters
             </button>
           )}
         </div>
       ) : (
-        <>
+        <div className={`transition-opacity duration-200 ${isLoading ? "opacity-50 pointer-events-none" : "opacity-100"}`}>
           <div className="space-y-8">
             {orderedGroups.map((group) => (
               <div key={group} className="relative">
-                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-3">
-                  <div className="h-px flex-1 bg-gray-100"></div>
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-3">
+                  <div className="h-px flex-1 bg-slate-100"></div>
                   <span>{group}</span>
-                  <div className="h-px flex-1 bg-gray-100"></div>
+                  <div className="h-px flex-1 bg-slate-100"></div>
                 </h3>
                 <div className="space-y-3">
-                  {groupedNotifications[group].map((n) => (
-                    <Link key={n.id} href={`/seeker/problem/${n.problemId}`} className="group block p-4 bg-white rounded-xl border border-gray-100 hover:border-accent/40 hover:shadow-md hover:bg-accent/5 transition-all">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold text-gray-900 group-hover:text-accent transition-colors truncate">{n.problemTitle}</p>
-                          <p className="text-sm text-gray-600 mt-1 line-clamp-2">{n.message}</p>
-                          <div className="flex flex-wrap items-center gap-3 mt-3">
-                            <span className="text-xs font-medium text-gray-700">{n.actorName}</span>
-                            <span className="w-1 h-1 rounded-full bg-gray-300"></span>
-                            <span className="text-[11px] font-bold px-2.5 py-0.5 bg-secondary/10 text-secondary border border-secondary/20 rounded-md uppercase tracking-wide">{n.eventType.replace(/_/g, " ")}</span>
+                  {groupedNotifications[group].map((n) => {
+                    const timeValue = n.timestamp || (n as any).createdAt;
+                    
+                    return (
+                      <Link 
+                        key={n.id} 
+                        href={`/seeker/problem/${n.problemId}`} 
+                        className="group block p-4 bg-white rounded-xl border border-slate-200 hover:border-accent/40 hover:shadow-md hover:bg-slate-50 transition-all cursor-pointer"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-slate-900 group-hover:text-accent transition-colors truncate">{n.problemTitle}</p>
+                            <p className="text-sm text-slate-600 mt-1 line-clamp-2 font-medium">{n.message}</p>
+                            <div className="flex flex-wrap items-center gap-3 mt-3">
+                              <span className="text-xs font-semibold text-slate-700">{n.actorName}</span>
+                              <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                              <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-md border uppercase tracking-wide ${getEventBadge(n.eventType)}`}>
+                                {n.eventType.replace(/_/g, " ")}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end gap-2 shrink-0">
+                            <span className="flex items-center gap-1 text-[11px] font-semibold text-slate-400">
+                              <Clock className="w-3.5 h-3.5" />
+                              {formatNotificationTime(timeValue)}
+                            </span>
+                            <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-accent transition-colors mt-2" />
                           </div>
                         </div>
-                        <div className="flex flex-col items-end gap-2 shrink-0">
-                          <span className="flex items-center gap-1 text-[11px] font-medium text-gray-400"><Clock className="w-3.5 h-3.5" />{formatNotificationTime(n.timestamp)}</span>
-                          <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-accent transition-colors mt-2" />
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
+                      </Link>
+                    );
+                  })}
                 </div>
               </div>
             ))}
           </div>
 
-          {data && data.totalPages > 1 && (
-            <div className="mt-8 pt-6 border-t border-gray-100">
+          {totalPages > 1 && (
+            <div className="mt-8 pt-6 border-t border-slate-100">
               <Pagination>
                 <PaginationContent>
                   <PaginationItem>
-                    <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); if (currentPage > 0) setCurrentPage(currentPage - 1); }} className={currentPage === 0 ? "pointer-events-none opacity-50" : ""} />
+                    <PaginationPrevious 
+                      href="#" 
+                      onClick={(e) => { e.preventDefault(); if (currentPage > 0) setCurrentPage(currentPage - 1); }} 
+                      className={currentPage === 0 ? "pointer-events-none opacity-50" : "cursor-pointer"} 
+                    />
                   </PaginationItem>
-                  {Array.from({ length: data.totalPages }, (_, i) => i).map((page) => {
-                    if (page === 0 || page === data.totalPages - 1 || (page >= currentPage - 1 && page <= currentPage + 1)) {
+                  {Array.from({ length: totalPages }, (_, i) => i).map((page) => {
+                    if (page === 0 || page === totalPages - 1 || (page >= currentPage - 1 && page <= currentPage + 1)) {
                       return (
                         <PaginationItem key={page}>
-                          <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(page); }} isActive={currentPage === page}>{page + 1}</PaginationLink>
+                          <PaginationLink 
+                            href="#" 
+                            onClick={(e) => { e.preventDefault(); setCurrentPage(page); }} 
+                            isActive={currentPage === page}
+                            className="cursor-pointer font-medium"
+                          >
+                            {page + 1}
+                          </PaginationLink>
                         </PaginationItem>
                       );
                     } else if (page === currentPage - 2 || page === currentPage + 2) {
@@ -192,13 +255,17 @@ export function SeekerRecentActivity() {
                     return null;
                   })}
                   <PaginationItem>
-                    <PaginationNext href="#" onClick={(e) => { e.preventDefault(); if (currentPage < data.totalPages - 1) setCurrentPage(currentPage + 1); }} className={currentPage === data.totalPages - 1 ? "pointer-events-none opacity-50" : ""} />
+                    <PaginationNext 
+                      href="#" 
+                      onClick={(e) => { e.preventDefault(); if (currentPage < totalPages - 1) setCurrentPage(currentPage + 1); }} 
+                      className={currentPage === totalPages - 1 ? "pointer-events-none opacity-50" : "cursor-pointer"} 
+                    />
                   </PaginationItem>
                 </PaginationContent>
               </Pagination>
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );
