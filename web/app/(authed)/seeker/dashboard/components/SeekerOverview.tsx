@@ -57,11 +57,13 @@ const deptConfig: ChartConfig = { completed: { label: "Completed", color: "#6366
 
 function StatCard({ title, value, icon, description }: { title: string; value: string | number; icon: React.ReactNode; description?: string }) {
   return (
-    <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
-      <div className="absolute -right-6 -top-6 w-24 h-24 bg-accent/5 rounded-full blur-2xl group-hover:bg-accent/10 transition-colors" />
+    <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm relative overflow-hidden">
+      {/* Static blur decoration with hover transitions removed */}
+      <div className="absolute -right-6 -top-6 w-24 h-24 bg-accent/5 rounded-full blur-2xl" />
       <div className="flex items-center justify-between mb-4 relative z-10">
         <h3 className="text-sm font-semibold text-gray-500 tracking-wide">{title}</h3>
-        <div className="p-2.5 bg-gray-50 rounded-xl text-accent border border-gray-100 group-hover:bg-accent group-hover:text-white transition-colors">
+        {/* Static icon frame with hover swap removed */}
+        <div className="p-2.5 bg-gray-50 rounded-xl text-accent border border-gray-100">
           {icon}
         </div>
       </div>
@@ -131,7 +133,6 @@ function EmptyChart({ message }: { message: string }) {
 // --- Main Component ---
 
 export function SeekerOverview({ problems, loading = false }: SeekerOverviewProps) {
-  // Local state for dashboard charts (status + SDG)
   const [statusData, setStatusData] = useState<ProblemStatusGroupDto | null>(null);
   const [sdgData, setSdgData] = useState<SdgDistributionDto[] | null>(null);
   const [chartLoading, setChartLoading] = useState(true);
@@ -154,7 +155,6 @@ export function SeekerOverview({ problems, loading = false }: SeekerOverviewProp
     fetchChartData();
   }, []);
 
-  // Stats mapped for the top cards
   const stats = useMemo(() => {
     const total = problems.length;
     const open = problems.filter((p) => p.status === "OPEN").length;
@@ -172,7 +172,6 @@ export function SeekerOverview({ problems, loading = false }: SeekerOverviewProp
   const deptData = useMemo(() => buildDeptData(problems), [problems]);
   const totalPosted = timelineData.reduce((a, d) => a + d.posted, 0);
 
-  // 🚀 Premium Full-Page Skeleton State
   if (loading) {
     return (
       <div className="space-y-6">
@@ -192,9 +191,10 @@ export function SeekerOverview({ problems, loading = false }: SeekerOverviewProp
   }
 
   return (
-    <div className="space-y-6">
+    // 🚀 Pure fade-in animation (slide-in removed)
+    <div className="space-y-6 animate-in fade-in duration-500">
       
-      {/* 🚀 New Top-Level Metric Cards */}
+      {/* Top-Level Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard 
           title="Total Problems" 

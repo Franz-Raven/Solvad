@@ -11,7 +11,6 @@ import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, Pagi
 
 const ITEMS_PER_PAGE = 5;
 
-// 🚀 FIX: Added ATTEMPT_CLAIMED to match the actual database logs shown in your screenshot
 const EVENT_TYPES = [
   "PROPOSAL_SUBMITTED",
   "PROPOSAL_APPROVED",
@@ -22,19 +21,19 @@ const EVENT_TYPES = [
 ];
 
 const SkeletonNotification = () => (
-  <div className="p-4 bg-slate-50/50 rounded-xl border border-slate-100 mb-3">
+  <div className="p-4 bg-white rounded-xl border border-slate-100 mb-3 shadow-sm animate-pulse">
     <div className="flex items-start justify-between gap-4">
       <div className="flex-1 min-w-0 space-y-2.5">
-        <div className="h-4 bg-slate-200 rounded-md w-1/3 animate-pulse" />
-        <div className="h-3 bg-slate-100 rounded-md w-3/4 animate-pulse" />
+        <div className="h-4 bg-slate-200 rounded-md w-1/3" />
+        <div className="h-3 bg-slate-100 rounded-md w-3/4" />
         <div className="flex gap-3 mt-3">
-          <div className="h-5 bg-slate-200 rounded-md w-24 animate-pulse" />
-          <div className="h-5 bg-slate-200 rounded-md w-32 animate-pulse" />
+          <div className="h-5 bg-slate-200 rounded-md w-24" />
+          <div className="h-5 bg-slate-200 rounded-md w-32" />
         </div>
       </div>
       <div className="flex flex-col items-end gap-2 shrink-0">
-        <div className="h-3 bg-slate-200 rounded-md w-16 animate-pulse" />
-        <div className="h-4 w-4 bg-slate-200 rounded-md animate-pulse mt-1" />
+        <div className="h-3 bg-slate-200 rounded-md w-16" />
+        <div className="h-4 w-4 bg-slate-200 rounded-md mt-1" />
       </div>
     </div>
   </div>
@@ -48,6 +47,8 @@ export function SeekerRecentActivity() {
 
   useEffect(() => {
     let isMounted = true;
+    
+    // 🚀 Instantly trigger skeleton loading on any dependency change
     setIsLoading(true);
     
     getSeekerNotifications(eventTypeFilter, currentPage, ITEMS_PER_PAGE)
@@ -65,8 +66,9 @@ export function SeekerRecentActivity() {
   }, [eventTypeFilter, currentPage]);
 
   const handleFilterChange = (value: string) => {
+    if (eventTypeFilter === value) return;
     setEventTypeFilter(value);
-    setCurrentPage(0);
+    setCurrentPage(0); // Triggers useEffect -> Skeletons
   };
 
   const formatNotificationTime = (dateString: string | undefined) => {
@@ -86,7 +88,6 @@ export function SeekerRecentActivity() {
     return "Earlier";
   };
 
-  // 🚀 FIX: Added theme color mapping for ATTEMPT_CLAIMED
   const getEventBadge = (type: string) => {
     switch (type) {
       case "PROPOSAL_APPROVED": 
@@ -131,16 +132,16 @@ export function SeekerRecentActivity() {
             <Activity className="w-6 h-6 text-accent" />
             Recent Activity
           </h2>
-          <p className="text-sm text-slate-500">Updates when solvers claim your problems or statuses change.</p>
+          <p className="text-sm text-slate-500 font-medium">Updates when solvers claim your problems or statuses change.</p>
         </div>
         <Select value={eventTypeFilter} onValueChange={handleFilterChange}>
-          <SelectTrigger className="w-full md:w-[220px] px-4 py-2.5 bg-white rounded-lg border border-slate-200 text-sm shadow-sm font-medium cursor-pointer">
+          <SelectTrigger className="w-full md:w-[220px] px-4 py-2.5 bg-white rounded-lg border border-slate-200 text-sm shadow-sm font-medium cursor-pointer transition-colors hover:border-slate-300 focus:ring-2 focus:ring-accent/20">
             <SelectValue placeholder="Filter by event..." />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all" className="cursor-pointer">All Events</SelectItem>
+            <SelectItem value="all" className="cursor-pointer font-medium">All Events</SelectItem>
             {EVENT_TYPES.map((type) => (
-              <SelectItem key={type} value={type} className="cursor-pointer">
+              <SelectItem key={type} value={type} className="cursor-pointer font-medium">
                 {type.replace(/_/g, " ")}
               </SelectItem>
             ))}
@@ -148,8 +149,9 @@ export function SeekerRecentActivity() {
         </Select>
       </div>
 
-      {isLoading && notifications.length === 0 ? (
-        <div className="space-y-8">
+      {/* 🚀 Changed to show skeleton on ANY loading state, not just initial load */}
+      {isLoading ? (
+        <div className="space-y-8 animate-in fade-in duration-300">
           <div>
             <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-4 flex items-center gap-3">
               <div className="h-px flex-1 bg-slate-100"></div>
@@ -171,13 +173,13 @@ export function SeekerRecentActivity() {
               : "Updates will appear here when solvers interact with your problems, submit proposals, or complete tasks."}
           </p>
           {eventTypeFilter !== "all" && (
-            <button onClick={() => handleFilterChange("all")} className="mt-4 text-accent text-sm hover:underline font-bold cursor-pointer">
+            <button onClick={() => handleFilterChange("all")} className="mt-4 text-accent text-sm hover:underline font-bold cursor-pointer transition-colors">
               Clear filters
             </button>
           )}
         </div>
       ) : (
-        <div className={`transition-opacity duration-200 ${isLoading ? "opacity-50 pointer-events-none" : "opacity-100"}`}>
+        <div className="animate-in fade-in duration-300">
           <div className="space-y-8">
             {orderedGroups.map((group) => (
               <div key={group} className="relative">
@@ -194,26 +196,30 @@ export function SeekerRecentActivity() {
                       <Link 
                         key={n.id} 
                         href={`/seeker/problem/${n.problemId}`} 
-                        className="group block p-4 bg-white rounded-xl border border-slate-200 hover:border-accent/40 hover:shadow-md hover:bg-slate-50 transition-all cursor-pointer"
+                        className="group block p-5 bg-white rounded-xl border border-slate-200 hover:border-accent/40 hover:shadow-md hover:bg-slate-50/50 transition-all duration-200 cursor-pointer"
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold text-slate-900 group-hover:text-accent transition-colors truncate">{n.problemTitle}</p>
-                            <p className="text-sm text-slate-600 mt-1 line-clamp-2 font-medium">{n.message}</p>
+                            <p className="text-base font-bold text-slate-900 group-hover:text-accent transition-colors truncate">
+                              {n.problemTitle}
+                            </p>
+                            <p className="text-sm text-slate-600 mt-1 line-clamp-2 font-medium">
+                              {n.message}
+                            </p>
                             <div className="flex flex-wrap items-center gap-3 mt-3">
                               <span className="text-xs font-semibold text-slate-700">{n.actorName}</span>
                               <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                              <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-md border uppercase tracking-wide ${getEventBadge(n.eventType)}`}>
+                              <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-md border uppercase tracking-wider ${getEventBadge(n.eventType)}`}>
                                 {n.eventType.replace(/_/g, " ")}
                               </span>
                             </div>
                           </div>
-                          <div className="flex flex-col items-end gap-2 shrink-0">
-                            <span className="flex items-center gap-1 text-[11px] font-semibold text-slate-400">
+                          <div className="flex flex-col items-end gap-3 shrink-0 mt-0.5">
+                            <span className="flex items-center gap-1 text-[11px] font-bold text-slate-400">
                               <Clock className="w-3.5 h-3.5" />
                               {formatNotificationTime(timeValue)}
                             </span>
-                            <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-accent transition-colors mt-2" />
+                            <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-accent transition-colors mt-1" />
                           </div>
                         </div>
                       </Link>
@@ -243,7 +249,7 @@ export function SeekerRecentActivity() {
                             href="#" 
                             onClick={(e) => { e.preventDefault(); setCurrentPage(page); }} 
                             isActive={currentPage === page}
-                            className="cursor-pointer font-medium"
+                            className="cursor-pointer font-bold"
                           >
                             {page + 1}
                           </PaginationLink>
