@@ -33,10 +33,10 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/login", "/api/auth/register/solver").permitAll()
+                        // 🚀 FIX: Add /api/health to the public endpoints
+                        .requestMatchers("/api/auth/login", "/api/auth/register/solver", "/api/health").permitAll()
+                        .requestMatchers("/api/auth/register/seeker").hasAuthority("ADMIN")
                         .anyRequest().authenticated()
-
-
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
