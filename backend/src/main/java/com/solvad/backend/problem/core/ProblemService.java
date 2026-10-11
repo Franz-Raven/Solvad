@@ -12,7 +12,7 @@ import com.solvad.backend.problem.attachment.ProblemAttachment;
 import com.solvad.backend.problem.search.ProblemSearchResult;
 import com.solvad.backend.problem.export.ProblemPdfService;
 import com.solvad.backend.problem.similarity.MatchmakingService;
-import com.solvad.backend.problem.similarity.VectorSimilarityService;
+
 import com.solvad.backend.problem.subtask.ProblemSubtask;
 import com.solvad.backend.problem.subtask.SubtaskRequest;
 import com.solvad.backend.problem.subtask.SubtaskResponse;
@@ -40,8 +40,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-
-
 @Service
 public class ProblemService {
 
@@ -59,18 +57,17 @@ public class ProblemService {
 
     @Autowired
     private ProblemAttachmentRepository attachmentRepository;
-    
+
     @Autowired
     private GeminiService geminiService;
 
     @Autowired
     private AuditService auditService;
 
-    @Autowired
-    private VectorSimilarityService vectorSimilarityService;
 
     @Autowired
     private ApplicationEventPublisher eventPublisher;
+
     @Autowired
     private ProblemPdfService problemPdfService;
 
@@ -78,7 +75,7 @@ public class ProblemService {
     private CloudinaryService cloudinaryService;
 
     public GenerateScopeResponse generateScope(GenerateScopeRequest request, List<MultipartFile> attachments) {
-        GenerateScopeResponse response = geminiService.generateSubtasks(
+        return geminiService.generateSubtasks(
                 request.getTitle(),
                 request.getBackgroundContext(),
                 request.getPrimaryStatement(),
@@ -87,8 +84,6 @@ public class ProblemService {
                 request.getPreferredProgram(),
                 attachments
         );
-
-        return response;
     }
 
     @Transactional
@@ -106,7 +101,7 @@ public class ProblemService {
                 request.getPreferredProgram(),
                 request.getSdgFocus()
         );
-        
+
         try {
             byte[] pdfBytes = problemPdfService.generateProblemPdf(request, seeker.getOrganizationName());
             String filename = "problem_" + System.currentTimeMillis() + ".pdf";
@@ -131,11 +126,10 @@ public class ProblemService {
 
         List<ProblemSubtask> savedSubtasks = subtaskRepository.saveAll(subtasks);
 
-        // SAVE ATTACHMENTS PER SUBTASK
         for (int i = 0; i < request.getSubtasks().size(); i++) {
             SubtaskRequest subtaskReq = request.getSubtasks().get(i);
             ProblemSubtask savedSubtask = savedSubtasks.get(i);
-            
+
             if (subtaskReq.getAttachments() != null && !subtaskReq.getAttachments().isEmpty()) {
                 List<ProblemAttachment> attachmentsToSave = subtaskReq.getAttachments().stream()
                         .map(att -> new ProblemAttachment(
@@ -188,11 +182,9 @@ public class ProblemService {
 
     @Transactional
     public ProblemResponse updateProblemStatus(UUID seekerUserId, UUID problemId, String newStatusStr) {
-        // Find the problem
         Problem problem = problemRepository.findById(problemId)
                 .orElseThrow(() -> new RuntimeException("Problem not found"));
 
-        // Verify ownership
         SeekerProfile seeker = seekerProfileRepository.findByUserId(seekerUserId)
                 .orElseThrow(() -> new RuntimeException("Seeker profile not found"));
 
@@ -204,12 +196,10 @@ public class ProblemService {
             ProblemStatus newStatus = ProblemStatus.valueOf(newStatusStr);
             ProblemStatus oldStatus = problem.getStatus();
 
-            // Guardrail: Prevent manual shifts to automated solver states
             if (newStatus == ProblemStatus.CLAIMED || newStatus == ProblemStatus.IN_PROGRESS) {
                 throw new RuntimeException("Status " + newStatus + " is driven by solver actions and cannot be set manually.");
             }
 
-            // FORCE CLOSE LOGIC: If moving to CLOSED or COMPLETED, we must terminate any active attempts
             if (newStatus == ProblemStatus.CLOSED || newStatus == ProblemStatus.COMPLETED) {
                 List<SolutionAttempt> activeAttempts = attemptRepository.findByProblemAndStatus(problem, SolutionAttemptStatus.ACTIVE);
                 for (SolutionAttempt attempt : activeAttempts) {
@@ -244,18 +234,15 @@ public class ProblemService {
             throw new RuntimeException("Invalid status: " + newStatusStr);
         }
 
-        // Return updated problem
         List<ProblemSubtask> subtasks = subtaskRepository.findByProblem(problem);
         return mapToResponse(problem, subtasks, seeker);
     }
 
     @Transactional
     public void deleteProblem(UUID seekerUserId, UUID problemId) {
-        // Find the problem
         Problem problem = problemRepository.findById(problemId)
                 .orElseThrow(() -> new RuntimeException("Problem not found"));
 
-        // Verify ownership
         SeekerProfile seeker = seekerProfileRepository.findByUserId(seekerUserId)
                 .orElseThrow(() -> new RuntimeException("Seeker profile not found"));
 
@@ -263,18 +250,14 @@ public class ProblemService {
             throw new RuntimeException("You do not have permission to delete this problem");
         }
 
-        // Delete subtasks first (cascade should handle this, but being explicit)
         List<ProblemSubtask> subtasks = subtaskRepository.findByProblem(problem);
         subtaskRepository.deleteAll(subtasks);
-
-        // Delete the problem
         problemRepository.delete(problem);
     }
 
     private ProblemResponse mapToResponse(Problem problem, List<ProblemSubtask> subtasks, SeekerProfile seeker) {
         List<SubtaskResponse> subtaskResponses = subtasks.stream()
                 .map(subtask -> {
-                    // 1. Fetch the attachments for this specific subtask
                     List<AttachmentRequirementResponse> attachmentResponses = attachmentRepository.findBySubtask(subtask)
                             .stream()
                             .map(att -> new AttachmentRequirementResponse(
@@ -284,7 +267,6 @@ public class ProblemService {
                             ))
                             .collect(Collectors.toList());
 
-                    // 2. Use the NEW constructor that includes attachmentResponses
                     return new SubtaskResponse(
                             subtask.getId(),
                             subtask.getTitle(),
@@ -335,7 +317,6 @@ public class ProblemService {
 
         List<SeekerNotificationResponse> allNotifications = auditService.getRecentNotificationsForProblems(problemIds, titles);
 
-        // 🚀 FIX: Bulletproof server-side filter that normalizes both sides
         if (eventType != null && !eventType.trim().isEmpty() && !eventType.equalsIgnoreCase("all")) {
             String normalizedFilter = eventType.replace(" ", "_").toUpperCase();
 
@@ -352,7 +333,6 @@ public class ProblemService {
         int totalPages = (int) Math.ceil((double) totalElements / size);
         int fromIndex = page * size;
 
-        // Extract only the current page
         List<SeekerNotificationResponse> paginated = allNotifications.stream()
                 .skip(fromIndex)
                 .limit(size)
@@ -367,7 +347,7 @@ public class ProblemService {
                 .orElseThrow(() -> new RuntimeException("Seeker profile not found"));
 
         List<Problem> allProblems = problemRepository.findBySeeker(seeker);
-        
+
         if (sdgFilter != null && !sdgFilter.trim().isEmpty()) {
             allProblems = allProblems.stream()
                     .filter(problem -> sdgFilter.equals(problem.getSdgFocus()))
@@ -399,11 +379,11 @@ public class ProblemService {
                     .sorted((a, b) -> Double.compare(b.getScore(), a.getScore()))
                     .collect(Collectors.toList());
         }
-        
+
         if (dateSort != null) {
             java.time.LocalDateTime now = java.time.LocalDateTime.now();
             java.time.LocalDateTime filterDate = null;
-            
+
             switch (dateSort.toLowerCase()) {
                 case "1day":
                     filterDate = now.minusDays(1);
@@ -418,7 +398,7 @@ public class ProblemService {
                     filterDate = now.minusYears(1);
                     break;
             }
-            
+
             if (filterDate != null) {
                 final java.time.LocalDateTime finalFilterDate = filterDate;
                 searchResults = searchResults.stream()
@@ -438,10 +418,27 @@ public class ProblemService {
         int totalPages = (int) Math.ceil((double) totalElements / size);
         int fromIndex = page * size;
 
-        List<ProblemResponse> paginatedProblems = searchResults.stream()
+        List<ProblemSummaryResponse> paginatedProblems = searchResults.stream()
                 .skip(fromIndex)
                 .limit(size)
-                .map(ProblemSearchResult::getProblem)
+                .map(result -> {
+                    ProblemResponse pr = result.getProblem();
+                    int subtaskCount = pr.getSubtasks() != null ? pr.getSubtasks().size() : 0;
+
+                    return new ProblemSummaryResponse(
+                            pr.getId(),
+                            pr.getTitle(),
+                            seeker.getOrganizationName(),
+                            pr.getPreferredProgram(),
+                            pr.getStatus(),
+                            subtaskCount,
+                            pr.getCreatedAt(),
+                            pr.getCourseMatch(),
+                            result.getScore(),
+                            pr.getSdgFocus(),
+                            pr.getTags()
+                    );
+                })
                 .collect(Collectors.toList());
 
         return new PaginatedProblemsResponse(paginatedProblems, page, totalPages, totalElements, size);
@@ -449,7 +446,7 @@ public class ProblemService {
 
     private double calculateSearchScore(Problem problem, String[] queryTerms) {
         double score = 0.0;
-        
+
         String title = problem.getTitle() != null ? problem.getTitle().toLowerCase() : "";
         String primaryStatement = problem.getPrimaryStatement() != null ? problem.getPrimaryStatement().toLowerCase() : "";
         String backgroundContext = problem.getBackgroundContext() != null ? problem.getBackgroundContext().toLowerCase() : "";
@@ -471,15 +468,15 @@ public class ProblemService {
         if (text.isEmpty() || term.isEmpty()) {
             return 0;
         }
-        
+
         int count = 0;
         int index = 0;
-        
+
         while ((index = text.indexOf(term, index)) != -1) {
             count++;
             index += term.length();
         }
-        
+
         return count;
     }
 
@@ -506,7 +503,6 @@ public class ProblemService {
             throw new RuntimeException("Capacity must be at least 1.");
         }
 
-        // 🚀 BACKEND GUARDRAIL: Check active solvers on THIS specific subtask
         long activeCount = attemptRepository.countByProblemAndTargetSubtaskAndStatus(
                 problem, subtask, SolutionAttemptStatus.ACTIVE);
 
@@ -524,7 +520,6 @@ public class ProblemService {
                 "Updated capacity limit for sub-problem '" + subtask.getTitle() + "' to " + maxSolvers
         );
 
-        // Fetch attachments to return a complete SubtaskResponse
         List<AttachmentRequirementResponse> attachmentResponses = attachmentRepository.findBySubtask(savedSubtask)
                 .stream()
                 .map(att -> new AttachmentRequirementResponse(att.getId(), att.getAttachmentTitle(), att.getAttachmentType()))
@@ -598,10 +593,20 @@ public class ProblemService {
         List<ProblemSummaryResponse> responses = pageProblems.stream()
                 .map(p -> {
                     List<String> tags = p.getTags() != null ? p.getTags() : List.of();
+                    int count = subtaskCounts.getOrDefault(p.getId(), 0);
+
                     return new ProblemSummaryResponse(
-                            p.getId(), p.getTitle(), p.getStatus().name(), p.getCreatedAt(),
-                            subtaskCounts.getOrDefault(p.getId(), 0),
-                            p.getPreferredProgram(), p.getSdgFocus(), orgName, tags
+                            p.getId(),
+                            p.getTitle(),
+                            orgName,
+                            p.getPreferredProgram(),
+                            p.getStatus().name(),
+                            count,
+                            p.getCreatedAt(),
+                            null,
+                            null,
+                            p.getSdgFocus(),
+                            tags
                     );
                 })
                 .collect(Collectors.toList());
@@ -620,20 +625,28 @@ public class ProblemService {
                 ProblemStatus.SOLVED_OPEN_FOR_IMPROVEMENT
         );
 
-
         Page<Problem> problemPage = problemRepository.findByStatusIn(visibleStatuses, pageable);
+
         if (!problemPage.hasContent()) {
             return new PaginatedProblemsResponse(List.of(), page, 0, 0, size);
         }
 
+        List<Problem> pageProblems = problemPage.getContent();
+        Map<UUID, Integer> subtaskCounts = subtaskRepository.findByProblemIn(pageProblems)
+                .stream()
+                .collect(Collectors.groupingBy(
+                        s -> s.getProblem().getId(),
+                        Collectors.summingInt(s -> 1)
+                ));
 
-        List<ProblemResponse> content = problemPage.getContent().stream()
-                .map(problem -> {
-                    List<ProblemSubtask> subtasks = subtaskRepository.findByProblem(problem);
-                    return mapToResponse(problem, subtasks, problem.getSeeker());
-                })
+        List<ProblemSummaryResponse> content = pageProblems.stream()
+                .map(problem -> mapToSummaryResponse(
+                        problem,
+                        subtaskCounts.getOrDefault(problem.getId(), 0),
+                        false,
+                        0.0
+                ))
                 .collect(Collectors.toList());
-
 
         return new PaginatedProblemsResponse(
                 content,
@@ -641,6 +654,24 @@ public class ProblemService {
                 problemPage.getTotalPages(),
                 problemPage.getTotalElements(),
                 size
+        );
+    }
+
+    private ProblemSummaryResponse mapToSummaryResponse(Problem problem, int subtaskCount, boolean isCourseMatch, double matchScore) {
+        List<String> tags = problem.getTags() != null ? problem.getTags() : List.of();
+
+        return new ProblemSummaryResponse(
+                problem.getId(),
+                problem.getTitle(),
+                problem.getSeeker().getOrganizationName(),
+                problem.getPreferredProgram(),
+                problem.getStatus().name(),
+                subtaskCount,
+                problem.getCreatedAt(),
+                isCourseMatch,
+                matchScore,
+                problem.getSdgFocus(),
+                tags
         );
     }
 }

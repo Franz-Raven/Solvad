@@ -105,13 +105,12 @@ export interface SeekerNotification {
 }
 
 export interface PaginatedProblemsResponse {
-  problems: ProblemResponse[];
+  problems: ProblemSummary[]; // 🚀 Changed from ProblemResponse[]
   currentPage: number;
   totalPages: number;
   totalElements: number;
   pageSize: number;
 }
-
 
 export interface ProblemSummaryResponse {
   id: string;
@@ -123,6 +122,19 @@ export interface ProblemSummaryResponse {
   sdgFocus?: string;
   organizationName: string;
   tags?: string[];
+}
+
+
+export interface ProblemSummary {
+  id: string;
+  title: string;
+  organizationName: string;
+  preferredProgram: string;
+  status: string;
+  subtaskCount: number; // 🚀 Replaces the subtasks array
+  createdAt: string;
+  courseMatch?: boolean;
+  matchScore?: number;
 }
 
 export interface SeekerProblemListResponse {

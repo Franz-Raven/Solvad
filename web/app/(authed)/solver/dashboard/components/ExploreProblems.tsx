@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Search, ChevronRight, Hash, Calendar, Building2, GraduationCap, FolderOpen } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { getDiscoverableProblems } from "../api/dashboard";
-import type { ProblemResponse } from "@/types/problem";
+// 🚀 Use the new lightweight ProblemSummary type
+import type { ProblemSummary } from "@/types/problem";
 import {
   Pagination,
   PaginationContent,
@@ -23,7 +24,7 @@ const STATUS_LABELS: Record<string, string> = {
   SOLVED_OPEN_FOR_IMPROVEMENT: "Open for Improvement",
 };
 
-// 🚀 FIX: Skeleton loader matching the exact layout of the list items
+// 🚀 Smooth Skeleton loader matching the exact layout of the list items
 const SkeletonCard = () => (
   <div className="flex flex-col md:flex-row md:items-center gap-5 p-5 bg-slate-50/50 rounded-xl border border-slate-100">
     <div className="w-12 h-12 bg-slate-200 rounded-xl animate-pulse shrink-0" />
@@ -43,7 +44,8 @@ const SkeletonCard = () => (
 );
 
 export function ExploreProblems() {
-  const [paginatedProblems, setPaginatedProblems] = useState<ProblemResponse[]>([]);
+  // 🚀 Updated state to use the lightweight ProblemSummary
+  const [paginatedProblems, setPaginatedProblems] = useState<ProblemSummary[]>([]);
   const [explorePage, setExplorePage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
@@ -112,7 +114,6 @@ export function ExploreProblems() {
         Problems matching your course are listed first.
       </p>
 
-      {/* 🚀 FIX: Smooth Skeleton Loading State */}
       {loading && paginatedProblems.length === 0 ? (
         <div className="space-y-4">
           {[...Array(5)].map((_, i) => <SkeletonCard key={i} />)}
@@ -135,7 +136,6 @@ export function ExploreProblems() {
           
           <div className="space-y-4">
             {paginatedProblems.map((problem, index) => (
-              /* 🚀 FIX: Made the entire box a clickable Link */
               <Link 
                 href={`/solver/problem/${problem.id}`}
                 key={problem.id} 
@@ -151,7 +151,6 @@ export function ExploreProblems() {
                       {problem.title}
                     </h4>
                     
-                    {/* 🚀 FIX: Themed status badges */}
                     <span className={`text-[11px] px-2.5 py-0.5 rounded-md font-bold border shrink-0 uppercase tracking-wide ${
                       problem.status === "OPEN" ? "bg-accent/10 text-accent border-accent/20" : "bg-emerald-50 text-emerald-700 border-emerald-200"
                     }`}>
@@ -168,7 +167,8 @@ export function ExploreProblems() {
                   <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-slate-500">
                     <span className="flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5 text-slate-400" /> {problem.organizationName}</span>
                     <span className="flex items-center gap-1.5"><GraduationCap className="w-3.5 h-3.5 text-slate-400" /> {problem.preferredProgram}</span>
-                    <span className="flex items-center gap-1.5"><Hash className="w-3.5 h-3.5 text-slate-400" /> {problem.subtasks.length} sub-tasks</span>
+                    {/* 🚀 FIX: Used problem.subtaskCount instead of problem.subtasks.length */}
+                    <span className="flex items-center gap-1.5"><Hash className="w-3.5 h-3.5 text-slate-400" /> {problem.subtaskCount} sub-tasks</span>
                     {problem.createdAt && (
                       <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-slate-400" /> {formatDate(problem.createdAt)}</span>
                     )}
@@ -176,7 +176,6 @@ export function ExploreProblems() {
                 </div>
                 
                 <div className="w-full md:w-auto shrink-0 flex justify-end mt-4 md:mt-0">
-                  {/* 🚀 FIX: The button is now a span that reacts to the parent link hover */}
                   <span
                     className="w-full md:w-auto px-5 py-2.5 bg-white border border-slate-300 group-hover:border-accent group-hover:bg-slate-50 group-hover:text-accent text-slate-700 text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm"
                   >
@@ -188,7 +187,6 @@ export function ExploreProblems() {
             ))}
           </div>
 
-          {/* 🚀 FIX: Added cursor-pointer to all pagination buttons */}
           {totalPages > 1 && (
             <div className="mt-8 pt-6 border-t border-slate-100">
               <Pagination>
