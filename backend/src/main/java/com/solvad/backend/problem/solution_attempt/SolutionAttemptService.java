@@ -739,4 +739,14 @@ public class SolutionAttemptService {
                 problem.getMaxConcurrentSolvers()
         );
     }
+    // Add this inside your SolutionAttemptService class
+    @Transactional(readOnly = true)
+    public ActiveAttemptsCountResponse getMyActiveAttemptsCount(UUID solverUserId) {
+        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
+                .orElseThrow(() -> new RuntimeException("Solver profile not found"));
+
+        long count = attemptRepository.countBySolverAndStatus(solver, SolutionAttemptStatus.ACTIVE);
+
+        return new ActiveAttemptsCountResponse(count);
+    }
 }

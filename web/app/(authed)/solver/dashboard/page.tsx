@@ -2,8 +2,11 @@
 
 import { Suspense, useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
-import { getDiscoveryDashboard } from "./api/dashboard";
-import { getMyActiveAttempts } from "./api/dashboard";
+import { 
+  getDiscoveryDashboard, 
+  getMyActiveAttemptsCount, 
+  getMyActiveAttempts 
+} from "./api/dashboard";
 import type { ProblemResponse } from "@/types/problem";
 import type { SolutionAttemptResponse } from "@/types/attempt";
 
@@ -26,50 +29,58 @@ function SolverDashboardContent() {
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab") || "home";
 
+  // Shared Data
   const [recommended, setRecommended] = useState<ProblemResponse[]>([]);
   const [solverCourse, setSolverCourse] = useState("");
-  const [myAttempts, setMyAttempts] = useState<SolutionAttemptResponse[]>([]);
-
-  const [isAttemptsLoading, setIsAttemptsLoading] = useState(true);
   const [isRecommendationsLoading, setIsRecommendationsLoading] = useState(true);
 
-  const loadAttempts = useCallback(async () => {
-    try {
-      setIsAttemptsLoading(true);
-      const attemptsData = await getMyActiveAttempts().catch(() => []);
-      setMyAttempts(attemptsData);
-    } catch (err) {
-      console.error("Failed to load attempts", err);
-    } finally {
-      setIsAttemptsLoading(false);
-    }
-  }, []);
+  // 🚀 Home Tab Data (Lightweight Integer Fetch)
+  const [activeCount, setActiveCount] = useState<number>(0);
+  const [isCountLoading, setIsCountLoading] = useState(true);
 
-  const loadRecommendations = useCallback(async () => {
-    try {
-      setIsRecommendationsLoading(true);
-      const discovery = await getDiscoveryDashboard();
-      setRecommended(discovery.recommended);
-      setSolverCourse(discovery.solverCourse);
-    } catch (err) {
-      console.error("Failed to load recommendations", err);
-    } finally {
-      setIsRecommendationsLoading(false);
-    }
-  }, []);
+  // 🚀 Overview Tab Data (Heavy Payload Fetch)
+  const [myAttempts, setMyAttempts] = useState<SolutionAttemptResponse[]>([]);
+  const [isAttemptsLoading, setIsAttemptsLoading] = useState(true);
 
+  // 1. Always load recommendations for the Home tab
   useEffect(() => {
-    loadAttempts();
-    loadRecommendations();
-  }, [loadAttempts, loadRecommendations]);
+    setIsRecommendationsLoading(true);
+    getDiscoveryDashboard()
+      .then((discovery) => {
+        setRecommended(discovery.recommended);
+        setSolverCourse(discovery.solverCourse);
+      })
+      .catch((err) => console.error("Failed to load recommendations", err))
+      .finally(() => setIsRecommendationsLoading(false));
+  }, []);
 
-  const activeAttempts = myAttempts.filter((a) => a.status === "ACTIVE");
+  // 2. Fetch the fast lightweight count ONLY for the Home tab banner
+  useEffect(() => {
+    if (activeTab === "home") {
+      setIsCountLoading(true);
+      getMyActiveAttemptsCount()
+        .then(setActiveCount)
+        .catch(() => setActiveCount(0))
+        .finally(() => setIsCountLoading(false));
+    }
+  }, [activeTab]);
+
+  // 3. LAZY-LOAD the massive JSON attempt history ONLY if they click the Overview tab
+  useEffect(() => {
+    if (activeTab === "overview" && myAttempts.length === 0) {
+      setIsAttemptsLoading(true);
+      getMyActiveAttempts()
+        .then(setMyAttempts)
+        .catch(() => setMyAttempts([]))
+        .finally(() => setIsAttemptsLoading(false));
+    }
+  }, [activeTab, myAttempts.length]);
 
   return (
     <div className="min-h-screen bg-linear-to-br from-accent/20 via-background to-accent/10 p-8">
       <div className="max-w-7xl mx-auto">
         {activeTab === "home" && (
-          <>
+          <div className="animate-in fade-in duration-300">
             <div className="mb-10 text-center">
               <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
                 Find Problems
@@ -81,8 +92,8 @@ function SolverDashboardContent() {
             </div>
 
             <WorkspaceBanner
-              isLoading={isAttemptsLoading}
-              activeCount={activeAttempts.length}
+              isLoading={isCountLoading}
+              activeCount={activeCount}
             />
 
             <RecommendationsList
@@ -91,15 +102,19 @@ function SolverDashboardContent() {
             />
 
             <ExploreProblems />
-          </>
+          </div>
         )}
 
         {activeTab === "overview" && (
-          <SolverOverview attempts={myAttempts} loading={isAttemptsLoading} />
+          <div className="animate-in fade-in duration-300">
+            <SolverOverview attempts={myAttempts} loading={isAttemptsLoading} />
+          </div>
         )}
 
         {activeTab === "workspace" && (
-          <MyWorkspace />
+          <div className="animate-in fade-in duration-300">
+            <MyWorkspace />
+          </div>
         )}
       </div>
     </div>

@@ -30,10 +30,33 @@ public class SolutionAttemptController {
     @Autowired
     private SolutionAttemptService solutionAttemptService;
 
-    // -------------------------------------------------------------------------
-    // BROWSE — Solver sees all OPEN problems
-    // GET /api/problems/open
-    // -------------------------------------------------------------------------
+    // 🚀 Changed path to 2 segments to permanently bypass the {attemptId} collision
+    @GetMapping("/api/attempts/active/count")
+    @PreAuthorize("hasRole('SOLVER')")
+    public ResponseEntity<ActiveAttemptsCountResponse> getMyActiveAttemptsCount(
+            @RequestHeader("Authorization") String authHeader) {
+
+        String token = authHeader.substring(7);
+        UUID userId = jwtService.extractUserId(token);
+
+        ActiveAttemptsCountResponse response = solutionAttemptService.getMyActiveAttemptsCount(userId);
+        return ResponseEntity.ok(response);
+    }
+    @GetMapping("/api/attempts/{attemptId}")
+    @PreAuthorize("hasAnyRole('SOLVER', 'SEEKER', 'ADMIN')")
+    public ResponseEntity<?> getAttemptById(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable UUID attemptId) {
+        try {
+            UUID currentUserId = extractUserId(authHeader);
+            SolutionAttemptResponse response = attemptService.getAttemptById(attemptId, currentUserId);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+
     @GetMapping("/api/problems/open")
     @PreAuthorize("hasRole('SOLVER')")
     public ResponseEntity<?> getOpenProblems() {
@@ -45,10 +68,7 @@ public class SolutionAttemptController {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // MODULE 2 — Discovery dashboard (recommendations + filtered list)
-    // GET /api/problems/discovery
-    // -------------------------------------------------------------------------
+
     @GetMapping("/api/problems/discovery")
     @PreAuthorize("hasRole('SOLVER')")
     public ResponseEntity<?> getDiscoveryDashboard(
@@ -66,10 +86,7 @@ public class SolutionAttemptController {
     }
 
 
-    // -------------------------------------------------------------------------
-    // MY ATTEMPT — Solver gets their active attempt on aaa problem
-    // GET /api/problems/{problemId}/my-attempt
-    // -------------------------------------------------------------------------
+
     @GetMapping("/api/problems/{problemId}/my-attempt")
     @PreAuthorize("hasRole('SOLVER')")
     public ResponseEntity<?> getMyAttempt(
@@ -87,10 +104,7 @@ public class SolutionAttemptController {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // SAVE DRAFT - SDD Section 3.6
-    // PUT /api/attempts/{attemptId}/subtasks/{subtaskId}/draft
-    // -------------------------------------------------------------------------
+
     @PutMapping("/api/attempts/{attemptId}/subtasks/{subtaskId}/draft")
     @PreAuthorize("hasRole('SOLVER')")
     public ResponseEntity<?> saveSubtaskDraft(
@@ -110,10 +124,7 @@ public class SolutionAttemptController {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // SUBMIT SUBTASK - SDD Section 3.6
-    // POST /api/attempts/{attemptId}/subtasks/{subtaskId}/submit
-    // -------------------------------------------------------------------------
+
     @PostMapping("/api/attempts/{attemptId}/subtasks/{subtaskId}/submit")
     @PreAuthorize("hasRole('SOLVER')")
     public ResponseEntity<?> lockAndSubmitSubtask(
@@ -133,10 +144,7 @@ public class SolutionAttemptController {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // COMPLETE ATTEMPT - SDD Section 3.6
-    // POST /api/attempts/{attemptId}/complete
-    // -------------------------------------------------------------------------
+
     @PostMapping("/api/attempts/{attemptId}/complete")
     @PreAuthorize("hasRole('SOLVER')")
     public ResponseEntity<?> completeAttempt(
@@ -151,11 +159,7 @@ public class SolutionAttemptController {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // DELETE FILE — Solver removes aaa file from aaa draft submission
-    // DELETE /api/submissions/{submissionId}/files
-    //   - fileUrl (String query param)
-    // -------------------------------------------------------------------------
+
     @DeleteMapping("/api/submissions/{submissionId}/files")
     @PreAuthorize("hasRole('SOLVER')")
     public ResponseEntity<?> deleteFile(
@@ -186,25 +190,7 @@ public class SolutionAttemptController {
         }
     }
 
-    @GetMapping("/api/attempts/{attemptId}")
-    @PreAuthorize("hasAnyRole('SOLVER', 'SEEKER', 'ADMIN')")
-    public ResponseEntity<?> getAttemptById(
-            @RequestHeader("Authorization") String authHeader, // 👈 Add this line
-            @PathVariable UUID attemptId) {
-        try {
-            UUID currentUserId = extractUserId(authHeader); // 👈 Add this line
-            SolutionAttemptResponse response = attemptService.getAttemptById(attemptId, currentUserId);
-            return ResponseEntity.ok(response);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
 
-
-
-    // -------------------------------------------------------------------------
-    // Helper
-    // -------------------------------------------------------------------------
     private UUID extractUserId(String authHeader) {
         String token = authHeader.substring(7);
         return jwtService.extractUserId(token);
