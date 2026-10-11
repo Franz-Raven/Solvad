@@ -3,8 +3,11 @@
 import type { ProblemResponse } from "@/types/problem";
 
 function parseList(raw: string): string[] {
-  try { return JSON.parse(raw).map((s: string) => s.trim()).filter(Boolean); }
-  catch { return [raw.trim()].filter(Boolean); }
+  try {
+    return JSON.parse(raw).map((s: string) => s.trim()).filter(Boolean);
+  } catch {
+    return [raw.trim()].filter(Boolean);
+  }
 }
 
 export function ProblemTab({ problem }: { problem: ProblemResponse }) {
@@ -45,6 +48,7 @@ export function ProblemTab({ problem }: { problem: ProblemResponse }) {
               </div>
             );
           })()}
+
           {problem.constraints && (() => {
             const items = parseList(problem.constraints);
             return items.length > 0 && (
@@ -61,28 +65,29 @@ export function ProblemTab({ problem }: { problem: ProblemResponse }) {
         </div>
       </div>
 
+      {/* Sub-problems: same card shell and panel language as the Blueprint card above */}
       <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
         <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-          <svg className="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-           </svg>
+          </svg>
           AI-Decomposed Sub-problems
         </h2>
         <div className="grid gap-4">
           {problem.subtasks.map((subtask, index) => (
-            <div key={subtask.id} className="bg-gradient-to-r from-accent/5 to-secondary/5 rounded-lg p-5 border border-gray-200 hover:shadow-md transition-shadow">
+            <div key={subtask.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200 hover:shadow-md transition-shadow">
               <div className="flex items-start gap-4">
-                <div className="w-10 h-10 bg-gradient-to-br from-accent to-secondary rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0">
+                <div className="w-10 h-10 bg-accent/10 text-accent border border-accent/20 rounded-lg flex items-center justify-center font-bold flex-shrink-0">
                   {index + 1}
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-2">
                     <h3 className="text-lg font-semibold text-gray-900">{subtask.title}</h3>
-                    <span className="px-2 py-1 bg-secondary/10 text-secondary text-xs font-medium rounded-full">
+                    <span className="px-2 py-1 bg-accent/10 text-accent border border-accent/20 text-xs font-medium rounded-full">
                       {subtask.departmentFocus}
                     </span>
                   </div>
-                  <p className="text-gray-700 leading-relaxed">{subtask.description}</p>
+                  <p className="text-gray-800 leading-relaxed">{subtask.description}</p>
                 </div>
               </div>
             </div>
@@ -97,7 +102,7 @@ export function ProblemTab({ problem }: { problem: ProblemResponse }) {
           </svg>
           Attachments
         </h2>
-        
+
         {problem.problemDocumentUrl ? (
           <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
             <div className="flex items-center gap-3">

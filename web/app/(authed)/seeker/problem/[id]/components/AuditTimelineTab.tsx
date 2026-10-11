@@ -1,341 +1,373 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import {
+  History, ListX, ChevronDown, FilePlus, RefreshCw,
+  CheckCircle2, GitBranch, Upload, Save, XCircle,
+  CheckCircle, Paperclip, Send, ThumbsUp, ThumbsDown,
+  ShieldAlert, Edit3,
+} from "lucide-react";
 import { getAuditLog } from "../api/problem";
 import type { AuditLogEntry, AuditEventType } from "@/types/attempt";
 
+// ─── Event styling (neutral by default, color only where it carries meaning) ──
 const AUDIT_EVENT_CONFIG: Record<
   AuditEventType,
-  { label: string; icon: React.ReactNode; color: string; dotColor: string }
+  { label: string; icon: React.ReactNode; color: string; iconColor: string }
 > = {
   PROBLEM_CREATED: {
     label: "Problem Created",
-    icon: (
-      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-      </svg>
-    ),
-    color: "bg-accent/10 text-accent border-accent/20",
-    dotColor: "bg-accent",
+    icon: <FilePlus className="w-4 h-4" />,
+    color: "bg-slate-50 text-slate-600 border-slate-200",
+    iconColor: "text-slate-500",
   },
   STATUS_CHANGED: {
     label: "Status Changed",
-    icon: (
-      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-      </svg>
-    ),
-    color: "bg-yellow-50 text-yellow-700 border-yellow-200",
-    dotColor: "bg-yellow-400",
+    icon: <RefreshCw className="w-4 h-4" />,
+    color: "bg-slate-50 text-slate-600 border-slate-200",
+    iconColor: "text-slate-500",
   },
   ATTEMPT_CLAIMED: {
     label: "Problem Claimed",
-    icon: (
-      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-      </svg>
-    ),
-    color: "bg-purple-50 text-purple-700 border-purple-200",
-    dotColor: "bg-purple-500",
+    icon: <CheckCircle2 className="w-4 h-4" />,
+    color: "bg-accent/10 text-accent border-accent/20",
+    iconColor: "text-accent",
   },
   ATTEMPT_FORKED: {
     label: "Attempt Forked",
-    icon: (
-      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-          d="M8 7v8a2 2 0 002 2h6M8 7l-2 2m2-2l2 2m4 4v-4a2 2 0 00-2-2h-6" />
-      </svg>
-    ),
-    color: "bg-blue-50 text-blue-700 border-blue-200",
-    dotColor: "bg-blue-500",
+    icon: <GitBranch className="w-4 h-4" />,
+    color: "bg-slate-50 text-slate-600 border-slate-200",
+    iconColor: "text-slate-500",
   },
   SUBTASK_SUBMITTED: {
     label: "Subtask Submitted",
-    icon: (
-      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-      </svg>
-    ),
-    color: "bg-green-50 text-green-700 border-green-200",
-    dotColor: "bg-green-500",
+    icon: <Upload className="w-4 h-4" />,
+    color: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    iconColor: "text-emerald-600",
   },
   SUBTASK_DRAFT_SAVED: {
     label: "Draft Saved",
-    icon: (
-      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-          d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-      </svg>
-    ),
-    color: "bg-gray-50 text-gray-600 border-gray-200",
-    dotColor: "bg-gray-400",
+    icon: <Save className="w-4 h-4" />,
+    color: "bg-slate-50 text-slate-600 border-slate-200",
+    iconColor: "text-slate-400",
   },
   ATTEMPT_ABANDONED: {
     label: "Attempt Abandoned",
-    icon: (
-      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-          d="M6 18L18 6M6 6l12 12" />
-      </svg>
-    ),
-    color: "bg-red-50 text-red-700 border-red-200",
-    dotColor: "bg-red-400",
+    icon: <XCircle className="w-4 h-4" />,
+    color: "bg-rose-50 text-rose-700 border-rose-200",
+    iconColor: "text-rose-500",
   },
   ATTEMPT_COMPLETED: {
     label: "Attempt Completed",
-    icon: (
-      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-    color: "bg-green-50 text-green-700 border-green-200",
-    dotColor: "bg-green-600",
+    icon: <CheckCircle className="w-4 h-4" />,
+    color: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    iconColor: "text-emerald-600",
   },
   FILE_UPLOADED: {
     label: "File Uploaded",
-    icon: (
-      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-          d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-      </svg>
-    ),
-    color: "bg-orange-50 text-orange-700 border-orange-200",
-    dotColor: "bg-orange-400",
+    icon: <Paperclip className="w-4 h-4" />,
+    color: "bg-slate-50 text-slate-600 border-slate-200",
+    iconColor: "text-slate-500",
   },
   PROPOSAL_SUBMITTED: {
     label: "Proposal Submitted",
-    icon: (
-      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-      </svg>
-    ),
-    color: "bg-amber-50 text-amber-700 border-amber-200",
-    dotColor: "bg-amber-500",
+    icon: <Send className="w-4 h-4" />,
+    color: "bg-accent/10 text-accent border-accent/20",
+    iconColor: "text-accent",
   },
   PROPOSAL_APPROVED: {
     label: "Proposal Approved",
-    icon: (
-      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-      </svg>
-    ),
+    icon: <ThumbsUp className="w-4 h-4" />,
     color: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    dotColor: "bg-emerald-500",
+    iconColor: "text-emerald-600",
   },
   PROPOSAL_REJECTED: {
     label: "Proposal Rejected",
-    icon: (
-      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
+    icon: <ThumbsDown className="w-4 h-4" />,
     color: "bg-rose-50 text-rose-700 border-rose-200",
-    dotColor: "bg-rose-500",
+    iconColor: "text-rose-500",
   },
   CAPACITY_REACHED: {
     label: "Capacity Reached",
-    icon: (
-      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-      </svg>
-    ),
-    color: "bg-slate-50 text-slate-700 border-slate-200",
-    dotColor: "bg-slate-600",
+    icon: <ShieldAlert className="w-4 h-4" />,
+    color: "bg-slate-50 text-slate-600 border-slate-200",
+    iconColor: "text-slate-500",
   },
   PROBLEM_UPDATED: {
     label: "Problem Updated",
-    icon: (
-      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-      </svg>
-    ),
-    color: "bg-teal-50 text-teal-700 border-teal-200",
-    dotColor: "bg-teal-500",
+    icon: <Edit3 className="w-4 h-4" />,
+    color: "bg-slate-50 text-slate-600 border-slate-200",
+    iconColor: "text-slate-500",
   },
 };
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 type SortOrder = "newest-first" | "oldest-first";
 type RoleFilter = "ALL" | "SEEKER" | "SOLVER" | "SYSTEM";
 
-// ─── Helper: get today's date label ──────────────────────────────────────────
+const CARD =
+  "bg-white rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100 p-6 md:p-8";
+
 function getTodayLabel(): string {
   return new Date().toLocaleDateString("en-US", {
     month: "long", day: "numeric", year: "numeric",
   });
 }
 
-// ─── Collapsible day group ────────────────────────────────────────────────────
+// ─── Lazy-loaded day group ───────────────────────────────────────────────────
 function DayGroup({
   dateLabel,
-  entries,
+  count,
   defaultOpen,
   sortOrder,
+  fetchEntries,
 }: {
   dateLabel: string;
-  entries: AuditLogEntry[];
+  count: number;
   defaultOpen: boolean;
   sortOrder: SortOrder;
+  fetchEntries: () => Promise<AuditLogEntry[]>;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  const [loading, setLoading] = useState(defaultOpen);
+  const [failed, setFailed] = useState(false);
+  const [entries, setEntries] = useState<AuditLogEntry[] | null>(null);
+
   const isToday = dateLabel === getTodayLabel();
 
-  const sortedEntries = sortOrder === "newest-first"
-    ? [...entries].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-    : [...entries].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+  const loadEntries = async () => {
+    setLoading(true);
+    setFailed(false);
+    try {
+      setEntries(await fetchEntries());
+    } catch (err) {
+      console.error("Failed to load entries for date", err);
+      setFailed(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Today's group is open by default, so it fetches on mount
+  useEffect(() => {
+    if (defaultOpen) loadEntries();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleToggle = () => {
+    // Only fetch the first time a collapsed group is opened
+    if (!open && !entries) {
+      setOpen(true);
+      loadEntries();
+    } else {
+      setOpen(!open);
+    }
+  };
+
+  const sortedEntries = entries
+    ? [...entries].sort((a, b) => {
+        const diff = new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+        return sortOrder === "newest-first" ? -diff : diff;
+      })
+    : [];
 
   return (
-    <div className="overflow-visible">
-      {/* ── Day header (clickable) ── */}
+    <div className="overflow-visible relative z-10">
       <button
-        onClick={() => setOpen((v) => !v)}
-        className="relative flex items-center gap-3 mb-2 mt-6 first:mt-0 w-full text-left group overflow-visible"
+        onClick={handleToggle}
+        className="relative flex items-center gap-4 mb-4 mt-8 first:mt-0 w-full text-left group overflow-visible cursor-pointer z-10"
       >
-        {/* Node on the spine */}
-        <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0  relative z-0 ring-2 ring-white ring-offset-0 shadow-md bg-white group-hover:shadow-lg transition-all">
-          <div className={`w-2.5 h-2.5 rounded-full transition-colors ${isToday ? "bg-accent" : "bg-gray-300"}`} />
+        <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-white border border-slate-200 shadow-sm group-hover:shadow-md transition-all">
+          <div className={`w-2.5 h-2.5 rounded-full transition-colors ${isToday ? "bg-accent" : "bg-slate-300"}`} />
         </div>
 
-        <span className={`text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full border transition-colors ${
-          isToday
-            ? "bg-accent/10 text-accent border-accent/20"
-            : "bg-gray-50 text-gray-500 border-gray-200"
-        }`}>
+        <span
+          className={`text-[11px] font-bold uppercase tracking-wider px-3 py-1 rounded-md border transition-colors ${
+            isToday
+              ? "bg-accent/10 text-accent border-accent/20"
+              : "bg-slate-50 text-slate-500 border-slate-200"
+          }`}
+        >
           {isToday ? `Today — ${dateLabel}` : dateLabel}
         </span>
 
-        {/* Entry count badge */}
-        <span className="text-[10px] font-semibold text-gray-400 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-full">
-          {entries.length} event{entries.length !== 1 ? "s" : ""}
+        <span className="text-[10px] font-bold text-slate-400 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md uppercase tracking-wider hidden sm:block">
+          {count} event{count !== 1 ? "s" : ""}
         </span>
 
-        {/* Chevron */}
-        <span className="ml-auto mr-1 text-gray-400 group-hover:text-gray-600 transition-colors">
-          <svg
-            className={`w-4 h-4 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
-            fill="none" stroke="currentColor" viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
+        <span className="ml-auto mr-1 text-slate-400 group-hover:text-accent transition-colors">
+          <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
         </span>
       </button>
 
-      {/* ── Entries ── */}
       {open && (
-        <div className="space-y-3 ml-0 overflow-visible">
-          {sortedEntries.map((entry) => {
-            const config = AUDIT_EVENT_CONFIG[entry.eventType] ?? {
-              label: entry.eventType,
-              icon: null,
-              color: "bg-gray-50 text-gray-600 border-gray-200",
-              dotColor: "bg-gray-400",
-            };
-            const time = new Date(entry.timestamp).toLocaleTimeString("en-US", {
-              hour: "numeric", minute: "2-digit", hour12: true,
-            });
-
-            return (
-              <div key={entry.id} className="relative flex items-start gap-3">
-                <div
-                  className={`
-                    w-10 h-10 rounded-full flex items-center justify-center
-                    flex-shrink-0 relative z-0
-                    ring-2 ring-white ring-offset-0
-                    shadow-md
-                    ${config.dotColor}
-                  `}
-                >
-                  <span className="text-white">{config.icon}</span>
-                </div>
-
-                {/* Card */}
-                <div className="flex-1 bg-white rounded-xl border border-gray-200 shadow-sm p-4 hover:shadow-md transition-shadow min-w-0">
-                  <div className="flex items-start justify-between gap-2 flex-wrap">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${config.color}`}>
-                        {config.label}
-                      </span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                        entry.actorRole === "SYSTEM"
-                          ? "bg-gray-100 text-gray-500 border-gray-200"
-                          : entry.actorRole === "SEEKER"
-                          ? "bg-accent/10 text-accent border-accent/20"
-                          : "bg-purple-50 text-purple-600 border-purple-200"
-                      }`}>
-                        {entry.actorRole}
-                      </span>
+        <div className="space-y-4 ml-0 overflow-visible mt-4 animate-in fade-in duration-300">
+          {loading ? (
+            /* Structural entry skeleton, one row per event (max 3) */
+            <div className="space-y-4 relative z-10">
+              {Array.from({ length: Math.min(Math.max(count, 1), 3) }).map((_, i) => (
+                <div key={i} className="relative flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-full flex-shrink-0 bg-slate-50 border border-slate-100 animate-pulse" />
+                  <div className="flex-1 bg-white rounded-2xl border border-slate-100 p-5 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="w-32 h-5 bg-slate-100 rounded-md animate-pulse" />
+                      <div className="w-16 h-3 bg-slate-50 rounded-md animate-pulse" />
                     </div>
-                    <span className="text-[11px] text-gray-400 flex-shrink-0">{time}</span>
+                    <div className="w-1/4 h-4 bg-slate-100 rounded-md animate-pulse mb-2" />
+                    <div className="w-full h-3 bg-slate-50 rounded-md animate-pulse mb-1" />
+                    <div className="w-2/3 h-3 bg-slate-50 rounded-md animate-pulse" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : failed ? (
+            <div className="relative z-10 flex items-center justify-between gap-4 bg-white border-l-4 border-rose-500 shadow-sm rounded-r-xl p-5">
+              <p className="text-sm font-bold text-slate-800">Couldn't load this day's events.</p>
+              <button
+                onClick={loadEntries}
+                className="text-sm font-bold text-accent hover:underline cursor-pointer flex-shrink-0"
+              >
+                Try again
+              </button>
+            </div>
+          ) : (
+            sortedEntries.map((entry) => {
+              const config = AUDIT_EVENT_CONFIG[entry.eventType] ?? {
+                label: entry.eventType,
+                icon: null,
+                color: "bg-slate-50 text-slate-600 border-slate-200",
+                iconColor: "text-slate-400",
+              };
+              const time = new Date(entry.timestamp).toLocaleTimeString("en-US", {
+                hour: "numeric", minute: "2-digit", hour12: true,
+              });
+
+              return (
+                <div key={entry.id} className="relative flex items-start gap-4 z-10">
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-white border border-slate-200 shadow-sm ${config.iconColor}`}
+                  >
+                    {config.icon}
                   </div>
 
-                  {/* Actor */}
-                  <p className="text-xs font-semibold text-gray-700 mt-2">
-                    {entry.actorRole === "SYSTEM"
-                      ? <span className="text-gray-400 font-normal italic">System automation</span>
-                      : entry.actorName
-                    }
-                  </p>
+                  {/* No hover transitions here: they made the boxes jump */}
+                  <div className="flex-1 bg-white rounded-2xl border border-slate-200 shadow-[0_2px_10px_rgba(0,0,0,0.02)] p-5 min-w-0">
+                    <div className="flex items-start justify-between gap-2 flex-wrap mb-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${config.color}`}
+                        >
+                          {config.label}
+                        </span>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-md border uppercase tracking-wider ${
+                            entry.actorRole === "SYSTEM"
+                              ? "bg-slate-100 text-slate-500 border-slate-200"
+                              : entry.actorRole === "SEEKER"
+                              ? "bg-accent/10 text-accent border-accent/20"
+                              : "bg-purple-50 text-purple-600 border-purple-200"
+                          }`}
+                        >
+                          {entry.actorRole}
+                        </span>
+                      </div>
+                      <span className="text-[11px] font-bold text-slate-400 flex-shrink-0">{time}</span>
+                    </div>
 
-                  {/* Delta */}
-                  <p className="text-sm text-gray-600 mt-1 leading-relaxed break-words">
-                    {entry.delta}
-                  </p>
+                    <p className="text-sm font-bold text-slate-900 mt-1">
+                      {entry.actorRole === "SYSTEM" ? (
+                        <span className="text-slate-400 font-medium italic">System automation</span>
+                      ) : (
+                        entry.actorName
+                      )}
+                    </p>
+
+                    <p className="text-sm text-slate-600 mt-1.5 font-medium leading-relaxed break-words">
+                      {entry.delta}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       )}
     </div>
   );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// ─── Tab ─────────────────────────────────────────────────────────────────────
 export function AuditTimelineTab({ problemId }: { problemId: string }) {
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [filterRole, setFilterRole] = useState<RoleFilter>("ALL");
   const [sortOrder, setSortOrder] = useState<SortOrder>("newest-first");
 
-  useEffect(() => {
+  const loadLogs = () => {
+    setLoading(true);
+    setLoadError(false);
     getAuditLog(problemId)
       .then(setLogs)
-      .catch((err: unknown) => console.error("Failed to load audit log", err))
+      .catch((err: unknown) => {
+        console.error("Failed to load audit log", err);
+        setLoadError(true);
+      })
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadLogs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [problemId]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin" />
+      <div className={`${CARD} animate-pulse`}>
+        <div className="w-48 h-8 bg-slate-200 rounded-lg mb-8" />
+        <div className="h-16 bg-slate-50 border border-slate-100 rounded-xl mb-12" />
+        <div className="space-y-6 pl-12 border-l-2 border-slate-100 ml-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-32 bg-white border border-slate-100 rounded-2xl shadow-sm relative">
+              <div className="absolute -left-16 top-4 w-8 h-8 rounded-full bg-slate-200" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className={`${CARD} p-12 text-center animate-in fade-in duration-500`}>
+        <div className="w-16 h-16 bg-rose-50 border border-rose-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+          <History className="w-8 h-8 text-rose-300" />
+        </div>
+        <h3 className="text-xl font-bold text-slate-900 mb-2">Couldn't load the activity ledger</h3>
+        <p className="text-slate-500 font-medium text-sm mb-6">Something went wrong while fetching the audit log.</p>
+        <button
+          onClick={loadLogs}
+          className="px-6 py-2.5 bg-accent hover:bg-accent/90 text-white font-bold rounded-xl transition-all shadow-md cursor-pointer"
+        >
+          Try Again
+        </button>
       </div>
     );
   }
 
   if (logs.length === 0) {
     return (
-      <div className="bg-white rounded-xl shadow-md border border-gray-200 p-12 text-center">
-        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-          </svg>
+      <div className={`${CARD} p-12 text-center animate-in fade-in duration-500`}>
+        <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+          <ListX className="w-8 h-8 text-slate-300" />
         </div>
-        <h3 className="text-xl font-bold text-gray-900 mb-2">No activity yet</h3>
-        <p className="text-gray-500 text-sm">Events will appear here as the problem progresses.</p>
+        <h3 className="text-xl font-bold text-slate-900 mb-2">No activity yet</h3>
+        <p className="text-slate-500 font-medium text-sm">Events will appear here as the problem progresses.</p>
       </div>
     );
   }
 
-  // ── Filter ──
   const filtered = filterRole === "ALL" ? logs : logs.filter((l) => l.actorRole === filterRole);
 
-  // ── Group by date ──
   const groupMap = new Map<string, AuditLogEntry[]>();
   filtered.forEach((entry) => {
     const dateLabel = new Date(entry.timestamp).toLocaleDateString("en-US", {
@@ -345,108 +377,112 @@ export function AuditTimelineTab({ problemId }: { problemId: string }) {
     groupMap.get(dateLabel)!.push(entry);
   });
 
-  // ── Sort date groups ──
   const groups = Array.from(groupMap.entries()).map(([dateLabel, entries]) => ({
     dateLabel,
     entries,
-    // Use the latest timestamp in the group for sorting the group itself
     latestTs: Math.max(...entries.map((e) => new Date(e.timestamp).getTime())),
   }));
 
-  const sortedGroups = sortOrder === "newest-first"
-    ? groups.sort((a, b) => b.latestTs - a.latestTs)
-    : groups.sort((a, b) => a.latestTs - b.latestTs);
+  const sortedGroups =
+    sortOrder === "newest-first"
+      ? groups.sort((a, b) => b.latestTs - a.latestTs)
+      : groups.sort((a, b) => a.latestTs - b.latestTs);
 
   const todayLabel = getTodayLabel();
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      {/* ── Header + stats ── */}
-      {/* ── Header + stats ── */}
-      <div className="bg-white rounded-xl shadow-md border border-gray-200 p-5">
-        <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div className={`${CARD} relative z-20`}>
+        <div className="flex items-start justify-between flex-wrap gap-4 mb-6">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">Activity Ledger</h2>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
+              <div className="p-2.5 bg-slate-50 rounded-xl text-slate-500 border border-slate-200">
+                <History className="w-5 h-5" />
+              </div>
+              Activity Ledger
+            </h2>
+            <p className="text-sm font-medium text-slate-500 mt-3">
               Immutable, chronological record of every event on this problem.
             </p>
           </div>
-          <span className="text-xs font-semibold px-3 py-1.5 bg-accent/10 text-accent rounded-full border border-accent/20">
+          <span className="text-[11px] font-bold px-3 py-1 bg-accent/10 text-accent uppercase tracking-wider rounded-md border border-accent/20 h-fit mt-2">
             {logs.length} event{logs.length !== 1 ? "s" : ""} logged
           </span>
         </div>
 
-        {/* ── Controls row ── */}
-        <div className="flex items-center gap-4 mt-4 flex-wrap">
-          {/* Role filter */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs text-gray-500 font-medium">Actor:</span>
-            {(["ALL", "SEEKER", "SOLVER", "SYSTEM"] as const).map((role) => (
-              <button
-                key={role}
-                onClick={() => setFilterRole(role)}
-                className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
-                  filterRole === role
-                    ? "bg-accent text-white border-accent"
-                    : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
-                }`}
-              >
-                {role}
-                {role !== "ALL" && (
-                  <span className="ml-1.5 opacity-70">
-                    {logs.filter((l) => l.actorRole === role).length}
-                  </span>
-                )}
-              </button>
-            ))}
+        <div className="flex flex-col xl:flex-row xl:items-center gap-6 mt-8 flex-wrap border-t border-slate-100 pt-6">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full xl:w-auto">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Actor:</span>
+            <div className="flex space-x-1 bg-slate-50 p-1 rounded-xl border border-slate-100 w-fit max-w-full overflow-x-auto no-scrollbar">
+              {(["ALL", "SEEKER", "SOLVER", "SYSTEM"] as const).map((role) => (
+                <button
+                  key={role}
+                  onClick={() => setFilterRole(role)}
+                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer flex items-center gap-2 border ${
+                    filterRole === role
+                      ? "bg-white text-accent shadow-sm border-slate-200"
+                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-100 border-transparent"
+                  }`}
+                >
+                  {role}
+                  {role !== "ALL" && (
+                    <span
+                      className={`px-1.5 py-0.5 rounded-md text-[10px] leading-none ${
+                        filterRole === role ? "bg-accent/10 text-accent" : "bg-slate-200/60 text-slate-500"
+                      }`}
+                    >
+                      {logs.filter((l) => l.actorRole === role).length}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* Divider */}
-          <div className="hidden sm:block w-px h-5 bg-gray-200" />
+          <div className="hidden xl:block w-px h-6 bg-slate-200" />
 
-          {/* Sort order */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500 font-medium">Order:</span>
-            {(
-              [
-                { value: "newest-first", label: "Newest first" },
-                { value: "oldest-first", label: "Oldest first" },
-              ] as { value: SortOrder; label: string }[]
-            ).map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => setSortOrder(opt.value)}
-                className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
-                  sortOrder === opt.value
-                    ? "bg-accent text-white border-accent"
-                    : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full xl:w-auto">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Order:</span>
+            <div className="flex space-x-1 bg-slate-50 p-1 rounded-xl border border-slate-100 w-fit max-w-full overflow-x-auto no-scrollbar">
+              {(
+                [
+                  { value: "newest-first", label: "Newest first" },
+                  { value: "oldest-first", label: "Oldest first" },
+                ] as { value: SortOrder; label: string }[]
+              ).map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setSortOrder(opt.value)}
+                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer border whitespace-nowrap ${
+                    sortOrder === opt.value
+                      ? "bg-white text-accent shadow-sm border-slate-200"
+                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-100 border-transparent"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ── Timeline ── */}
-      <div className="relative overflow-visible">
-        {/*
-          FIX: The spine is now `pointer-events-none` so it never
-          intercepts clicks on the day-header buttons.
-          It's also `z-0` so icon dots (z-10) always render above it.
-        */}
-        <div className="absolute left-[19px] top-0 bottom-0 w-0.5 bg-gray-200 z-0 pointer-events-none" />
+      <div className="relative overflow-visible px-4 md:px-8">
+        {/* Spine: pointer-events-none so it never swallows clicks on day headers */}
+        <div className="absolute left-[35px] md:left-[51px] top-4 bottom-4 w-0.5 bg-slate-200 z-0 pointer-events-none" />
 
-        <div className="space-y-1 overflow-visible">
+        <div className="space-y-4 overflow-visible relative z-10">
           {sortedGroups.map((group) => (
             <DayGroup
-              key={group.dateLabel}
+              // Keying with filterRole remounts each group when the filter changes
+              key={`${group.dateLabel}-${filterRole}`}
               dateLabel={group.dateLabel}
-              entries={group.entries}
+              count={group.entries.length}
               sortOrder={sortOrder}
-              // Today's group is open by default; all other days are collapsed
               defaultOpen={group.dateLabel === todayLabel}
+              // Entries are already in memory. Swap this for a per-day endpoint
+              // and the skeleton above will show while it loads.
+              fetchEntries={() => Promise.resolve(group.entries)}
             />
           ))}
         </div>
