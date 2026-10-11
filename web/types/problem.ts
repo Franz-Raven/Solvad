@@ -83,7 +83,6 @@ export interface ProblemResponse {
   matchScore?: number;
   courseMatch?: boolean;
   maxConcurrentSolvers?: number; 
-  
 }
 
 export interface DiscoveryDashboardResponse {
@@ -104,41 +103,31 @@ export interface SeekerNotification {
   timestamp: string;
 }
 
-export interface PaginatedProblemsResponse {
-  problems: ProblemSummary[]; // 🚀 Changed from ProblemResponse[]
-  currentPage: number;
-  totalPages: number;
-  totalElements: number;
-  pageSize: number;
-}
-
-export interface ProblemSummaryResponse {
-  id: string;
-  title: string;
-  status: string;
-  createdAt: string;
-  subtaskCount: number;
-  preferredProgram: string;
-  sdgFocus?: string;
-  organizationName: string;
-  tags?: string[];
-}
-
-
+// 🚀 UNIFIED LIGHTWEIGHT SUMMARY
 export interface ProblemSummary {
   id: string;
   title: string;
   organizationName: string;
   preferredProgram: string;
   status: string;
-  subtaskCount: number; // 🚀 Replaces the subtasks array
+  subtaskCount: number; 
   createdAt: string;
   courseMatch?: boolean;
   matchScore?: number;
+  sdgFocus?: string;
+
+}
+
+export interface PaginatedProblemsResponse {
+  problems: ProblemSummary[]; // Uses unified summary
+  currentPage: number;
+  totalPages: number;
+  totalElements: number;
+  pageSize: number;
 }
 
 export interface SeekerProblemListResponse {
-  problems: ProblemSummaryResponse[];
+  problems: ProblemSummary[]; // Uses unified summary
   currentPage: number;
   totalPages: number;
   totalElements: number;

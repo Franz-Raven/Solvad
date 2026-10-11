@@ -13,7 +13,7 @@ import {
   X,
   ArrowRight
 } from "lucide-react";
-import type { ProblemSummaryResponse, SeekerProblemListResponse } from "@/types/problem";
+import type { SeekerProblemListResponse } from "@/types/problem";
 import { getSeekerProblemList } from "../api/dashboard";
 import { getAllSDGs } from "@/lib/data/sdgs";
 import { useDebounce } from "@/hooks/use-debounce";

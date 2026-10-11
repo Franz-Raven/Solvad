@@ -157,17 +157,27 @@ public class ProblemService {
         return mapToResponse(savedProblem, savedSubtasks, seeker);
     }
 
-    public List<ProblemResponse> getMyProblems(UUID seekerUserId) {
+    public List<ProblemSummaryResponse> getMyProblems(UUID seekerUserId) {
         SeekerProfile seeker = seekerProfileRepository.findByUserId(seekerUserId)
                 .orElseThrow(() -> new RuntimeException("Seeker profile not found"));
 
         List<Problem> problems = problemRepository.findBySeeker(seeker);
 
+        // Batch fetch counts to prevent database lag
+        Map<UUID, Integer> subtaskCounts = subtaskRepository.findByProblemIn(problems)
+                .stream()
+                .collect(Collectors.groupingBy(
+                        s -> s.getProblem().getId(),
+                        Collectors.summingInt(s -> 1)
+                ));
+
         return problems.stream()
-                .map(problem -> {
-                    List<ProblemSubtask> subtasks = subtaskRepository.findByProblem(problem);
-                    return mapToResponse(problem, subtasks, seeker);
-                })
+                .map(problem -> mapToSummaryResponse(
+                        problem,
+                        subtaskCounts.getOrDefault(problem.getId(), 0),
+                        false,
+                        0.0
+                ))
                 .collect(Collectors.toList());
     }
 
@@ -435,8 +445,7 @@ public class ProblemService {
                             pr.getCreatedAt(),
                             pr.getCourseMatch(),
                             result.getScore(),
-                            pr.getSdgFocus(),
-                            pr.getTags()
+                            pr.getSdgFocus()
                     );
                 })
                 .collect(Collectors.toList());
@@ -605,8 +614,7 @@ public class ProblemService {
                             p.getCreatedAt(),
                             null,
                             null,
-                            p.getSdgFocus(),
-                            tags
+                            p.getSdgFocus()
                     );
                 })
                 .collect(Collectors.toList());
@@ -658,8 +666,6 @@ public class ProblemService {
     }
 
     private ProblemSummaryResponse mapToSummaryResponse(Problem problem, int subtaskCount, boolean isCourseMatch, double matchScore) {
-        List<String> tags = problem.getTags() != null ? problem.getTags() : List.of();
-
         return new ProblemSummaryResponse(
                 problem.getId(),
                 problem.getTitle(),
@@ -670,8 +676,7 @@ public class ProblemService {
                 problem.getCreatedAt(),
                 isCourseMatch,
                 matchScore,
-                problem.getSdgFocus(),
-                tags
+                problem.getSdgFocus()
         );
     }
 }

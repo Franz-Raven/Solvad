@@ -1,14 +1,14 @@
 import { apiRequest } from "@/lib/api";
 import type {
-  ProblemResponse,
+  ProblemSummary,
   PaginatedNotificationsResponse,
   SeekerProblemListResponse,
   PaginatedProblemsResponse
 } from "@/types/problem";
 
 
-export async function getMyProblems(): Promise<ProblemResponse[]> {
-  return apiRequest<ProblemResponse[]>("/problems/my-problems", {
+export async function getMyProblems(): Promise<ProblemSummary[]> {
+  return apiRequest<ProblemSummary[]>("/problems/my-problems", {
     method: "GET",
   });
 }

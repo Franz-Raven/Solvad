@@ -14,6 +14,5 @@ public record ProblemSummaryResponse(
         LocalDateTime createdAt,
         Boolean courseMatch,
         Double matchScore,
-        String sdgFocus,
-        List<String> tags
+        String sdgFocus
 ) {}
