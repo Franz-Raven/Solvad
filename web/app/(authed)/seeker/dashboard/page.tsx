@@ -3,7 +3,7 @@
 import { Suspense, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { getMyProblems } from "./api/dashboard";
-import type { ProblemResponse } from "@/types/problem";
+import type { ProblemSummary } from "@/types/problem";
 import { SeekerOverview } from "./components/SeekerOverview";
 import { SeekerRecentActivity } from "./components/SeekerRecentActivity";
 import { SeekerPostedProblems } from "./components/SeekerPostedProblems";
@@ -20,7 +20,7 @@ function SeekerDashboardContent() {
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab") || "home";
 
-  const [problems, setProblems] = useState<ProblemResponse[]>([]);
+  const [problems, setProblems] = useState<ProblemSummary[]>([]);
   const [, setTotalProblems] = useState(0);
 
   useEffect(() => {
