@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { GitFork, GitBranch, Network, ArrowRight } from "lucide-react";
+import { GitFork, GitBranch, Network, ArrowRight, Calendar } from "lucide-react";
 import type { SolutionAttemptResponse, TreeAttemptNode } from "@/types/attempt";
 import { AttemptDetailModal } from "./AttemptDetailModal";
 
@@ -32,6 +32,62 @@ function buildHierarchyTree(flatList: SolutionAttemptResponse[]): TreeAttemptNod
   return roots;
 }
 
+// 🚀 Downward-growing Tree Animation Skeleton
+const TreeSkeleton = () => (
+  <div className="tree-viewport flex flex-col items-center justify-start pt-12 pb-16 w-full overflow-hidden" style={{ minHeight: '480px' }}>
+    <style>{`
+      @keyframes growDown { from { transform: scaleY(0); opacity: 0; } to { transform: scaleY(1); opacity: 1; } }
+      @keyframes fadePop { from { transform: translateY(-10px) scale(0.95); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+      @keyframes expandX { from { transform: scaleX(0); opacity: 0;} to { transform: scaleX(1); opacity: 1; } }
+      .node-skel { animation: fadePop 0.5s ease-out forwards; opacity: 0; transform-origin: top center; }
+      .line-skel { animation: growDown 0.4s ease-out forwards; opacity: 0; transform-origin: top center; }
+      .expand-x { animation: expandX 0.4s ease-out forwards; opacity: 0; transform-origin: center; }
+    `}</style>
+    
+    {/* Root Node */}
+    <div className="node-skel w-[256px] h-[140px] bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col p-5 relative z-10" style={{ animationDelay: '0ms' }}>
+      <div className="w-3/4 h-4 bg-slate-200 rounded-md animate-pulse mb-2" />
+      <div className="w-1/2 h-3 bg-slate-100 rounded-md animate-pulse mb-auto" />
+      <div className="flex gap-2 mt-4">
+        <div className="w-full h-8 bg-slate-50 rounded-lg animate-pulse" />
+        <div className="w-full h-8 bg-slate-50 rounded-lg animate-pulse" />
+      </div>
+    </div>
+    
+    {/* Drop Line */}
+    <div className="line-skel w-0.5 h-8 bg-slate-200 relative z-0" style={{ animationDelay: '200ms' }} />
+    
+    {/* Bridge */}
+    <div className="expand-x w-[288px] h-0.5 bg-slate-200 relative z-0" style={{ animationDelay: '400ms' }} />
+    
+    {/* Drops to children */}
+    <div className="flex justify-between w-[288px] relative z-0">
+      <div className="line-skel w-0.5 h-8 bg-slate-200" style={{ animationDelay: '500ms' }} />
+      <div className="line-skel w-0.5 h-8 bg-slate-200" style={{ animationDelay: '500ms' }} />
+    </div>
+    
+    {/* Children Nodes */}
+    <div className="flex gap-[32px] relative z-10">
+      <div className="node-skel w-[256px] h-[140px] bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col p-5" style={{ animationDelay: '700ms' }}>
+        <div className="w-2/3 h-4 bg-slate-200 rounded-md animate-pulse mb-2" />
+        <div className="w-1/3 h-3 bg-slate-100 rounded-md animate-pulse mb-auto" />
+        <div className="flex gap-2 mt-4">
+          <div className="w-full h-8 bg-slate-50 rounded-lg animate-pulse" />
+          <div className="w-full h-8 bg-slate-50 rounded-lg animate-pulse" />
+        </div>
+      </div>
+      <div className="node-skel w-[256px] h-[140px] bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col p-5" style={{ animationDelay: '700ms' }}>
+        <div className="w-3/4 h-4 bg-slate-200 rounded-md animate-pulse mb-2" />
+        <div className="w-1/2 h-3 bg-slate-100 rounded-md animate-pulse mb-auto" />
+        <div className="flex gap-2 mt-4">
+          <div className="w-full h-8 bg-slate-50 rounded-lg animate-pulse" />
+          <div className="w-full h-8 bg-slate-50 rounded-lg animate-pulse" />
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
 export function SolutionTreeTab({
   attempts,
   isAlreadyClaimed,
@@ -47,6 +103,14 @@ export function SolutionTreeTab({
   const [selectedSubtaskId, setSelectedSubtaskId] = useState<string>("ALL");
   const [isAnimating, setIsAnimating] = useState(false);
   const [displayedSubtaskId, setDisplayedSubtaskId] = useState<string>("ALL");
+  
+  const [isTreeReady, setIsTreeReady] = useState(false);
+
+  useEffect(() => {
+    // Show skeleton for 1.2s while calculating tree
+    const timer = setTimeout(() => setIsTreeReady(true), 1200);
+    return () => clearTimeout(timer);
+  }, []);
 
   const uniqueSubtasks = useMemo(() => {
     const map = new Map<string, string>();
@@ -70,7 +134,6 @@ export function SolutionTreeTab({
     (myProposalStatus === "PENDING" || myProposalStatus === "APPROVED");
   const canInteract = !isAlreadyClaimed && !isUnavailable && !hasPendingOrApproved;
 
-  // Animate filter changes: fade out → swap → fade in
   function handleFilterChange(id: string) {
     if (id === selectedSubtaskId) return;
     setSelectedSubtaskId(id);
@@ -94,7 +157,7 @@ export function SolutionTreeTab({
           display: "flex",
           flexDirection: "row",
           alignItems: "flex-start",
-          gap: "32px", // Spacing between horizontal nodes
+          gap: "32px",
           justifyContent: "center",
         }}
       >
@@ -110,12 +173,10 @@ export function SolutionTreeTab({
               zIndex: 10,
             }}
           >
-            {/* 🚀 Updated node card styling to match the unified UI */}
             <div
               className="group bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:border-emerald-500/30 hover:shadow-md transition-all duration-300 select-none relative overflow-hidden"
               style={{ minWidth: "256px", maxWidth: "256px" }}
             >
-              {/* Subtle hover accent block */}
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-accent opacity-0 group-hover:opacity-100 transition-opacity" />
               
               <div className="flex items-start justify-between gap-2 mb-2">
@@ -153,16 +214,14 @@ export function SolutionTreeTab({
                 </div>
               )}
 
-              <div className="flex items-center justify-between mt-3 mb-4 text-[10px] font-bold text-slate-400">
-                <p>
+              <div className="flex items-center justify-between mt-3 mb-4 text-[11px] font-bold text-slate-400">
+                <p className="flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5" />
                   {new Date(node.claimedAt).toLocaleDateString("en-US", {
                     month: "short",
                     day: "numeric",
                     year: "numeric",
                   })}
-                </p>
-                <p>
-                  {node.submissions.filter((s) => s.status === "SUBMITTED").length} / {node.submissions.length} SUBMISSIONS
                 </p>
               </div>
 
@@ -230,16 +289,12 @@ export function SolutionTreeTab({
 
           const p = toL(pRect);
           const cs = childRects.map(toL);
-          const barY = p.bottom + 20; // Matches the height of the parent drop line
+          const barY = p.bottom + 20;
 
           lines.push(
-            // 🚀 Polished SVG lines
             <g key={`conn-${node.id}`} stroke="#e2e8f0" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
-              {/* Vertical line down from parent */}
               <line x1={p.cx} y1={p.bottom} x2={p.cx} y2={barY} />
-              {/* Horizontal bridge connecting children */}
               <line x1={Math.min(...cs.map((c) => c.cx))} y1={barY} x2={Math.max(...cs.map((c) => c.cx))} y2={barY} />
-              {/* Vertical lines dropping down into children */}
               {cs.map((c, i) => <line key={i} x1={c.cx} y1={barY} x2={c.cx} y2={c.top - 20} />)}
             </g>
           );
@@ -257,7 +312,6 @@ export function SolutionTreeTab({
   return (
     <>
       <style>{`
-        /* Tree viewport — fixed height, no resize */
         .tree-viewport {
           min-height: 480px;
           max-height: 600px;
@@ -270,38 +324,11 @@ export function SolutionTreeTab({
           border: 1px solid #f1f5f9;
           box-shadow: inset 0 2px 12px rgba(0,0,0,0.02);
         }
-
-        /* Fade animation for tree content */
-        .tree-content {
-          transition: opacity 0.3s ease;
-        }
-        .tree-content.exiting {
-          opacity: 0;
-        }
-        .tree-content.entering {
-          opacity: 1;
-        }
-
-        /* Section header */
-        .tree-section-header {
-          display: flex;
-          align-items: flex-start;
-          justify-content: space-between;
-          gap: 16px;
-          flex-wrap: wrap;
-          margin-bottom: 24px;
-        }
-
-        /* Empty state inside viewport */
-        .tree-empty {
-          position: absolute;
-          inset: 0;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: 12px;
-        }
+        .tree-content { transition: opacity 0.3s ease; }
+        .tree-content.exiting { opacity: 0; }
+        .tree-content.entering { opacity: 1; }
+        .tree-section-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+        .tree-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
       `}</style>
 
       {modalNode && (
@@ -318,8 +345,45 @@ export function SolutionTreeTab({
         />
       )}
 
-      {/* 🚀 Main Fade-In Mount */}
       <div className="animate-in fade-in duration-500">
+        
+        {/* 🚀 Restyled Top CTA Banner */}
+        {canInteract && attempts.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.04)] border border-slate-100 p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 transition-shadow hover:shadow-md">
+            <div>
+              <h3 className="font-bold text-slate-900 text-lg">Want to start from scratch?</h3>
+              <p className="text-sm font-medium text-slate-500 mt-1">
+                Submit a fresh proposal instead of branching off an existing solution.
+              </p>
+            </div>
+            <button
+              onClick={onClaimNew}
+              className="w-full md:w-auto px-8 py-3 bg-accent hover:bg-accent/90 text-white font-bold rounded-xl transition-all shadow-sm hover:scale-[1.02] flex items-center justify-center gap-2 cursor-pointer"
+            >
+              Submit New Proposal <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Pending banner */}
+        {hasPendingOrApproved && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex items-start gap-4 mb-8 shadow-sm">
+            <div className="w-3 h-3 bg-amber-500 rounded-full animate-pulse mt-1.5 flex-shrink-0" />
+            <div>
+              <p className="text-base font-bold text-amber-900">
+                {myProposalStatus === "PENDING"
+                  ? "Your proposal is pending review"
+                  : "Your proposal has been approved"}
+              </p>
+              <p className="text-sm font-medium text-amber-700 mt-1.5">
+                {myProposalStatus === "PENDING"
+                  ? "The Seeker will review your proposed approach. Fork and claim buttons are hidden until a decision is made."
+                  : "Your workspace is being prepared. Please check your dashboard."}
+              </p>
+            </div>
+          </div>
+        )}
+
         {attempts.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100 p-12 text-center mt-4">
             <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
@@ -340,7 +404,6 @@ export function SolutionTreeTab({
           </div>
         ) : (
           <div className="bg-white rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100 p-6 md:p-8">
-            {/* Header row */}
             <div className="tree-section-header">
               <div style={{ flex: 1 }}>
                 <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
@@ -354,7 +417,6 @@ export function SolutionTreeTab({
                 </p>
               </div>
 
-              {/* Filter Dropdown */}
               {uniqueSubtasks.length > 1 && (
                 <div className="flex flex-col md:flex-row md:items-center gap-2 w-full md:w-auto mt-4 md:mt-0">
                   <label htmlFor="subtask-filter" className="text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">
@@ -385,95 +447,62 @@ export function SolutionTreeTab({
               )}
             </div>
 
-            {/* Fixed-height tree viewport */}
-            <div className="tree-viewport" ref={containerRef}>
-              <div
-                className={`tree-content ${isAnimating ? "exiting" : "entering"}`}
-                style={{
-                  padding: "48px 64px 80px 64px",
-                  position: "relative",
-                  zIndex: 1,
-                  minWidth: "max-content",
-                  display: "inline-block",
-                }}
-              >
-                {filteredAttempts.length === 0 ? (
-                  <div className="tree-empty" style={{ minWidth: "100%", position: "absolute", inset: 0 }}>
-                    <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center shadow-sm">
-                      <GitFork className="w-5 h-5 text-slate-300" />
+            {/* 🚀 Inner viewport toggles between Skeleton and Tree */}
+            {!isTreeReady ? (
+              <TreeSkeleton />
+            ) : (
+              <div className="tree-viewport" ref={containerRef}>
+                <div
+                  className={`tree-content ${isAnimating ? "exiting" : "entering"}`}
+                  style={{
+                    padding: "48px 64px 80px 64px",
+                    position: "relative",
+                    zIndex: 1,
+                    minWidth: "max-content",
+                    display: "inline-block",
+                  }}
+                >
+                  {filteredAttempts.length === 0 ? (
+                    <div className="tree-empty" style={{ minWidth: "100%", position: "absolute", inset: 0 }}>
+                      <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center shadow-sm">
+                        <GitFork className="w-5 h-5 text-slate-300" />
+                      </div>
+                      <p className="text-sm text-slate-500 font-bold mt-2">No attempts match this filter.</p>
                     </div>
-                    <p className="text-sm text-slate-500 font-bold mt-2">No attempts match this filter.</p>
-                  </div>
-                ) : (
-                  <>
-                    {svgLines.length > 0 && (
-                      <svg
+                  ) : (
+                    <>
+                      {svgLines.length > 0 && (
+                        <svg
+                          style={{
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            width: "100%",
+                            height: "100%",
+                            pointerEvents: "none",
+                            zIndex: 0,
+                            overflow: "visible",
+                          }}
+                        >
+                          {svgLines}
+                        </svg>
+                      )}
+                      <div
                         style={{
-                          position: "absolute",
-                          top: 0,
-                          left: 0,
-                          width: "100%",
-                          height: "100%",
-                          pointerEvents: "none",
-                          zIndex: 0,
-                          overflow: "visible",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          position: "relative",
+                          zIndex: 1,
                         }}
                       >
-                        {svgLines}
-                      </svg>
-                    )}
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        position: "relative",
-                        zIndex: 1,
-                      }}
-                    >
-                      {renderLevel(structuredTreeRoots)}
-                    </div>
-                  </>
-                )}
+                        {renderLevel(structuredTreeRoots)}
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* Claim from scratch CTA */}
-        {canInteract && attempts.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100 p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 mt-6">
-            <div>
-              <h3 className="font-bold text-slate-900 text-lg">Start from scratch?</h3>
-              <p className="text-sm font-medium text-slate-500 mt-1">
-                Submit a fresh proposal without building on an existing solution.
-              </p>
-            </div>
-            <button
-              onClick={onClaimNew}
-              className="w-full md:w-auto px-8 py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer"
-            >
-              Submit New Proposal <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-
-        {/* Pending banner */}
-        {hasPendingOrApproved && (
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex items-start gap-4 mt-6 shadow-sm">
-            <div className="w-3 h-3 bg-amber-500 rounded-full animate-pulse mt-1.5 flex-shrink-0" />
-            <div>
-              <p className="text-base font-bold text-amber-900">
-                {myProposalStatus === "PENDING"
-                  ? "Your proposal is pending review"
-                  : "Your proposal has been approved"}
-              </p>
-              <p className="text-sm font-medium text-amber-700 mt-1.5">
-                {myProposalStatus === "PENDING"
-                  ? "The Seeker will review your proposed approach. Fork and claim buttons are hidden until a decision is made."
-                  : "Your workspace is being prepared. Please check your dashboard."}
-              </p>
-            </div>
+            )}
           </div>
         )}
       </div>

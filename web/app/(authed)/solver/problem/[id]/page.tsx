@@ -15,26 +15,67 @@ import {
 import type { ProblemResponse } from "@/types/problem";
 import type { SolutionAttemptResponse } from "@/types/attempt";
 
-// 🚀 OPTIMIZATION: Lazy Load all tab components locally. 
-const BlueprintTab = dynamic(() => import("./components/BlueprintTab").then(mod => mod.BlueprintTab), {
-  loading: () => <div className="p-12 text-center text-slate-500 animate-pulse font-medium">Loading Blueprint...</div>
+// 🚀 PROPER TYPESCRIPT DYNAMIC IMPORTS
+const BlueprintTab = dynamic(() => import("./components/BlueprintTab").then((mod) => mod.BlueprintTab), {
+  loading: () => (
+    <div className="bg-white rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100 p-6 md:p-8 animate-pulse">
+      <div className="w-48 h-8 bg-slate-200 rounded-lg mb-8" />
+      <div className="space-y-6">
+        {[1, 2, 3].map((i) => (
+          <div key={i}>
+            <div className="w-32 h-4 bg-slate-200 rounded mb-3" />
+            <div className="h-24 bg-slate-50 border border-slate-100 rounded-xl" />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 });
 
-const SubtasksTab = dynamic(() => import("./components/SubtasksTab").then(mod => mod.SubtasksTab), {
-  loading: () => <div className="p-12 text-center text-slate-500 animate-pulse font-medium">Loading Subtasks...</div>
+const SubtasksTab = dynamic(() => import("./components/SubtasksTab").then((mod) => mod.SubtasksTab), {
+  loading: () => (
+    <div className="bg-white rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100 p-6 md:p-8 animate-pulse">
+      <div className="w-64 h-8 bg-slate-200 rounded-lg mb-8" />
+      <div className="space-y-5">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-32 bg-slate-50 border border-slate-100 rounded-2xl" />
+        ))}
+      </div>
+    </div>
+  )
 });
 
-const SolutionTreeTab = dynamic(() => import("./components/SolutionTreeTab").then(mod => mod.SolutionTreeTab), {
-  loading: () => <div className="p-12 text-center text-slate-500 animate-pulse font-medium">Loading Solution Tree...</div>
+const SolutionTreeTab = dynamic(() => import("./components/SolutionTreeTab").then((mod) => mod.SolutionTreeTab), {
+  loading: () => (
+    <div className="bg-white rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100 p-6 md:p-8 animate-pulse">
+      <div className="w-64 h-8 bg-slate-200 rounded-lg mb-8" />
+      <div className="h-[480px] bg-slate-50 border border-slate-100 rounded-2xl" />
+    </div>
+  )
 });
 
-const AuditTimelineTab = dynamic(() => import("./components/AuditTimelineTab").then(mod => mod.AuditTimelineTab), {
-  loading: () => <div className="p-12 text-center text-slate-500 animate-pulse font-medium">Loading History...</div>
+const AuditTimelineTab = dynamic(() => import("./components/AuditTimelineTab").then((mod) => mod.AuditTimelineTab), {
+  loading: () => (
+    <div className="bg-white rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100 p-6 md:p-8 animate-pulse">
+      <div className="w-48 h-8 bg-slate-200 rounded-lg mb-8" />
+      <div className="h-16 bg-slate-50 border border-slate-100 rounded-xl mb-12" />
+      <div className="space-y-6 pl-12 border-l-2 border-slate-100 ml-4">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-32 bg-white border border-slate-100 rounded-2xl shadow-sm relative">
+            <div className="absolute -left-16 top-4 w-8 h-8 rounded-full bg-slate-200" />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 });
 
+// Since SubmitProposalModal uses `export default function`, it doesn't need a .then() modifier
 const SubmitProposalModal = dynamic(() => import("./components/SubmitProposalModal"), {
   ssr: false,
 });
+
+
 
 type TabType = "blueprint" | "subtasks" | "tree" | "history";
 
@@ -62,7 +103,6 @@ export default function SolverProblemDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Proposal Modal State
   const [showProposalModal, setShowProposalModal] = useState(false);
   const [forkParentId, setForkParentId] = useState<string | undefined>(undefined);
   const [proposalSubtaskId, setProposalSubtaskId] = useState<string | undefined>(undefined);
@@ -111,23 +151,52 @@ export default function SolverProblemDetailPage() {
     setShowProposalModal(true);
   };
 
+  // 🚀 HIGHLY ACCURATE PAGE SKELETON
+  // Accurately replicates the header shape, pills, and main layout structure
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50/50">
         <div className="bg-white border-b border-slate-200">
-          {/* Tighter skeleton spacing */}
-          <div className="max-w-7xl mx-auto px-8 py-5">
-            <div className="w-32 h-4 bg-slate-200 rounded animate-pulse mb-4" />
-            <div className="w-3/4 h-8 bg-slate-200 rounded-lg animate-pulse mb-4" />
-            <div className="flex gap-4 mb-4">
-              <div className="w-20 h-6 bg-slate-100 rounded animate-pulse" />
-              <div className="w-32 h-6 bg-slate-100 rounded animate-pulse" />
+          <div className="max-w-7xl mx-auto px-6 md:px-8 py-4 md:py-5">
+            {/* Back link skeleton */}
+            <div className="w-32 h-4 bg-slate-100 rounded animate-pulse mb-4" />
+            
+            {/* Title & Action Button skeleton */}
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+              <div className="w-full md:w-3/4 h-8 md:h-10 bg-slate-100 rounded-lg animate-pulse" />
+              <div className="w-full md:w-40 h-10 bg-slate-100 rounded-xl animate-pulse flex-shrink-0" />
             </div>
-            <div className="w-64 h-10 bg-slate-100 rounded-xl animate-pulse" />
+
+            {/* Badges skeleton (Matches the shape/size of the real badges) */}
+            <div className="flex items-center gap-3 mt-4 mb-4">
+              <div className="w-16 h-6 bg-slate-100 rounded-md animate-pulse" />
+              <div className="w-48 h-6 bg-slate-100 rounded-md animate-pulse" />
+              <div className="w-24 h-6 bg-slate-100 rounded-md animate-pulse" />
+              <div className="w-40 h-5 bg-slate-100 rounded-md animate-pulse ml-1" />
+            </div>
+            
+            {/* Tab Pills skeleton */}
+            <div className="flex space-x-2 bg-slate-50 p-1 rounded-xl mt-4 w-fit animate-pulse border border-slate-100">
+              <div className="w-36 h-9 bg-white rounded-lg border border-slate-200" />
+              <div className="w-28 h-9 bg-slate-200/50 rounded-lg" />
+              <div className="w-32 h-9 bg-slate-200/50 rounded-lg" />
+              <div className="w-20 h-9 bg-slate-200/50 rounded-lg" />
+            </div>
           </div>
         </div>
-        <div className="max-w-7xl mx-auto px-8 py-8">
-          <div className="h-64 bg-white rounded-2xl border border-slate-100 animate-pulse" />
+        
+        <div className="max-w-7xl mx-auto px-6 md:px-8 py-8">
+          <div className="bg-white rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100 p-6 md:p-8 animate-pulse">
+            <div className="w-48 h-8 bg-slate-100 rounded-lg mb-8" />
+            <div className="space-y-6">
+              {[1, 2, 3].map((i) => (
+                <div key={i}>
+                  <div className="w-32 h-4 bg-slate-100 rounded mb-3" />
+                  <div className="h-24 bg-slate-50 border border-slate-100 rounded-xl" />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -243,7 +312,6 @@ export default function SolverProblemDetailPage() {
 
   return (
     <div className="min-h-screen bg-slate-50/50">
-      {/* ── Proposal Flow Modal ── */}
       {showProposalModal && proposalSubtaskId && (
         <SubmitProposalModal
           problemId={problemId}
@@ -258,45 +326,38 @@ export default function SolverProblemDetailPage() {
         />
       )}
 
-      {/* ── Sticky header (Tightened Spacing & Pure Fade-in) ── */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm animate-in fade-in duration-500">
-        {/* Reduced py-6 md:py-8 to py-4 md:py-5 */}
         <div className="max-w-7xl mx-auto px-6 md:px-8 py-4 md:py-5">
           <Link
             href="/solver/dashboard"
-            // Reduced mb-6 to mb-3
             className="text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors mb-3 inline-flex items-center gap-1.5 cursor-pointer"
           >
             <ChevronLeft className="w-4 h-4" />
             Back to Dashboard
           </Link>
 
-          {/* Reduced gap-6 to gap-4 */}
           <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-            {/* Reduced text size to text-2xl md:text-3xl for better wrapping */}
             <h1 className="text-2xl md:text-3xl font-bold text-slate-900 leading-tight flex-1 min-w-0">
               {problem.title}
             </h1>
             <div className="flex-shrink-0 w-full md:w-auto">{renderHeaderAction()}</div>
           </div>
 
-          {/* Reduced mt-6 to mt-3 */}
-          <div className="flex items-center gap-3 flex-wrap mt-3">
-            <span className={`text-[11px] px-3 py-1 rounded-md font-bold border uppercase tracking-wider ${getBadgeStyle(problem.status)}`}>
+         <div className="flex items-center gap-3 flex-wrap mt-3">
+            <span className={`text-[10px] sm:text-[11px] px-3 py-1 rounded-md font-bold border uppercase tracking-wider ${getBadgeStyle(problem.status)}`}>
               {problem.status.replace(/_/g, " ")}
             </span>
-            <span className="text-[11px] px-3 py-1 rounded-md font-bold border border-amber-200 bg-amber-50 text-amber-700 uppercase tracking-wider">
+            <span className="text-[10px] sm:text-[11px] px-3 py-1 rounded-md font-bold border border-amber-200 bg-amber-50 text-amber-700 uppercase tracking-wider">
               {problem.preferredProgram}
             </span>
-            <span className="text-[12px] px-3 py-1 rounded-md font-bold border border-slate-200 bg-slate-50 text-slate-600 uppercase tracking-wider">
+            <span className="text-[10px] sm:text-[11px] px-3 py-1 rounded-md font-bold border border-slate-200 bg-slate-50 text-slate-600 uppercase tracking-wider">
               {problem.subtasks.length} Sub-tasks
             </span>
-            <span className="text-[13px] font-bold text-slate-500">
+            <span className="text-sm font-bold text-slate-500 ml-1">
               {problem.organizationName}
             </span>
           </div>
 
-          {/* Interactive Pill Tabs - Reduced mt-8 to mt-4 */}
           <div className="flex space-x-1 bg-slate-50 p-1 rounded-xl mt-4 w-fit overflow-x-auto border border-slate-100">
             {tabs.map((tab) => (
               <button
@@ -305,7 +366,7 @@ export default function SolverProblemDetailPage() {
                 className={`px-5 md:px-6 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${
                   activeTab === tab.id
                     ? "bg-white text-accent shadow-sm border border-slate-200"
-                    : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
+                    : "text-slate-500 hover:text-slate-900 hover:bg-slate-100 border border-transparent"
                 }`}
               >
                 {tab.label}
@@ -315,10 +376,8 @@ export default function SolverProblemDetailPage() {
         </div>
       </div>
 
-      {/* ── Page body ── */}
       <div className="max-w-7xl mx-auto px-6 md:px-8 py-8 space-y-6">
         
-        {/* Active claim banner */}
         {isAlreadyClaimed && (
           <div className="bg-white border-l-4 border-accent shadow-sm rounded-r-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in duration-300">
             <div className="flex items-center gap-3">
@@ -336,7 +395,6 @@ export default function SolverProblemDetailPage() {
           </div>
         )}
 
-        {/* Pending proposal banner */}
         {!isAlreadyClaimed && myProposalStatus === "PENDING" && (
           <div className="bg-white border-l-4 border-amber-500 shadow-sm rounded-r-xl p-5 flex items-center gap-3 animate-in fade-in duration-300">
             <div className="w-2.5 h-2.5 bg-amber-500 rounded-full animate-pulse flex-shrink-0" />
@@ -346,7 +404,6 @@ export default function SolverProblemDetailPage() {
           </div>
         )}
 
-        {/* Pure fade-in (removed slide-in classes) */}
         <div className="animate-in fade-in duration-500">
           {activeTab === "blueprint" && <BlueprintTab problem={problem} />}
 
@@ -369,7 +426,7 @@ export default function SolverProblemDetailPage() {
               onForkRequest={(parentId: string, subtaskId: string) => openProposalModal(subtaskId, parentId)}
               onClaimNew={() => setActiveTab("subtasks")}
             />
-            )}
+          )}
 
           {activeTab === "history" && <AuditTimelineTab problemId={problemId} />}
         </div>
