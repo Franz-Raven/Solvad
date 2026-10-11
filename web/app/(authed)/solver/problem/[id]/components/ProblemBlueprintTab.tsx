@@ -1,44 +1,69 @@
 "use client";
 
+import { FileText, Target, ShieldAlert, AlignLeft, CheckCircle2 } from "lucide-react";
 import type { ProblemResponse } from "@/types/problem";
 
 export function ProblemBlueprintTab({ problem }: { problem: ProblemResponse }) {
   return (
-    <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
-      <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-        <svg className="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
+    <div className="bg-white rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100 p-6 md:p-8 animate-in fade-in duration-500">
+      <h2 className="text-2xl font-bold text-slate-900 mb-8 flex items-center gap-3">
+        <div className="p-2.5 bg-accent/10 rounded-xl text-accent border border-accent/20">
+          <FileText className="w-5 h-5" />
+        </div>
         Problem Blueprint
       </h2>
+      
       <div className="space-y-6">
+        {/* Background Context */}
         {problem.backgroundContext && (
-          <div>
-            <h3 className="text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">Background Context</h3>
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <p className="text-gray-800 leading-relaxed">{problem.backgroundContext}</p>
+          <div className="group">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <AlignLeft className="w-4 h-4 text-slate-300" /> Background Context
+            </h3>
+            <div className="bg-slate-50/50 rounded-xl p-5 border border-slate-100 group-hover:bg-slate-50 group-hover:border-slate-200 transition-colors">
+              <p className="text-slate-700 leading-relaxed text-sm font-medium">
+                {problem.backgroundContext}
+              </p>
             </div>
           </div>
         )}
-        <div>
-          <h3 className="text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">Primary Problem Statement</h3>
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <p className="text-gray-800 leading-relaxed font-medium">{problem.primaryStatement}</p>
+        
+        {/* Primary Statement */}
+        <div className="group">
+          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+            <Target className="w-4 h-4 text-slate-300" /> Primary Problem Statement
+          </h3>
+          <div className="bg-slate-50/50 rounded-xl p-5 border border-slate-100 group-hover:bg-slate-50 group-hover:border-slate-200 transition-colors border-l-4 border-l-accent">
+            <p className="text-slate-900 leading-relaxed text-base font-bold">
+              {problem.primaryStatement}
+            </p>
           </div>
         </div>
+        
+        {/* Objectives */}
         {problem.objectives && (
-          <div>
-            <h3 className="text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">Objectives</h3>
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <p className="text-gray-800 leading-relaxed">{problem.objectives}</p>
+          <div className="group">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-slate-300" /> Objectives
+            </h3>
+            <div className="bg-slate-50/50 rounded-xl p-5 border border-slate-100 group-hover:bg-slate-50 group-hover:border-slate-200 transition-colors">
+              <p className="text-slate-700 leading-relaxed text-sm font-medium whitespace-pre-wrap">
+                {problem.objectives}
+              </p>
             </div>
           </div>
         )}
+        
+        {/* Constraints */}
         {problem.constraints && (
-          <div>
-            <h3 className="text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">Constraints</h3>
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <p className="text-gray-800 leading-relaxed">{problem.constraints}</p>
+          <div className="group">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <ShieldAlert className="w-4 h-4 text-slate-300" /> Constraints
+            </h3>
+            <div className="bg-slate-50/50 rounded-xl p-5 border border-slate-100 group-hover:bg-slate-50 group-hover:border-slate-200 transition-colors">
+              <p className="text-slate-700 leading-relaxed text-sm font-medium whitespace-pre-wrap">
+                {problem.constraints}
+              </p>
             </div>
           </div>
         )}
