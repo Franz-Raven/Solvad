@@ -76,8 +76,9 @@ public class ProblemController {
         try {
             String token = authHeader.substring(7);
             UUID seekerUserId = jwtService.extractUserId(token);
-            
-            List<ProblemResponse> problems = problemService.getMyProblems(seekerUserId);
+
+            // 🚀 FIX: Changed to ProblemSummaryResponse
+            List<ProblemSummaryResponse> problems = problemService.getMyProblems(seekerUserId);
             return ResponseEntity.ok(problems);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());

@@ -44,5 +44,6 @@ public interface SolutionAttemptRepository extends JpaRepository<SolutionAttempt
 
     long countByProblemAndTargetSubtaskAndStatus(Problem problem, ProblemSubtask targetSubtask, SolutionAttemptStatus status);
     List<SolutionAttempt> findByProblemInAndStatus(List<Problem> problems, SolutionAttemptStatus status);
+    long countBySolverAndStatus(SolverProfile solver, SolutionAttemptStatus status);
 
 }
