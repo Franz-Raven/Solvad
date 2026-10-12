@@ -3,6 +3,7 @@ package com.solvad.backend.problem.solution_attempt;
 import com.solvad.backend.problem.core.Problem;
 import com.solvad.backend.problem.subtask.ProblemSubtask;
 import com.solvad.backend.profile.solver.SolverProfile;
+import com.solvad.backend.user.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -53,4 +54,5 @@ public interface SolutionAttemptRepository extends JpaRepository<SolutionAttempt
     );
     // 🚀 ADD THIS METHOD
     List<SolutionAttempt> findByProblemOrderByClaimedAtAsc(Problem problem);
+    List<SolutionAttempt> findBySolver(SolverProfile solver);
 }

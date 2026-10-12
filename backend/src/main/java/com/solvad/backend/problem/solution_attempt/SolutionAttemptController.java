@@ -10,6 +10,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import com.solvad.backend.user.User;
 
 import java.util.List;
 import java.util.Map;
@@ -325,5 +327,16 @@ public class SolutionAttemptController {
     @PreAuthorize("hasAnyRole('SEEKER', 'ADMIN')")
     public ResponseEntity<Map<String, Object>> getProposalDetailsForSeeker(@PathVariable UUID proposalId) {
         return ResponseEntity.ok(solutionAttemptService.getProposalDetailsForSeeker(proposalId));
+    }
+
+    @GetMapping("/api/attempts/me/summary")
+    @PreAuthorize("hasRole('SOLVER')")
+    public ResponseEntity<List<SolutionAttemptSummaryResponse>> getMyLightweightAttempts(
+            @RequestHeader("Authorization") String authHeader) {
+
+        String token = authHeader.substring(7);
+        UUID userId = jwtService.extractUserId(token);
+
+        return ResponseEntity.ok(solutionAttemptService.getMyLightweightAttemptsByUserId(userId));
     }
 }
