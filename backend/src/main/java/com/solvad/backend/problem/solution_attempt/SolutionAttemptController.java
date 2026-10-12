@@ -10,8 +10,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import com.solvad.backend.user.User;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -286,4 +289,54 @@ public class SolutionAttemptController {
         }
     }
 
+    // 🚀 Update the generic return type from AttemptNodeSummaryResponse to SolutionAttemptSummaryResponse
+    @GetMapping("/api/problems/{problemId}/attempts/tree")
+    @PreAuthorize("hasAnyRole('SEEKER', 'SOLVER', 'ADMIN')")
+    public ResponseEntity<List<SolutionAttemptSummaryResponse>> getProblemTree(
+            @PathVariable UUID problemId,
+            @RequestHeader("Authorization") String authHeader) {
+        return ResponseEntity.ok(solutionAttemptService.getLightweightTree(problemId));
+    }
+
+    @GetMapping("/api/problems/{problemId}/attempts/active-count")
+    @PreAuthorize("hasAnyRole('SEEKER', 'ADMIN')")
+    public ResponseEntity<ActiveAttemptsCountResponse> getProblemActiveAttemptsCount(@PathVariable UUID problemId) {
+        long count = solutionAttemptService.getActiveAttemptsCountForProblem(problemId);
+        return ResponseEntity.ok(new ActiveAttemptsCountResponse(count));
+    }
+
+    @GetMapping("/api/problems/{problemId}/workspaces/active")
+    @PreAuthorize("hasAnyRole('SEEKER', 'ADMIN')")
+    public ResponseEntity<List<SolutionAttemptSummaryResponse>> getActiveWorkspaces(@PathVariable UUID problemId) {
+        return ResponseEntity.ok(solutionAttemptService.getActiveWorkspaces(problemId));
+    }
+
+    @GetMapping("/api/problems/{problemId}/subtasks/capacities")
+    @PreAuthorize("hasAnyRole('SEEKER', 'ADMIN')")
+    public ResponseEntity<List<Map<String, Object>>> getSubtaskCapacities(@PathVariable UUID problemId) {
+        return ResponseEntity.ok(solutionAttemptService.getSubtaskCapacities(problemId));
+    }
+
+    @GetMapping("/api/problems/{problemId}/proposals/pending/summary")
+    @PreAuthorize("hasAnyRole('SEEKER', 'ADMIN')")
+    public ResponseEntity<List<Map<String, Object>>> getPendingProposalsSummary(@PathVariable UUID problemId) {
+        return ResponseEntity.ok(solutionAttemptService.getLightweightPendingProposals(problemId));
+    }
+
+    @GetMapping("/api/proposals/{proposalId}/details")
+    @PreAuthorize("hasAnyRole('SEEKER', 'ADMIN')")
+    public ResponseEntity<Map<String, Object>> getProposalDetailsForSeeker(@PathVariable UUID proposalId) {
+        return ResponseEntity.ok(solutionAttemptService.getProposalDetailsForSeeker(proposalId));
+    }
+
+    @GetMapping("/api/attempts/me/summary")
+    @PreAuthorize("hasRole('SOLVER')")
+    public ResponseEntity<List<SolutionAttemptSummaryResponse>> getMyLightweightAttempts(
+            @RequestHeader("Authorization") String authHeader) {
+
+        String token = authHeader.substring(7);
+        UUID userId = jwtService.extractUserId(token);
+
+        return ResponseEntity.ok(solutionAttemptService.getMyLightweightAttemptsByUserId(userId));
+    }
 }

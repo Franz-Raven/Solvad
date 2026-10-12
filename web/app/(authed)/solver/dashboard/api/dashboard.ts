@@ -6,6 +6,7 @@ import type {
 import type { SolutionAttemptResponse, PaginatedAttemptsResponse, PaginatedClaimsResponse } from "@/types/attempt";
 import type { ProblemResponse } from "@/types/problem";
 import type { ClaimDetail, AttemptDetail } from "@/types/attempt";
+import type { SolutionAttemptSummary } from "@/types/attempt";
 
 export interface DiscoveryQuery {
   search?: string;
@@ -104,4 +105,7 @@ export async function getClaimDetails(id: string): Promise<ClaimDetail> {
 export async function getAttemptDetails(id: string): Promise<AttemptDetail> {
   // 🚀 Changed from "/attempts/history/${id}" to "/history/${id}"
   return apiRequest<AttemptDetail>(`/history/${id}`, { method: "GET" }); 
+}
+export async function getMyLightweightAttempts(): Promise<SolutionAttemptSummary[]> {
+  return apiRequest<SolutionAttemptSummary[]>("/attempts/me/summary", { method: "GET" });
 }

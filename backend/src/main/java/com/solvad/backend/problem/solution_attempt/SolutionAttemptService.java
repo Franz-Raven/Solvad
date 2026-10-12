@@ -19,6 +19,7 @@ import com.solvad.backend.profile.solver.SolverProfileRepository;
 import com.solvad.backend.audit.AuditService;
 import com.solvad.backend.storage.CloudinaryService;
 import com.solvad.backend.problem.similarity.MatchmakingService;
+import com.solvad.backend.user.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -808,4 +809,193 @@ public class SolutionAttemptService {
                 attachedFiles // 🚀 Pass to DTO
         );
     }
+
+    @Transactional(readOnly = true)
+    public List<SolutionAttemptSummaryResponse> getLightweightTree(UUID problemId) {
+        Problem problem = problemRepository.findById(problemId)
+                .orElseThrow(() -> new RuntimeException("Problem not found"));
+
+        return attemptRepository.findByProblemOrderByClaimedAtAsc(problem).stream()
+                .map(attempt -> {
+                    String parentName = null;
+                    UUID parentId = null;
+                    if (attempt.getParentAttempt() != null) {
+                        parentName = attempt.getParentAttempt().getSolver().getFirstName() + " " +
+                                attempt.getParentAttempt().getSolver().getLastName();
+                        parentId = attempt.getParentAttempt().getId();
+                    }
+
+                    return new SolutionAttemptSummaryResponse(
+                            attempt.getId(),
+                            attempt.getProblem().getId(),
+                            attempt.getProblem().getTitle(),
+                            attempt.getSolver().getFirstName(),
+                            attempt.getSolver().getLastName(),
+                            attempt.getSolver().getUser().getProfileUrl(),
+                            attempt.getSolver().getInstitution(),
+                            attempt.getSolver().getDegreeProgram(),
+                            attempt.getStatus().name(),
+                            attempt.getSubmissions() != null ? attempt.getSubmissions().size() : 0,
+                            attempt.getClaimedAt(),
+                            attempt.getUpdatedAt(),
+                            attempt.getCompletedAt(),
+                            parentId,
+                            parentName,
+                            attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getId() : null,
+                            attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : null
+                    );
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public long getActiveAttemptsCountForProblem(UUID problemId) {
+        Problem problem = problemRepository.findById(problemId)
+                .orElseThrow(() -> new RuntimeException("Problem not found"));
+        return attemptRepository.countByProblemAndStatus(problem, SolutionAttemptStatus.ACTIVE);
+    }
+
+    // 🚀 1. Fetches ONLY active workspaces (bypasses the entire tree structure)
+    @Transactional(readOnly = true)
+    public List<SolutionAttemptSummaryResponse> getActiveWorkspaces(UUID problemId) {
+        Problem problem = problemRepository.findById(problemId)
+                .orElseThrow(() -> new RuntimeException("Problem not found"));
+
+        return attemptRepository.findByProblemAndStatus(problem, SolutionAttemptStatus.ACTIVE).stream()
+                .map(attempt -> new SolutionAttemptSummaryResponse(
+                        attempt.getId(),
+                        attempt.getProblem().getId(),
+                        attempt.getProblem().getTitle(),
+                        attempt.getSolver().getFirstName(),
+                        attempt.getSolver().getLastName(),
+                        attempt.getSolver().getUser().getProfileUrl(),
+                        attempt.getSolver().getInstitution(),
+                        attempt.getSolver().getDegreeProgram(),
+                        attempt.getStatus().name(),
+                        attempt.getSubmissions() != null ? attempt.getSubmissions().size() : 0,
+                        attempt.getClaimedAt(),
+                        attempt.getUpdatedAt(),
+                        attempt.getCompletedAt(),
+                        attempt.getParentAttempt() != null ? attempt.getParentAttempt().getId() : null,
+                        attempt.getParentAttempt() != null ? attempt.getParentAttempt().getSolver().getFirstName() + " " + attempt.getParentAttempt().getSolver().getLastName() : null,
+                        attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getId() : null,
+                        attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : null
+                ))
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getSubtaskCapacities(UUID problemId) {
+        Problem problem = problemRepository.findById(problemId)
+                .orElseThrow(() -> new RuntimeException("Problem not found"));
+
+        List<SolutionAttempt> activeAttempts = attemptRepository.findByProblemAndStatus(problem, SolutionAttemptStatus.ACTIVE);
+
+        Map<UUID, Long> activeCounts = activeAttempts.stream()
+                .filter(a -> a.getTargetSubtask() != null)
+                .collect(Collectors.groupingBy(a -> a.getTargetSubtask().getId(), Collectors.counting()));
+
+        // 🚀 FIX: Fetch the subtasks from the repository instead of the Problem entity directly!
+        List<ProblemSubtask> subtasks = subtaskRepository.findByProblem(problem);
+
+        return subtasks.stream()
+                .map(st -> {
+                    Map<String, Object> map = new java.util.HashMap<>();
+                    map.put("subtaskId", st.getId());
+                    map.put("title", st.getTitle());
+                    map.put("activeCount", activeCounts.getOrDefault(st.getId(), 0L).intValue());
+                    map.put("maxSolvers", st.getMaxConcurrentSolvers() != null ? st.getMaxConcurrentSolvers() : 3);
+                    return map;
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getLightweightPendingProposals(UUID problemId) {
+        Problem problem = problemRepository.findById(problemId)
+                .orElseThrow(() -> new RuntimeException("Problem not found"));
+
+        return claimRequestRepository.findByProblemAndStatus(problem, ClaimRequestStatus.PENDING)
+                .stream()
+                .map(claim -> {
+                    Map<String, Object> map = new java.util.HashMap<>();
+                    map.put("id", claim.getId());
+                    map.put("targetSubtaskId", claim.getTargetSubtask() != null ? claim.getTargetSubtask().getId() : null);
+                    map.put("parentAttemptId", claim.getParentAttempt() != null ? claim.getParentAttempt().getId() : null);
+                    map.put("status", claim.getStatus().name());
+                    map.put("createdAt", claim.getCreatedAt());
+
+                    // Count files instead of sending the massive URL string
+                    int fileCount = 0;
+                    if (claim.getSupportingDocuments() != null && !claim.getSupportingDocuments().isBlank()) {
+                        fileCount = claim.getSupportingDocuments().split(",").length;
+                    }
+                    map.put("fileCount", fileCount);
+
+                    Map<String, Object> solver = new java.util.HashMap<>();
+                    solver.put("firstName", claim.getSolver().getFirstName());
+                    solver.put("lastName", claim.getSolver().getLastName());
+                    solver.put("institution", claim.getSolver().getInstitution());
+                    solver.put("profilePictureUrl", claim.getSolver().getUser().getProfileUrl());
+                    map.put("solver", solver);
+
+                    return map;
+                })
+                .collect(Collectors.toList());
+    }
+
+    // 🚀 2. The Heavy Payload (Fires ONLY when clicking "Review")
+    @Transactional(readOnly = true)
+    public Map<String, Object> getProposalDetailsForSeeker(UUID proposalId) {
+        ClaimRequest claim = claimRequestRepository.findById(proposalId)
+                .orElseThrow(() -> new RuntimeException("Proposal not found"));
+
+        Map<String, Object> map = new java.util.HashMap<>();
+        map.put("id", claim.getId());
+        map.put("proposedApproach", claim.getProposedApproach()); // Heavy Text
+        map.put("supportingDocuments", claim.getSupportingDocuments()); // Heavy URLs
+        map.put("status", claim.getStatus().name());
+        map.put("createdAt", claim.getCreatedAt());
+        map.put("targetSubtaskId", claim.getTargetSubtask() != null ? claim.getTargetSubtask().getId() : null);
+        map.put("parentAttemptId", claim.getParentAttempt() != null ? claim.getParentAttempt().getId() : null);
+
+        Map<String, Object> solver = new java.util.HashMap<>();
+        solver.put("firstName", claim.getSolver().getFirstName());
+        solver.put("lastName", claim.getSolver().getLastName());
+        solver.put("institution", claim.getSolver().getInstitution());
+        solver.put("profilePictureUrl", claim.getSolver().getUser().getProfileUrl());
+        map.put("solver", solver);
+
+        return map;
+    }
+
+    // 🚀 FIX: Accept UUID instead of User object, matching your other secure endpoints
+    @Transactional(readOnly = true)
+    public List<SolutionAttemptSummaryResponse> getMyLightweightAttemptsByUserId(UUID solverUserId) {
+        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
+                .orElseThrow(() -> new RuntimeException("Solver not found"));
+
+        return attemptRepository.findBySolver(solver).stream()
+                .map(attempt -> new SolutionAttemptSummaryResponse(
+                        attempt.getId(),
+                        attempt.getProblem().getId(),
+                        attempt.getProblem().getTitle(),
+                        attempt.getSolver().getFirstName(),
+                        attempt.getSolver().getLastName(),
+                        attempt.getSolver().getUser().getProfileUrl(),
+                        attempt.getSolver().getInstitution(),
+                        attempt.getSolver().getDegreeProgram(),
+                        attempt.getStatus().name(),
+                        attempt.getSubmissions() != null ? attempt.getSubmissions().size() : 0,
+                        attempt.getClaimedAt(),
+                        attempt.getUpdatedAt(),
+                        attempt.getCompletedAt(),
+                        attempt.getParentAttempt() != null ? attempt.getParentAttempt().getId() : null,
+                        attempt.getParentAttempt() != null ? attempt.getParentAttempt().getSolver().getFirstName() + " " + attempt.getParentAttempt().getSolver().getLastName() : null,
+                        attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getId() : null,
+                        attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : null
+                ))
+                .collect(Collectors.toList());
+    }
+
 }

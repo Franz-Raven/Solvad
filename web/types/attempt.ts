@@ -160,3 +160,22 @@ export interface AttemptDetail {
   summary: string;
   attachedFiles?: string[]; // 🚀 ADD THIS LINE
 }
+
+export interface AttemptNodeSummary {
+  id: string;
+  parentId: string | null;
+  solverName: string;
+  subtaskTitle: string;
+  status: string;
+}
+
+// 🚀 The new lightweight summary type for the table
+export interface ClaimSummaryResponse {
+  id: string;
+  solver: { firstName: string; lastName: string; institution?: string; profilePictureUrl?: string; };
+  targetSubtaskId?: string;
+  parentAttemptId?: string;
+  status: string;
+  createdAt: string;
+  fileCount: number;
+}

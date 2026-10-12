@@ -1,14 +1,14 @@
 "use client";
 
-import { Suspense, useState, useEffect, useCallback } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { 
   getDiscoveryDashboard, 
   getMyActiveAttemptsCount, 
-  getMyActiveAttempts 
+  getMyLightweightAttempts // 🚀 FIX: Swapped to the optimized lightweight fetcher
 } from "./api/dashboard";
 import type { ProblemResponse } from "@/types/problem";
-import type { SolutionAttemptResponse } from "@/types/attempt";
+import type { SolutionAttemptSummary } from "@/types/attempt"; // 🚀 FIX: Changed to Summary type
 
 // Extracted Components
 import { SolverOverview } from "./components/SolverOverview";
@@ -38,8 +38,8 @@ function SolverDashboardContent() {
   const [activeCount, setActiveCount] = useState<number>(0);
   const [isCountLoading, setIsCountLoading] = useState(true);
 
-  // 🚀 Overview Tab Data (Heavy Payload Fetch)
-  const [myAttempts, setMyAttempts] = useState<SolutionAttemptResponse[]>([]);
+  // 🚀 Overview Tab Data (Lightweight Summary Fetch)
+  const [myAttempts, setMyAttempts] = useState<SolutionAttemptSummary[]>([]); // 🚀 FIX: Updated state type
   const [isAttemptsLoading, setIsAttemptsLoading] = useState(true);
 
   // 1. Always load recommendations for the Home tab
@@ -65,11 +65,11 @@ function SolverDashboardContent() {
     }
   }, [activeTab]);
 
-  // 3. LAZY-LOAD the massive JSON attempt history ONLY if they click the Overview tab
+  // 3. LAZY-LOAD the lightweight attempt history ONLY if they click the Overview tab
   useEffect(() => {
     if (activeTab === "overview" && myAttempts.length === 0) {
       setIsAttemptsLoading(true);
-      getMyActiveAttempts()
+      getMyLightweightAttempts() // 🚀 FIX: Triggering optimized backend endpoint
         .then(setMyAttempts)
         .catch(() => setMyAttempts([]))
         .finally(() => setIsAttemptsLoading(false));

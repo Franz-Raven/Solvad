@@ -3,11 +3,10 @@
 import { useState, useEffect } from "react";
 import { Lock, XCircle, FileText, X, GitBranch, Paperclip } from "lucide-react";
 import Portal from "@/components/portal";
-import type { SolutionAttemptResponse, TreeAttemptNode } from "@/types/attempt";
+import type { TreeAttemptNode } from "@/types/attempt";
 
 interface AttemptDetailModalProps {
   node: TreeAttemptNode;
-  flatAttemptsList: SolutionAttemptResponse[];
   isAlreadyClaimed: boolean;
   isUnavailable: boolean;
   onForkRequest: (attemptId: string, subtaskId: string) => void;
@@ -16,7 +15,6 @@ interface AttemptDetailModalProps {
 
 export function AttemptDetailModal({
   node,
-  flatAttemptsList,
   isAlreadyClaimed,
   isUnavailable,
   onForkRequest,
@@ -29,13 +27,13 @@ export function AttemptDetailModal({
 
   const activeSub = node.submissions[activeSubIdx] ?? null;
 
-  // Look for parent data directly inside the node, then fallback to searching the flat array
-  const predecessorSub = activeSub
-    ? node.parentSubmissions?.find((ps) => ps.subtaskId === activeSub.subtaskId) ||
-      flatAttemptsList
-        .find((a) => a.id === node.parentAttemptId)
-        ?.submissions.find((ps) => ps.subtaskId === activeSub.subtaskId)
-    : null;
+  const predecessorSub = activeSub && node.parentAttemptId ? {
+    description: node.parentDescription || "No description provided.",
+    fileUrls: node.parentFileUrls || []
+  } : null;
+
+  // 🚀 Added initials calculation for the avatar fallback
+  const initials = `${node.solverFirstName?.[0] || ""}${node.solverLastName?.[0] || ""}`.toUpperCase() || "S";
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -68,37 +66,54 @@ export function AttemptDetailModal({
           
           {/* ── Header ── */}
           <div className="flex items-start justify-between p-5 md:p-6 border-b border-slate-100 flex-shrink-0 bg-white z-10">
-            <div className="flex-1 min-w-0 pr-4">
-              <div className="flex items-center gap-3 flex-wrap mb-1">
-                <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-                  {node.solverFirstName} {node.solverLastName}
-                </h2>
-                <span
-                  className={`text-[11px] font-bold px-2.5 py-0.5 rounded-md border uppercase tracking-wider ${
-                    node.status === "COMPLETED" || node.status === "SOLVED_OPEN_FOR_IMPROVEMENT"
-                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                      : node.status === "ABANDONED" || node.status === "TERMINATED"
-                      ? "bg-rose-50 text-rose-700 border-rose-200"
-                      : "bg-amber-50 text-amber-700 border-amber-200"
-                  }`}
-                >
-                  {node.status.replace(/_/g, " ")}
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 font-medium">
-                {node.degreeProgram} · {node.institution}
-              </p>
+            {/* 🚀 Changed to match the Seeker layout with flex row and gap */}
+            <div className="flex items-start gap-4 flex-1 min-w-0 pr-4">
               
-              <div className="flex items-center gap-3 mt-3 flex-wrap">
-                {node.parentAttemptId && (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 text-slate-600 text-[10px] font-bold uppercase tracking-wider rounded-md">
-                    <GitBranch className="w-3 h-3 text-slate-400" />
-                    Forked: {node.parentAttemptName || "Original"}
+              {/* 🚀 Added the Avatar block */}
+              {node.profilePictureUrl ? (
+                <img
+                  src={node.profilePictureUrl}
+                  alt=""
+                  className="w-12 h-12 rounded-2xl object-cover ring-1 ring-slate-200 shrink-0"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-2xl bg-accent/10 text-accent border border-accent/20 font-bold text-sm flex items-center justify-center shrink-0 shadow-sm">
+                  {initials}
+                </div>
+              )}
+
+              <div className="min-w-0">
+                <div className="flex items-center gap-3 flex-wrap mb-1">
+                  <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                    {node.solverFirstName} {node.solverLastName}
+                  </h2>
+                  <span
+                    className={`text-[11px] font-bold px-2.5 py-0.5 rounded-md border uppercase tracking-wider ${
+                      node.status === "COMPLETED" || node.status === "SOLVED_OPEN_FOR_IMPROVEMENT"
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        : node.status === "ABANDONED" || node.status === "TERMINATED"
+                        ? "bg-rose-50 text-rose-700 border-rose-200"
+                        : "bg-amber-50 text-amber-700 border-amber-200"
+                    }`}
+                  >
+                    {node.status.replace(/_/g, " ")}
                   </span>
-                )}
-                <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
-                  {attemptDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                </span>
+                </div>
+                <p className="text-xs text-slate-500 font-medium">
+                  {node.degreeProgram} · {node.institution}
+                </p>
+                
+                <div className="flex items-center gap-3 mt-3 flex-wrap">
+                  {node.parentAttemptId && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 text-slate-600 text-[10px] font-bold uppercase tracking-wider rounded-md">
+                      <GitBranch className="w-3 h-3 text-slate-400" />
+                      Forked: {node.parentSolverName || "Original"}
+                    </span>
+                  )}
+                  <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
+                    {attemptDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                  </span>
+                </div>
               </div>
             </div>
             
@@ -213,7 +228,7 @@ export function AttemptDetailModal({
                                 : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
                             }`}
                           >
-                            Previous ({node.parentAttemptName || "Original"})
+                            Previous ({node.parentSolverName || "Original"})
                           </button>
                         </div>
 
@@ -248,7 +263,7 @@ export function AttemptDetailModal({
                         {viewPanel === "previous" && (
                           <div className="bg-slate-100 border border-slate-200 rounded-2xl p-6 animate-in fade-in duration-300">
                             <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3">
-                              {node.parentAttemptName || "Original Solver"}'s Approach
+                              {node.parentSolverName || "Original Solver"}'s Approach
                             </p>
                             <p className="text-sm text-slate-600 whitespace-pre-wrap break-words font-medium leading-relaxed">
                               {predecessorSub.description || "No description provided."}
