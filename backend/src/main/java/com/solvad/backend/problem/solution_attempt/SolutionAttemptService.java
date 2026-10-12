@@ -808,4 +808,50 @@ public class SolutionAttemptService {
                 attachedFiles // 🚀 Pass to DTO
         );
     }
+
+    @Transactional(readOnly = true)
+    public List<SolutionAttemptSummaryResponse> getLightweightTree(UUID problemId) {
+        Problem problem = problemRepository.findById(problemId)
+                .orElseThrow(() -> new RuntimeException("Problem not found"));
+
+        return attemptRepository.findByProblemOrderByClaimedAtAsc(problem).stream()
+                .map(attempt -> {
+                    String parentName = null;
+                    UUID parentId = null;
+                    if (attempt.getParentAttempt() != null) {
+                        parentName = attempt.getParentAttempt().getSolver().getFirstName() + " " +
+                                attempt.getParentAttempt().getSolver().getLastName();
+                        parentId = attempt.getParentAttempt().getId();
+                    }
+
+                    return new SolutionAttemptSummaryResponse(
+                            attempt.getId(),
+                            attempt.getProblem().getId(),
+                            attempt.getProblem().getTitle(),
+                            attempt.getSolver().getFirstName(),
+                            attempt.getSolver().getLastName(),
+                            null, // 🚀 FIX: Removed the invalid label here
+                            attempt.getSolver().getInstitution(),
+                            attempt.getSolver().getDegreeProgram(),
+                            attempt.getStatus().name(),
+                            attempt.getSubmissions() != null ? attempt.getSubmissions().size() : 0,
+                            attempt.getClaimedAt(),
+                            attempt.getUpdatedAt(),
+                            attempt.getCompletedAt(),
+                            parentId,
+                            parentName,
+                            attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getId() : null,
+                            attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : null
+                    );
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public long getActiveAttemptsCountForProblem(UUID problemId) {
+        Problem problem = problemRepository.findById(problemId)
+                .orElseThrow(() -> new RuntimeException("Problem not found"));
+        return attemptRepository.countByProblemAndStatus(problem, SolutionAttemptStatus.ACTIVE);
+    }
+
 }

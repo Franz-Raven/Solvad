@@ -51,4 +51,6 @@ public interface SolutionAttemptRepository extends JpaRepository<SolutionAttempt
             SolutionAttemptStatus status,
             Pageable pageable
     );
+    // 🚀 ADD THIS METHOD
+    List<SolutionAttempt> findByProblemOrderByClaimedAtAsc(Problem problem);
 }

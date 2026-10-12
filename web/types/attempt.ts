@@ -160,3 +160,11 @@ export interface AttemptDetail {
   summary: string;
   attachedFiles?: string[]; // 🚀 ADD THIS LINE
 }
+
+export interface AttemptNodeSummary {
+  id: string;
+  parentId: string | null;
+  solverName: string;
+  subtaskTitle: string;
+  status: string;
+}

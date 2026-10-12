@@ -1,7 +1,7 @@
 import { apiRequest } from "@/lib/api";
 import type { ProblemResponse } from "@/types/problem";
-import type { SolutionAttemptResponse, AuditLogEntry } from "@/types/attempt";
-
+import type { SolutionAttemptResponse, AuditLogEntry, AttemptNodeSummary } from "@/types/attempt";
+import type { SolutionAttemptSummary } from "@/types/attempt";
 
 export async function getProblemById(
   problemId: string
@@ -69,4 +69,12 @@ export async function submitProposal(
     method: "POST",
     body: formData,
   });
+}
+
+export async function getProblemTree(problemId: string): Promise<SolutionAttemptSummary[]> {
+  return apiRequest<SolutionAttemptSummary[]>(`/problems/${problemId}/attempts/tree`, { method: "GET" });
+}
+// 2. Fetch the heavy details ONLY when a node is clicked (reuses your existing endpoint)
+export async function getFullAttemptDetails(attemptId: string): Promise<SolutionAttemptResponse> {
+  return apiRequest<SolutionAttemptResponse>(`/attempts/${attemptId}`, { method: "GET" });
 }

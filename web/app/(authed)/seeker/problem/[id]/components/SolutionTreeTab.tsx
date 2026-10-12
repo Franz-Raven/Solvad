@@ -11,19 +11,26 @@ import {
   Network,
   ChevronDown,
   X,
+  Loader2,
 } from "lucide-react";
 import Portal from "@/components/portal";
-import { getAllAttempts } from "../api/problem";
-import type { SolutionAttemptResponse, TreeAttemptNode } from "@/types/attempt";
+import { getProblemTree } from "../api/problem";
+import { getFullAttemptDetails } from "../api/problem";
+import type {  TreeAttemptNode, SolutionAttemptSummary } from "@/types/attempt";
+import type { SolutionAttemptResponse } from "@/types/attempt";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const CARD =
-  "bg-white rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100 p-6 md:p-8";
+  "bg-white rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.04)] border border-slate-100 p-6 md:p-8 animate-in fade-in duration-500";
 
-function buildHierarchyTree(flatList: SolutionAttemptResponse[]): TreeAttemptNode[] {
-  const map: Record<string, TreeAttemptNode> = {};
-  const roots: TreeAttemptNode[] = [];
+interface TreeAttemptNodeSummary extends SolutionAttemptSummary {
+  children: TreeAttemptNodeSummary[];
+}
+
+function buildHierarchyTree(flatList: SolutionAttemptSummary[]): TreeAttemptNodeSummary[] {
+  const map: Record<string, TreeAttemptNodeSummary> = {};
+  const roots: TreeAttemptNodeSummary[] = [];
   flatList.forEach((item) => {
     map[item.id] = { ...item, children: [] };
   });
@@ -45,8 +52,6 @@ const getStatusBadge = (status: string) =>
     ? "bg-rose-50 text-rose-700 border-rose-200"
     : "bg-amber-50 text-amber-700 border-amber-200";
 
-// Auto-links raw URLs (incl. www.github.com/...). With a capturing split the
-// matched URLs are always the odd indices, so no stateful regex .test() is needed.
 const URL_SPLIT = /((?:https?:\/\/)?(?:www\.)?github\.com\/[^\s]+|https?:\/\/[^\s]+)/g;
 
 const renderWithLinks = (text?: string | null) => {
@@ -84,7 +89,6 @@ const sanitizeUrl = (url: string) => {
   return url.startsWith("http://") || url.startsWith("https://") ? url : `https://${url}`;
 };
 
-// Finds the GitHub link no matter what the backend named the field
 const extractRepoUrl = (obj: any): string | null => {
   if (!obj) return null;
   const possibleKeys = [
@@ -106,15 +110,7 @@ const GithubIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-// Same keyframes / viewport as the solver tree
 const TREE_STYLES = `
-  @keyframes growDown { from { transform: scaleY(0); opacity: 0; } to { transform: scaleY(1); opacity: 1; } }
-  @keyframes fadePop { from { transform: translateY(-10px) scale(0.95); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
-  @keyframes expandX { from { transform: scaleX(0); opacity: 0; } to { transform: scaleX(1); opacity: 1; } }
-  .node-skel { animation: fadePop 0.5s ease-out forwards; opacity: 0; transform-origin: top center; }
-  .line-skel { animation: growDown 0.4s ease-out forwards; opacity: 0; transform-origin: top center; }
-  .expand-x { animation: expandX 0.4s ease-out forwards; opacity: 0; transform-origin: center; }
-
   .tree-viewport {
     min-height: 480px;
     max-height: 600px;
@@ -131,9 +127,26 @@ const TREE_STYLES = `
   .tree-content.exiting { opacity: 0; }
   .tree-content.entering { opacity: 1; }
   .tree-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+
+  @keyframes growDown {
+    0%, 100% { transform: scaleY(0); opacity: 0; }
+    20%, 80% { transform: scaleY(1); opacity: 1; }
+  }
+  @keyframes fadePop {
+    0%, 100% { transform: translateY(-10px) scale(0.95); opacity: 0; }
+    20%, 80% { transform: translateY(0) scale(1); opacity: 1; }
+  }
+  @keyframes expandX {
+    0%, 100% { transform: scaleX(0); opacity: 0;}
+    20%, 80% { transform: scaleX(1); opacity: 1; }
+  }
+  
+  .node-skel { animation: fadePop 1.5s infinite ease-in-out; opacity: 0; transform-origin: top center; }
+  .line-skel { animation: growDown 1.5s infinite ease-in-out; opacity: 0; transform-origin: top center; }
+  .expand-x { animation: expandX 1.5s infinite ease-in-out; opacity: 0; transform-origin: center; }
 `;
 
-// ─── Downward-growing tree skeleton (shown while attempts are fetched) ───────
+// ─── Downward-growing tree skeleton ───────
 
 const SkelNode = ({ delay, w1, w2 }: { delay: number; w1: string; w2: string }) => (
   <div
@@ -149,20 +162,17 @@ const SkelNode = ({ delay, w1, w2 }: { delay: number; w1: string; w2: string }) 
 );
 
 const TreeSkeleton = () => (
-  <div
-    className="tree-viewport flex flex-col items-center justify-start pt-12 pb-16 w-full overflow-hidden"
-    style={{ minHeight: "480px" }}
-  >
+  <div className="tree-viewport flex flex-col items-center justify-start pt-12 pb-16 w-full overflow-hidden" style={{ minHeight: "480px" }}>
     <SkelNode delay={0} w1="w-3/4" w2="w-1/2" />
-    <div className="line-skel w-0.5 h-8 bg-slate-200 relative z-0" style={{ animationDelay: "200ms" }} />
-    <div className="expand-x w-[288px] h-0.5 bg-slate-200 relative z-0" style={{ animationDelay: "400ms" }} />
+    <div className="line-skel w-0.5 h-8 bg-slate-200 relative z-0" style={{ animationDelay: "150ms" }} />
+    <div className="expand-x w-[288px] h-0.5 bg-slate-200 relative z-0" style={{ animationDelay: "300ms" }} />
     <div className="flex justify-between w-[288px] relative z-0">
-      <div className="line-skel w-0.5 h-8 bg-slate-200" style={{ animationDelay: "500ms" }} />
-      <div className="line-skel w-0.5 h-8 bg-slate-200" style={{ animationDelay: "500ms" }} />
+      <div className="line-skel w-0.5 h-8 bg-slate-200" style={{ animationDelay: "450ms" }} />
+      <div className="line-skel w-0.5 h-8 bg-slate-200" style={{ animationDelay: "450ms" }} />
     </div>
     <div className="flex gap-[32px] relative z-10">
-      <SkelNode delay={700} w1="w-2/3" w2="w-1/3" />
-      <SkelNode delay={700} w1="w-3/4" w2="w-1/2" />
+      <SkelNode delay={600} w1="w-2/3" w2="w-1/3" />
+      <SkelNode delay={600} w1="w-3/4" w2="w-1/2" />
     </div>
   </div>
 );
@@ -173,17 +183,8 @@ function RepoLink({ url, label, muted }: { url: string; label: string; muted?: b
   return (
     <div className="mt-6 pt-5 border-t border-slate-100">
       <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">{label}</p>
-      <a
-        href={sanitizeUrl(url)}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={`flex items-center gap-3 p-3 bg-slate-900 hover:bg-slate-800 rounded-xl text-sm font-bold text-white shadow-sm hover:shadow-md transition-all min-w-0 ${
-          muted ? "opacity-90 hover:opacity-100" : ""
-        }`}
-      >
-        <div className="p-1.5 bg-white/10 rounded-lg flex-shrink-0">
-          <GithubIcon className="w-4 h-4" />
-        </div>
+      <a href={sanitizeUrl(url)} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-3 p-3 bg-slate-900 hover:bg-slate-800 rounded-xl text-sm font-bold text-white shadow-sm hover:shadow-md transition-all min-w-0 ${muted ? "opacity-90 hover:opacity-100" : ""}`}>
+        <div className="p-1.5 bg-white/10 rounded-lg flex-shrink-0"><GithubIcon className="w-4 h-4" /></div>
         <span className="truncate flex-1">{url}</span>
       </a>
     </div>
@@ -196,13 +197,8 @@ function FileLinks({ urls, label, muted }: { urls: string[]; label: string; mute
       <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider w-full mb-1">{label}</p>
       {urls.map((url, idx) => {
         const isGithub = url.toLowerCase().includes("github.com");
-        const base =
-          "inline-flex items-center gap-2 text-sm font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm min-w-0";
-        const tone = isGithub
-          ? "bg-slate-900 text-white hover:bg-slate-800"
-          : muted
-          ? "bg-white border border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
-          : "bg-accent/5 border border-accent/20 text-accent hover:bg-accent hover:text-white";
+        const base = "inline-flex items-center gap-2 text-sm font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm min-w-0";
+        const tone = isGithub ? "bg-slate-900 text-white hover:bg-slate-800" : muted ? "bg-white border border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900" : "bg-accent/5 border border-accent/20 text-accent hover:bg-accent hover:text-white";
         return (
           <a key={idx} href={sanitizeUrl(url)} target="_blank" rel="noopener noreferrer" className={`${base} ${tone}`}>
             {isGithub ? <GithubIcon className="w-4 h-4 flex-shrink-0" /> : <Paperclip className="w-4 h-4 flex-shrink-0" />}
@@ -216,41 +212,33 @@ function FileLinks({ urls, label, muted }: { urls: string[]; label: string; mute
 
 function AttemptDetailModal({
   node,
-  flatAttemptsList,
   onClose,
 }: {
   node: TreeAttemptNode;
-  flatAttemptsList: SolutionAttemptResponse[];
   onClose: () => void;
 }) {
   const attemptDate = new Date(node.claimedAt);
-  const parentRec = node.parentAttemptId
-    ? flatAttemptsList.find((a) => a.id === node.parentAttemptId)
-    : null;
-
   const [activeSubIdx, setActiveSubIdx] = useState(0);
   const [viewPanel, setViewPanel] = useState<"current" | "previous">("current");
 
   const subs = node.submissions || [];
   const activeSub = subs[activeSubIdx] ?? null;
 
-  const predecessorSub = activeSub
-    ? node.parentSubmissions?.find((ps) => ps.subtaskId === activeSub.subtaskId) ||
-      (parentRec?.submissions || []).find((ps) => ps.subtaskId === activeSub.subtaskId) ||
-      null
-    : null;
+  // 🚀 FIX: Pulling parent data natively instead of searching array
+  const predecessorSub = activeSub && node.parentAttemptId ? {
+    description: node.parentDescription || "No description provided.",
+    fileUrls: node.parentFileUrls || []
+  } : null;
 
-  const isConfidential =
-    activeSub?.status === "DRAFT" || activeSub?.description?.includes("Confidential Workspace");
+  const isConfidential = activeSub?.status === "DRAFT" || activeSub?.description?.includes("Confidential Workspace");
 
   const educationInfo = [node.degreeProgram, node.institution].filter(Boolean).join(" · ");
-  const initials =
-    `${node.solverFirstName?.[0] || ""}${node.solverLastName?.[0] || ""}`.toUpperCase() || "S";
+  const initials = `${node.solverFirstName?.[0] || ""}${node.solverLastName?.[0] || ""}`.toUpperCase() || "S";
   const submittedCount = subs.filter((s) => s.status === "SUBMITTED").length;
   const parentName = node.parentSolverName || "Original";
 
   const currentGithub = extractRepoUrl(activeSub) || extractRepoUrl(node);
-  const prevGithub = predecessorSub ? extractRepoUrl(predecessorSub) : parentRec ? extractRepoUrl(parentRec) : null;
+  const prevGithub = predecessorSub ? extractRepoUrl(predecessorSub) : null;
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -273,22 +261,12 @@ function AttemptDetailModal({
 
   return (
     <Portal>
-      <div
-        className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200"
-        onClick={(e) => {
-          if (e.target === e.currentTarget) onClose();
-        }}
-      >
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
-          {/* ── Header ── */}
           <div className="flex items-start justify-between p-5 md:p-6 border-b border-slate-100 flex-shrink-0 bg-white z-10">
             <div className="flex items-start gap-4 flex-1 min-w-0 pr-4">
               {node.profilePictureUrl ? (
-                <img
-                  src={node.profilePictureUrl}
-                  alt=""
-                  className="w-12 h-12 rounded-2xl object-cover ring-1 ring-slate-200 shrink-0"
-                />
+                <img src={node.profilePictureUrl} alt="" className="w-12 h-12 rounded-2xl object-cover ring-1 ring-slate-200 shrink-0" />
               ) : (
                 <div className="w-12 h-12 rounded-2xl bg-accent/10 text-accent border border-accent/20 font-bold text-sm flex items-center justify-center shrink-0 shadow-sm">
                   {initials}
@@ -309,13 +287,11 @@ function AttemptDetailModal({
                 <div className="flex items-center gap-3 mt-3 flex-wrap">
                   {node.parentAttemptId && (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 text-slate-600 text-[10px] font-bold uppercase tracking-wider rounded-md">
-                      <GitBranch className="w-3 h-3 text-slate-400" />
-                      Forked: {parentName}
+                      <GitBranch className="w-3 h-3 text-slate-400" /> Forked: {parentName}
                     </span>
                   )}
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold uppercase tracking-wider rounded-md">
-                    <CheckCircle2 className="w-3 h-3" />
-                    {submittedCount} of {subs.length} completed
+                    <CheckCircle2 className="w-3 h-3" /> {submittedCount} of {subs.length} completed
                   </span>
                   <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
                     {attemptDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
@@ -324,16 +300,11 @@ function AttemptDetailModal({
               </div>
             </div>
 
-            <button
-              onClick={onClose}
-              aria-label="Close"
-              className="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors bg-slate-50 border border-slate-100 flex-shrink-0 cursor-pointer"
-            >
+            <button onClick={onClose} aria-label="Close" className="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors bg-slate-50 border border-slate-100 flex-shrink-0 cursor-pointer">
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          {/* ── Content ── */}
           {subs.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center p-12 bg-slate-50/50">
               <div className="w-16 h-16 bg-white rounded-full border border-slate-100 shadow-sm flex items-center justify-center mb-4">
@@ -346,15 +317,7 @@ function AttemptDetailModal({
               {subs.length > 1 && (
                 <div className="flex gap-2 px-5 md:px-6 pt-4 pb-3 border-b border-slate-100 flex-shrink-0 overflow-x-auto no-scrollbar bg-slate-50/30">
                   {subs.map((sub, idx) => (
-                    <button
-                      key={sub.id}
-                      onClick={() => setActiveSubIdx(idx)}
-                      className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-                        activeSubIdx === idx
-                          ? "bg-slate-900 text-white shadow-sm"
-                          : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100 hover:text-slate-900"
-                      }`}
-                    >
+                    <button key={sub.id} onClick={() => setActiveSubIdx(idx)} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${activeSubIdx === idx ? "bg-slate-900 text-white shadow-sm" : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100 hover:text-slate-900"}`}>
                       <span className={`w-2 h-2 rounded-full ${sub.status === "SUBMITTED" ? "bg-emerald-500" : "bg-amber-500"}`} />
                       {sub.subtaskTitle}
                     </button>
@@ -369,13 +332,7 @@ function AttemptDetailModal({
                   <>
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <h3 className="text-lg font-bold text-slate-900 tracking-tight">{activeSub.subtaskTitle}</h3>
-                      <span
-                        className={`flex-shrink-0 text-[10px] font-bold px-2.5 py-1 rounded-md border uppercase tracking-wider w-fit ${
-                          activeSub.status === "SUBMITTED"
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            : "bg-amber-50 text-amber-700 border-amber-200"
-                        }`}
-                      >
+                      <span className={`flex-shrink-0 text-[10px] font-bold px-2.5 py-1 rounded-md border uppercase tracking-wider w-fit ${activeSub.status === "SUBMITTED" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-amber-50 text-amber-700 border-amber-200"}`}>
                         {activeSub.status}
                       </span>
                     </div>
@@ -386,21 +343,16 @@ function AttemptDetailModal({
                           <Lock className="w-8 h-8 text-slate-400" />
                         </div>
                         <h4 className="font-bold text-slate-900 text-lg mb-1">Workspace in Draft Mode</h4>
-                        <p className="text-sm text-slate-500 font-medium max-w-sm leading-relaxed">
-                          The solver is still drafting. The narrative and attachments become visible once they finalize and lock this module.
-                        </p>
+                        <p className="text-sm text-slate-500 font-medium max-w-sm leading-relaxed">The solver is still drafting. The narrative and attachments become visible once they finalize and lock this module.</p>
                         <span className="mt-5 inline-flex items-center gap-2 px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-md text-[10px] font-bold uppercase tracking-wider">
-                          <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                          Protected by privacy policy
+                          <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" /> Protected by privacy policy
                         </span>
                       </div>
                     ) : (
                       <>
                         {activeSub.deltaDescription && (
                           <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-5 shadow-sm">
-                            <p className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider mb-2">
-                              What changed from the parent solution
-                            </p>
+                            <p className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider mb-2">What changed from the parent solution</p>
                             <p className="text-sm text-slate-700 italic font-medium leading-relaxed break-words">
                               “{renderWithLinks(activeSub.deltaDescription)}”
                             </p>
@@ -410,15 +362,7 @@ function AttemptDetailModal({
                         {predecessorSub && (
                           <div className="flex items-center gap-1 p-1 bg-slate-200/50 rounded-xl w-fit border border-slate-200 max-w-full">
                             {(["current", "previous"] as const).map((panel) => (
-                              <button
-                                key={panel}
-                                onClick={() => setViewPanel(panel)}
-                                className={`px-5 py-2 text-[13px] font-bold rounded-lg transition-all truncate cursor-pointer ${
-                                  viewPanel === panel
-                                    ? "bg-white text-slate-900 shadow-sm"
-                                    : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
-                                }`}
-                              >
+                              <button key={panel} onClick={() => setViewPanel(panel)} className={`px-5 py-2 text-[13px] font-bold rounded-lg transition-all truncate cursor-pointer ${viewPanel === panel ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"}`}>
                                 {panel === "current" ? "Current Solution" : `Previous (${parentName})`}
                               </button>
                             ))}
@@ -427,29 +371,17 @@ function AttemptDetailModal({
 
                         {viewPanel === "previous" && predecessorSub ? (
                           <div className="bg-slate-100 border border-slate-200 rounded-2xl p-6 animate-in fade-in duration-300">
-                            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3">
-                              {parentName}'s Original Narrative
-                            </p>
-                            <p className="text-sm text-slate-600 whitespace-pre-wrap break-words font-medium leading-relaxed">
-                              {renderWithLinks(predecessorSub.description)}
-                            </p>
+                            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3">{parentName}'s Original Narrative</p>
+                            <p className="text-sm text-slate-600 whitespace-pre-wrap break-words font-medium leading-relaxed">{renderWithLinks(predecessorSub.description)}</p>
                             {prevGithub && <RepoLink url={prevGithub} label="Original Repository" muted />}
-                            {predecessorSub.fileUrls && predecessorSub.fileUrls.length > 0 && (
-                              <FileLinks urls={predecessorSub.fileUrls} label="Original Attachments" muted />
-                            )}
+                            {predecessorSub.fileUrls && predecessorSub.fileUrls.length > 0 && <FileLinks urls={predecessorSub.fileUrls} label="Original Attachments" muted />}
                           </div>
                         ) : (
                           <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6 animate-in fade-in duration-300">
-                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">
-                              {predecessorSub ? `${node.solverFirstName}'s Modified Narrative` : "Submitted Narrative"}
-                            </p>
-                            <p className="text-sm text-slate-800 whitespace-pre-wrap break-words font-medium leading-relaxed">
-                              {renderWithLinks(activeSub.description)}
-                            </p>
+                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">{predecessorSub ? `${node.solverFirstName}'s Modified Narrative` : "Submitted Narrative"}</p>
+                            <p className="text-sm text-slate-800 whitespace-pre-wrap break-words font-medium leading-relaxed">{renderWithLinks(activeSub.description)}</p>
                             {currentGithub && <RepoLink url={currentGithub} label="Project Repository" />}
-                            {activeSub.fileUrls && activeSub.fileUrls.length > 0 && (
-                              <FileLinks urls={activeSub.fileUrls} label="Attachments" />
-                            )}
+                            {activeSub.fileUrls && activeSub.fileUrls.length > 0 && <FileLinks urls={activeSub.fileUrls} label="Attachments" />}
                           </div>
                         )}
                       </>
@@ -470,37 +402,30 @@ function AttemptDetailModal({
 function AttemptCard({
   node,
   onViewClick,
+  isFetching,
   isHighlighted,
 }: {
-  node: TreeAttemptNode;
+  node: TreeAttemptNodeSummary;
   onViewClick: () => void;
+  isFetching?: boolean;
   isHighlighted?: boolean;
 }) {
-  const subs = node.submissions || [];
-  const submitted = subs.filter((s) => s.status === "SUBMITTED").length;
-
   return (
     <div
-      className={`group bg-white border rounded-2xl p-5 transition-all duration-300 select-none relative overflow-hidden ${
+      className={`bg-white border rounded-2xl p-5 select-none relative overflow-hidden animate-in fade-in zoom-in-95 duration-500 ${
         isHighlighted
           ? "border-emerald-500 ring-4 ring-emerald-500/20 shadow-lg bg-emerald-50/40"
-          : "border-slate-200 shadow-sm hover:border-emerald-500/30 hover:shadow-md"
+          : "border-slate-200 shadow-sm"
       }`}
       style={{ minWidth: "256px", maxWidth: "256px" }}
     >
-      <div
-        className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-accent transition-opacity ${
-          isHighlighted ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-        }`}
-      />
-
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex-1 min-w-0">
-          <p className="font-bold text-slate-900 text-sm leading-tight truncate group-hover:text-emerald-700 transition-colors">
+          <p className="font-bold text-slate-900 text-sm leading-tight truncate">
             {node.solverFirstName} {node.solverLastName}
           </p>
-          <p className="text-[11px] text-slate-500 font-medium leading-snug truncate mt-0.5">{node.degreeProgram}</p>
-          <p className="text-[10px] text-slate-400 font-bold truncate mt-1">{node.institution}</p>
+          <p className="text-[11px] text-slate-500 font-medium leading-snug truncate mt-0.5">{node.solverDegreeProgram}</p>
+          <p className="text-[10px] text-slate-400 font-bold truncate mt-1">{node.solverInstitution}</p>
         </div>
         <span className={`flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-md border uppercase tracking-wider ${getStatusBadge(node.status)}`}>
           {node.status.replace(/_/g, " ")}
@@ -523,7 +448,7 @@ function AttemptCard({
         </p>
         <p className="flex items-center gap-1.5" title="Subtasks submitted">
           <CheckCircle2 className="w-3.5 h-3.5" />
-          {submitted} / {subs.length}
+          {node.submissionCount} Submissions
         </p>
       </div>
 
@@ -532,13 +457,16 @@ function AttemptCard({
           e.stopPropagation();
           onViewClick();
         }}
-        className={`w-full py-1.5 text-[11px] font-bold rounded-lg border transition-all cursor-pointer shadow-sm group-hover:scale-[1.02] ${
-          isHighlighted
-            ? "bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700"
-            : "text-slate-600 border-slate-200 bg-slate-50 hover:bg-slate-100 hover:text-slate-900"
+        disabled={isFetching}
+        className={`w-full flex justify-center items-center gap-2 py-1.5 text-[11px] font-bold rounded-lg border transition-all cursor-pointer shadow-sm active:scale-[0.98] ${
+          isFetching
+            ? "bg-slate-100 text-slate-400 border-slate-200" 
+            : isHighlighted
+              ? "bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700"
+              : "text-slate-600 border-slate-200 bg-slate-50 hover:bg-slate-100 hover:text-slate-900"
         }`}
       >
-        View Solution
+        {isFetching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "View Solution"}
       </button>
     </div>
   );
@@ -548,17 +476,18 @@ function SolutionFamilyTree({
   roots,
   onViewAttempt,
   isAnimating,
+  fetchingDetailsId,
   highlightedAttemptId,
 }: {
-  roots: TreeAttemptNode[];
-  onViewAttempt: (node: TreeAttemptNode) => void;
+  roots: TreeAttemptNodeSummary[];
+  onViewAttempt: (node: TreeAttemptNodeSummary) => void;
   isAnimating: boolean;
+  fetchingDetailsId: string | null;
   highlightedAttemptId?: string | null;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [, setTick] = useState(0);
 
-  // Force a re-render so SVG connectors can measure the laid-out nodes
   useEffect(() => {
     const t = setTimeout(() => setTick((n) => n + 1), 100);
     return () => clearTimeout(t);
@@ -573,18 +502,15 @@ function SolutionFamilyTree({
     return () => clearTimeout(t);
   }, [highlightedAttemptId, roots]);
 
-  function renderLevel(nodes: TreeAttemptNode[]): React.ReactNode {
+  function renderLevel(nodes: TreeAttemptNodeSummary[]): React.ReactNode {
     return (
       <div style={{ display: "flex", flexDirection: "row", alignItems: "flex-start", gap: "32px", justifyContent: "center" }}>
         {nodes.map((node) => (
-          <div
-            key={node.id}
-            id={`tnode-${node.id}`}
-            style={{ display: "flex", flexDirection: "column", alignItems: "center", position: "relative", zIndex: 10 }}
-          >
+          <div key={node.id} id={`tnode-${node.id}`} style={{ display: "flex", flexDirection: "column", alignItems: "center", position: "relative", zIndex: 10 }}>
             <AttemptCard
               node={node}
               onViewClick={() => onViewAttempt(node)}
+              isFetching={fetchingDetailsId === node.id}
               isHighlighted={node.id === highlightedAttemptId}
             />
             {node.children.length > 0 && (
@@ -599,12 +525,12 @@ function SolutionFamilyTree({
     );
   }
 
-  function buildConnectorLines(nodes: TreeAttemptNode[]): React.ReactNode[] {
+  function buildConnectorLines(nodes: TreeAttemptNodeSummary[]): React.ReactNode[] {
     if (!containerRef.current) return [];
     const containerRect = containerRef.current.getBoundingClientRect();
     const lines: React.ReactNode[] = [];
 
-    function walk(list: TreeAttemptNode[]) {
+    function walk(list: TreeAttemptNodeSummary[]) {
       list.forEach((node) => {
         if (node.children.length >= 2) {
           const childCards = node.children
@@ -659,10 +585,7 @@ function SolutionFamilyTree({
 
   return (
     <div className="tree-viewport" ref={containerRef}>
-      <div
-        className={`tree-content ${isAnimating ? "exiting" : "entering"}`}
-        style={{ padding: "48px 64px 80px 64px", position: "relative", zIndex: 1, minWidth: "max-content", display: "inline-block" }}
-      >
+      <div className={`tree-content ${isAnimating ? "exiting" : "entering"}`} style={{ padding: "48px 64px 80px 64px", position: "relative", zIndex: 1, minWidth: "max-content", display: "inline-block" }}>
         {roots.length === 0 ? (
           <div className="tree-empty" style={{ minWidth: "100%" }}>
             <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center shadow-sm">
@@ -673,9 +596,7 @@ function SolutionFamilyTree({
         ) : (
           <>
             {svgLines.length > 0 && (
-              <svg
-                style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 0, overflow: "visible" }}
-              >
+              <svg className="animate-in fade-in duration-700 delay-300" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 0, overflow: "visible", animationFillMode: 'both' }}>
                 {svgLines}
               </svg>
             )}
@@ -697,10 +618,13 @@ interface SolutionTreeTabProps {
 }
 
 export function SolutionTreeTab({ problemId, highlightedAttemptId }: SolutionTreeTabProps) {
-  const [attempts, setAttempts] = useState<SolutionAttemptResponse[]>([]);
+  const [attempts, setAttempts] = useState<SolutionAttemptSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [isTreeReady, setIsTreeReady] = useState(false);
+
   const [modalNode, setModalNode] = useState<TreeAttemptNode | null>(null);
+  const [fetchingDetailsId, setFetchingDetailsId] = useState<string | null>(null);
 
   const [selectedSubtaskId, setSelectedSubtaskId] = useState<string>("ALL");
   const [isAnimating, setIsAnimating] = useState(false);
@@ -709,8 +633,15 @@ export function SolutionTreeTab({ problemId, highlightedAttemptId }: SolutionTre
   const loadAttempts = () => {
     setLoading(true);
     setLoadError(false);
-    getAllAttempts(problemId)
-      .then(setAttempts)
+
+    const fetchTree = getProblemTree(problemId);
+    const skeletonTimer = new Promise(resolve => setTimeout(resolve, 1200));
+
+    Promise.all([fetchTree, skeletonTimer])
+      .then(([data]) => {
+        setAttempts(data as SolutionAttemptSummary[]);
+        setIsTreeReady(true);
+      })
       .catch((err: unknown) => {
         console.error("Failed to load attempts", err);
         setLoadError(true);
@@ -722,7 +653,6 @@ export function SolutionTreeTab({ problemId, highlightedAttemptId }: SolutionTre
     loadAttempts();
   }, [problemId]);
 
-  // Locating a proposal must never be hidden by a previously chosen filter
   useEffect(() => {
     if (highlightedAttemptId) {
       setSelectedSubtaskId("ALL");
@@ -755,6 +685,21 @@ export function SolutionTreeTab({ problemId, highlightedAttemptId }: SolutionTre
     }, 220);
   }
 
+  const handleOpenDetails = async (node: TreeAttemptNodeSummary) => {
+    setFetchingDetailsId(node.id);
+    try {
+      const heavyAttempt = await getFullAttemptDetails(node.id);
+      setModalNode({
+        ...heavyAttempt,
+        children: node.children as any 
+      });
+    } catch (error) {
+      console.error("Failed to load attempt details", error);
+    } finally {
+      setFetchingDetailsId(null);
+    }
+  };
+
   const showTreeCard = loading || (!loadError && attempts.length > 0);
 
   return (
@@ -762,12 +707,12 @@ export function SolutionTreeTab({ problemId, highlightedAttemptId }: SolutionTre
       <style>{TREE_STYLES}</style>
 
       {modalNode && (
-        <AttemptDetailModal node={modalNode} flatAttemptsList={attempts} onClose={() => setModalNode(null)} />
+        <AttemptDetailModal node={modalNode} onClose={() => setModalNode(null)} />
       )}
 
       <div className="animate-in fade-in duration-500">
         {!showTreeCard && loadError && (
-          <div className={`${CARD} p-12 text-center`}>
+          <div className={CARD + " p-12 text-center"}>
             <div className="w-16 h-16 bg-rose-50 border border-rose-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
               <Network className="w-8 h-8 text-rose-300" />
             </div>
@@ -775,17 +720,14 @@ export function SolutionTreeTab({ problemId, highlightedAttemptId }: SolutionTre
             <p className="text-slate-500 font-medium text-sm mb-6 max-w-sm mx-auto">
               Something went wrong while fetching attempts for this problem.
             </p>
-            <button
-              onClick={loadAttempts}
-              className="px-6 py-2.5 bg-accent hover:bg-accent/90 text-white font-bold rounded-xl transition-all shadow-md cursor-pointer"
-            >
+            <button onClick={loadAttempts} className="px-6 py-2.5 bg-accent hover:bg-accent/90 text-white font-bold rounded-xl transition-all shadow-md cursor-pointer">
               Try Again
             </button>
           </div>
         )}
 
         {!showTreeCard && !loadError && attempts.length === 0 && (
-          <div className={`${CARD} p-12 text-center`}>
+          <div className={CARD + " p-12 text-center"}>
             <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
               <Network className="w-8 h-8 text-slate-300" />
             </div>
@@ -807,19 +749,14 @@ export function SolutionTreeTab({ problemId, highlightedAttemptId }: SolutionTre
                   Solution Evolution Tree
                 </h2>
                 <p className="text-sm font-medium text-slate-500 mt-2">
-                  {highlightedAttemptId
-                    ? "Showing the located proposal source. "
-                    : "Monitor how solvers are building upon each other's solutions. "}
+                  {highlightedAttemptId ? "Showing the located proposal source. " : "Monitor how solvers are building upon each other's solutions. "}
                   Click <strong className="text-slate-700">View Solution</strong> to inspect their code and documentation.
                 </p>
               </div>
 
               {!loading && uniqueSubtasks.length > 1 && (
                 <div className="flex flex-col md:flex-row md:items-center gap-2 w-full md:w-auto md:flex-shrink-0 mt-4 md:mt-0">
-                  <label
-                    htmlFor="seeker-subtask-filter"
-                    className="text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap"
-                  >
+                  <label htmlFor="seeker-subtask-filter" className="text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">
                     Filter Tree:
                   </label>
                   <div className="relative w-full md:w-72">
@@ -831,9 +768,7 @@ export function SolutionTreeTab({ problemId, highlightedAttemptId }: SolutionTre
                     >
                       <option value="ALL">All Sub-problems</option>
                       {uniqueSubtasks.map((st) => (
-                        <option key={st.id} value={st.id}>
-                          {st.title}
-                        </option>
+                        <option key={st.id} value={st.id}>{st.title}</option>
                       ))}
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
@@ -844,10 +779,12 @@ export function SolutionTreeTab({ problemId, highlightedAttemptId }: SolutionTre
               )}
             </div>
 
-            {loading ? (
-              <TreeSkeleton />
+            {!isTreeReady ? (
+              <div key="skeleton-view">
+                <TreeSkeleton />
+              </div>
             ) : (
-              <>
+              <div key="real-tree-view">
                 <div className="flex items-center gap-x-5 gap-y-2 mb-5 flex-wrap bg-slate-50/50 px-4 py-3 rounded-xl border border-slate-100">
                   <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Legend</span>
                   <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700 font-bold">
@@ -869,11 +806,12 @@ export function SolutionTreeTab({ problemId, highlightedAttemptId }: SolutionTre
 
                 <SolutionFamilyTree
                   roots={roots}
-                  onViewAttempt={(node) => setModalNode(node)}
+                  onViewAttempt={handleOpenDetails}
                   isAnimating={isAnimating}
+                  fetchingDetailsId={fetchingDetailsId}
                   highlightedAttemptId={highlightedAttemptId}
                 />
-              </>
+              </div>
             )}
           </div>
         )}

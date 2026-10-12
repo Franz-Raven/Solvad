@@ -286,4 +286,20 @@ public class SolutionAttemptController {
         }
     }
 
+    // 🚀 Update the generic return type from AttemptNodeSummaryResponse to SolutionAttemptSummaryResponse
+    @GetMapping("/api/problems/{problemId}/attempts/tree")
+    @PreAuthorize("hasAnyRole('SEEKER', 'SOLVER', 'ADMIN')")
+    public ResponseEntity<List<SolutionAttemptSummaryResponse>> getProblemTree(
+            @PathVariable UUID problemId,
+            @RequestHeader("Authorization") String authHeader) {
+        return ResponseEntity.ok(solutionAttemptService.getLightweightTree(problemId));
+    }
+
+    @GetMapping("/api/problems/{problemId}/attempts/active-count")
+    @PreAuthorize("hasAnyRole('SEEKER', 'ADMIN')")
+    public ResponseEntity<ActiveAttemptsCountResponse> getProblemActiveAttemptsCount(@PathVariable UUID problemId) {
+        long count = solutionAttemptService.getActiveAttemptsCountForProblem(problemId);
+        return ResponseEntity.ok(new ActiveAttemptsCountResponse(count));
+    }
+
 }

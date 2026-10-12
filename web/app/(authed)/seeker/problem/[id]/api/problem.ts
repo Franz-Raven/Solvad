@@ -3,6 +3,7 @@ import type { ProblemResponse } from "@/types/problem";
 import type { ClaimRequestResponse } from "@/types/attempt";
 import type { SolutionAttemptResponse } from "@/types/attempt";
 import { AuditLogEntry } from "@/types/attempt";
+import type { SolutionAttemptSummary } from "@/types/attempt";
 
 export async function getProblemById(
   problemId: string
@@ -47,16 +48,10 @@ export async function markAsSolved(
 }
 
 export async function updateSubtaskMaxSolvers(problemId: string, subtaskId: string, maxSolvers: number) {
-  const token = localStorage.getItem("token");
-  const res = await fetch(`http://localhost:8080/api/problems/${problemId}/subtasks/${subtaskId}/max-solvers?maxSolvers=${maxSolvers}`, {
-    method: "PUT",
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(errorText || "Failed to update limit");
-  }
-  return res.json();
+  return apiRequest<any>(
+    `/problems/${problemId}/subtasks/${subtaskId}/max-solvers?maxSolvers=${maxSolvers}`, 
+    { method: "PUT" }
+  );
 }
 
 export async function updateProblemStatus(
@@ -84,3 +79,16 @@ export async function getAllAttempts(
   });
 }
 
+
+export async function getProblemTree(problemId: string): Promise<SolutionAttemptSummary[]> {
+  return apiRequest<SolutionAttemptSummary[]>(`/problems/${problemId}/attempts/tree`, { method: "GET" });
+}
+
+export async function getFullAttemptDetails(attemptId: string): Promise<SolutionAttemptResponse> {
+  return apiRequest<SolutionAttemptResponse>(`/attempts/${attemptId}`, { method: "GET" });
+}
+
+export async function getProblemActiveAttemptsCount(problemId: string): Promise<number> {
+  const res = await apiRequest<any>(`/problems/${problemId}/attempts/active-count`, { method: "GET" });
+  return res.activeCount ?? res.count ?? 0; // Safely handles the Java record JSON mapping
+}
