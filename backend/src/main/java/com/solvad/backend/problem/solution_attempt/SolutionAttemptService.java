@@ -830,7 +830,7 @@ public class SolutionAttemptService {
                             attempt.getProblem().getTitle(),
                             attempt.getSolver().getFirstName(),
                             attempt.getSolver().getLastName(),
-                            null, // 🚀 FIX: Removed the invalid label here
+                            attempt.getSolver().getUser().getProfileUrl(),
                             attempt.getSolver().getInstitution(),
                             attempt.getSolver().getDegreeProgram(),
                             attempt.getStatus().name(),
@@ -852,6 +852,120 @@ public class SolutionAttemptService {
         Problem problem = problemRepository.findById(problemId)
                 .orElseThrow(() -> new RuntimeException("Problem not found"));
         return attemptRepository.countByProblemAndStatus(problem, SolutionAttemptStatus.ACTIVE);
+    }
+
+    // 🚀 1. Fetches ONLY active workspaces (bypasses the entire tree structure)
+    @Transactional(readOnly = true)
+    public List<SolutionAttemptSummaryResponse> getActiveWorkspaces(UUID problemId) {
+        Problem problem = problemRepository.findById(problemId)
+                .orElseThrow(() -> new RuntimeException("Problem not found"));
+
+        return attemptRepository.findByProblemAndStatus(problem, SolutionAttemptStatus.ACTIVE).stream()
+                .map(attempt -> new SolutionAttemptSummaryResponse(
+                        attempt.getId(),
+                        attempt.getProblem().getId(),
+                        attempt.getProblem().getTitle(),
+                        attempt.getSolver().getFirstName(),
+                        attempt.getSolver().getLastName(),
+                        attempt.getSolver().getUser().getProfileUrl(),
+                        attempt.getSolver().getInstitution(),
+                        attempt.getSolver().getDegreeProgram(),
+                        attempt.getStatus().name(),
+                        attempt.getSubmissions() != null ? attempt.getSubmissions().size() : 0,
+                        attempt.getClaimedAt(),
+                        attempt.getUpdatedAt(),
+                        attempt.getCompletedAt(),
+                        attempt.getParentAttempt() != null ? attempt.getParentAttempt().getId() : null,
+                        attempt.getParentAttempt() != null ? attempt.getParentAttempt().getSolver().getFirstName() + " " + attempt.getParentAttempt().getSolver().getLastName() : null,
+                        attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getId() : null,
+                        attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : null
+                ))
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getSubtaskCapacities(UUID problemId) {
+        Problem problem = problemRepository.findById(problemId)
+                .orElseThrow(() -> new RuntimeException("Problem not found"));
+
+        List<SolutionAttempt> activeAttempts = attemptRepository.findByProblemAndStatus(problem, SolutionAttemptStatus.ACTIVE);
+
+        Map<UUID, Long> activeCounts = activeAttempts.stream()
+                .filter(a -> a.getTargetSubtask() != null)
+                .collect(Collectors.groupingBy(a -> a.getTargetSubtask().getId(), Collectors.counting()));
+
+        // 🚀 FIX: Fetch the subtasks from the repository instead of the Problem entity directly!
+        List<ProblemSubtask> subtasks = subtaskRepository.findByProblem(problem);
+
+        return subtasks.stream()
+                .map(st -> {
+                    Map<String, Object> map = new java.util.HashMap<>();
+                    map.put("subtaskId", st.getId());
+                    map.put("title", st.getTitle());
+                    map.put("activeCount", activeCounts.getOrDefault(st.getId(), 0L).intValue());
+                    map.put("maxSolvers", st.getMaxConcurrentSolvers() != null ? st.getMaxConcurrentSolvers() : 3);
+                    return map;
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getLightweightPendingProposals(UUID problemId) {
+        Problem problem = problemRepository.findById(problemId)
+                .orElseThrow(() -> new RuntimeException("Problem not found"));
+
+        return claimRequestRepository.findByProblemAndStatus(problem, ClaimRequestStatus.PENDING)
+                .stream()
+                .map(claim -> {
+                    Map<String, Object> map = new java.util.HashMap<>();
+                    map.put("id", claim.getId());
+                    map.put("targetSubtaskId", claim.getTargetSubtask() != null ? claim.getTargetSubtask().getId() : null);
+                    map.put("parentAttemptId", claim.getParentAttempt() != null ? claim.getParentAttempt().getId() : null);
+                    map.put("status", claim.getStatus().name());
+                    map.put("createdAt", claim.getCreatedAt());
+
+                    // Count files instead of sending the massive URL string
+                    int fileCount = 0;
+                    if (claim.getSupportingDocuments() != null && !claim.getSupportingDocuments().isBlank()) {
+                        fileCount = claim.getSupportingDocuments().split(",").length;
+                    }
+                    map.put("fileCount", fileCount);
+
+                    Map<String, Object> solver = new java.util.HashMap<>();
+                    solver.put("firstName", claim.getSolver().getFirstName());
+                    solver.put("lastName", claim.getSolver().getLastName());
+                    solver.put("institution", claim.getSolver().getInstitution());
+                    solver.put("profilePictureUrl", claim.getSolver().getUser().getProfileUrl());
+                    map.put("solver", solver);
+
+                    return map;
+                })
+                .collect(Collectors.toList());
+    }
+
+    // 🚀 2. The Heavy Payload (Fires ONLY when clicking "Review")
+    @Transactional(readOnly = true)
+    public Map<String, Object> getProposalDetailsForSeeker(UUID proposalId) {
+        ClaimRequest claim = claimRequestRepository.findById(proposalId)
+                .orElseThrow(() -> new RuntimeException("Proposal not found"));
+
+        Map<String, Object> map = new java.util.HashMap<>();
+        map.put("id", claim.getId());
+        map.put("proposedApproach", claim.getProposedApproach()); // Heavy Text
+        map.put("supportingDocuments", claim.getSupportingDocuments()); // Heavy URLs
+        map.put("status", claim.getStatus().name());
+        map.put("createdAt", claim.getCreatedAt());
+        map.put("targetSubtaskId", claim.getTargetSubtask() != null ? claim.getTargetSubtask().getId() : null);
+        map.put("parentAttemptId", claim.getParentAttempt() != null ? claim.getParentAttempt().getId() : null);
+
+        Map<String, Object> solver = new java.util.HashMap<>();
+        solver.put("firstName", claim.getSolver().getFirstName());
+        solver.put("lastName", claim.getSolver().getLastName());
+        solver.put("institution", claim.getSolver().getInstitution());
+        solver.put("profilePictureUrl", claim.getSolver().getUser().getProfileUrl());
+        map.put("solver", solver);
+
+        return map;
     }
 
 }

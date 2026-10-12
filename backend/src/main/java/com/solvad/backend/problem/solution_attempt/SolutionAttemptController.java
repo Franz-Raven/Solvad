@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -302,4 +303,27 @@ public class SolutionAttemptController {
         return ResponseEntity.ok(new ActiveAttemptsCountResponse(count));
     }
 
+    @GetMapping("/api/problems/{problemId}/workspaces/active")
+    @PreAuthorize("hasAnyRole('SEEKER', 'ADMIN')")
+    public ResponseEntity<List<SolutionAttemptSummaryResponse>> getActiveWorkspaces(@PathVariable UUID problemId) {
+        return ResponseEntity.ok(solutionAttemptService.getActiveWorkspaces(problemId));
+    }
+
+    @GetMapping("/api/problems/{problemId}/subtasks/capacities")
+    @PreAuthorize("hasAnyRole('SEEKER', 'ADMIN')")
+    public ResponseEntity<List<Map<String, Object>>> getSubtaskCapacities(@PathVariable UUID problemId) {
+        return ResponseEntity.ok(solutionAttemptService.getSubtaskCapacities(problemId));
+    }
+
+    @GetMapping("/api/problems/{problemId}/proposals/pending/summary")
+    @PreAuthorize("hasAnyRole('SEEKER', 'ADMIN')")
+    public ResponseEntity<List<Map<String, Object>>> getPendingProposalsSummary(@PathVariable UUID problemId) {
+        return ResponseEntity.ok(solutionAttemptService.getLightweightPendingProposals(problemId));
+    }
+
+    @GetMapping("/api/proposals/{proposalId}/details")
+    @PreAuthorize("hasAnyRole('SEEKER', 'ADMIN')")
+    public ResponseEntity<Map<String, Object>> getProposalDetailsForSeeker(@PathVariable UUID proposalId) {
+        return ResponseEntity.ok(solutionAttemptService.getProposalDetailsForSeeker(proposalId));
+    }
 }

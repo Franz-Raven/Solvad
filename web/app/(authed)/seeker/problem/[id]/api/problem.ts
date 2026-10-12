@@ -1,6 +1,6 @@
 import { apiRequest } from "@/lib/api";
 import type { ProblemResponse } from "@/types/problem";
-import type { ClaimRequestResponse } from "@/types/attempt";
+import type { ClaimSummaryResponse } from "@/types/attempt";
 import type { SolutionAttemptResponse } from "@/types/attempt";
 import { AuditLogEntry } from "@/types/attempt";
 import type { SolutionAttemptSummary } from "@/types/attempt";
@@ -91,4 +91,30 @@ export async function getFullAttemptDetails(attemptId: string): Promise<Solution
 export async function getProblemActiveAttemptsCount(problemId: string): Promise<number> {
   const res = await apiRequest<any>(`/problems/${problemId}/attempts/active-count`, { method: "GET" });
   return res.activeCount ?? res.count ?? 0; // Safely handles the Java record JSON mapping
+}
+
+export async function getActiveWorkspaces(problemId: string): Promise<SolutionAttemptSummary[]> {
+  return apiRequest<SolutionAttemptSummary[]>(`/problems/${problemId}/workspaces/active`, { method: "GET" });
+}
+
+export interface SubtaskCapacity {
+  subtaskId: string;
+  title: string;
+  activeCount: number;
+  maxSolvers: number;
+}
+
+export async function getSubtaskCapacities(problemId: string): Promise<SubtaskCapacity[]> {
+  return apiRequest<SubtaskCapacity[]>(`/problems/${problemId}/subtasks/capacities`, { method: "GET" });
+}
+
+import type { ClaimRequestResponse } from "@/types/attempt";
+
+
+export async function getPendingProposalsSummary(problemId: string): Promise<ClaimSummaryResponse[]> {
+  return apiRequest<ClaimSummaryResponse[]>(`/problems/${problemId}/proposals/pending/summary`, { method: "GET" });
+}
+
+export async function getFullProposalDetails(proposalId: string): Promise<ClaimRequestResponse> {
+  return apiRequest<ClaimRequestResponse>(`/proposals/${proposalId}/details`, { method: "GET" });
 }
