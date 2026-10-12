@@ -119,3 +119,40 @@ export interface PaginatedAttemptsResponse {
   size: number;
 }
 
+export interface ClaimSummary {
+  id: string;
+  problemId: string;
+  problemTitle: string;
+  targetSubtaskId?: string;
+  targetSubtaskTitle?: string;
+  status: string;
+  submittedAt: string;
+}
+
+export interface PaginatedClaimsResponse {
+  claims: ClaimSummary[];
+  currentPage: number;
+  totalPages: number;
+  totalElements: number;
+  size: number;
+}
+
+export interface ClaimDetail {
+  id: string;
+  problemId: string;
+  problemTitle: string;
+  targetSubtaskTitle?: string;
+  status: string;
+  submittedAt: string;
+  proposalText: string;
+}
+
+export interface AttemptDetail {
+  id: string;
+  problemId: string;
+  problemTitle: string;
+  targetSubtaskTitle?: string;
+  status: string;
+  completedAt: string;
+  summary: string;
+}

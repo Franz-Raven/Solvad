@@ -17,6 +17,7 @@ import com.solvad.backend.problem.solution_attempt.SolutionAttempt;
 import com.solvad.backend.problem.solution_attempt.SolutionAttemptRepository;
 import com.solvad.backend.problem.solution_attempt.SolutionAttemptStatus;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,6 +27,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Sort;
+import java.util.stream.Collectors;
+import com.solvad.backend.profile.solver.SolverProfile;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 
 @Service
 public class ClaimRequestService {
@@ -286,13 +293,40 @@ public class ClaimRequestService {
     }
 
     @Transactional(readOnly = true)
+    public PaginatedClaimsResponse getPendingWorkspaceClaims(UUID solverId, int page, int size) {
+        SolverProfile solver = solverProfileRepository.findByUserId(solverId)
+                .orElseThrow(() -> new RuntimeException("Solver profile not found"));
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        // 🚀 FIX: Used ClaimRequestStatus to match your actual Enum
+        Page<ClaimRequest> claimPage = claimRequestRepository.findBySolverAndStatus(solver, ClaimRequestStatus.PENDING, pageable);
+
+        List<ClaimSummaryResponse> summaries = claimPage.getContent().stream()
+                .map(claim -> new ClaimSummaryResponse(
+                        claim.getId(),
+                        claim.getProblem().getId(),
+                        claim.getProblem().getTitle(),
+                        // 🚀 FIX: Used getTargetSubtask() to match your entity schema
+                        claim.getTargetSubtask() != null ? claim.getTargetSubtask().getId() : null,
+                        claim.getTargetSubtask() != null ? claim.getTargetSubtask().getTitle() : null,
+                        claim.getStatus().name(),
+                        claim.getCreatedAt()
+                ))
+                .collect(Collectors.toList());
+
+        return new PaginatedClaimsResponse(summaries, claimPage.getNumber(), claimPage.getTotalPages(), claimPage.getTotalElements(), claimPage.getSize());
+    }
+
+    @Transactional(readOnly = true)
     public List<ClaimRequest> getPendingProposalsForProblem(UUID problemId) {
+        // Fetch the problem first to ensure it exists
         Problem problem = problemRepository.findById(problemId)
                 .orElseThrow(() -> new RuntimeException("Problem not found"));
 
+        // Return the list of pending claims for this specific problem
         return claimRequestRepository.findByProblemAndStatus(problem, ClaimRequestStatus.PENDING);
     }
-
 
     @Transactional(readOnly = true)
     public List<ClaimRequest> getPendingProposalsForSubtask(UUID problemId, UUID subtaskId) {
@@ -329,5 +363,28 @@ public class ClaimRequestService {
                 .findTopByProblemIdAndSolverIdOrderByCreatedAtDesc(problemId, solver.getId())
                 .map(ClaimRequest::getStatus)
                 .filter(s -> s == ClaimRequestStatus.PENDING); // Removed the APPROVED check
+    }
+
+    @Transactional(readOnly = true)
+    public ClaimDetailResponse getClaimDetails(UUID claimId, UUID solverUserId) {
+        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
+                .orElseThrow(() -> new RuntimeException("Solver not found"));
+
+        ClaimRequest claim = claimRequestRepository.findById(claimId)
+                .orElseThrow(() -> new RuntimeException("Proposal not found"));
+
+        if (!claim.getSolver().getId().equals(solver.getId())) {
+            throw new RuntimeException("Unauthorized access to this proposal");
+        }
+
+        return new ClaimDetailResponse(
+                claim.getId(),
+                claim.getProblem().getId(),
+                claim.getProblem().getTitle(),
+                claim.getTargetSubtask() != null ? claim.getTargetSubtask().getTitle() : null,
+                claim.getStatus().name(),
+                claim.getCreatedAt(),
+                claim.getProposedApproach()
+        );
     }
 }

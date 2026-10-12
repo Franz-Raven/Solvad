@@ -15,27 +15,27 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import com.solvad.backend.profile.solver.SolverProfile;
 
+
 @Repository
 public interface ClaimRequestRepository extends JpaRepository<ClaimRequest, UUID> {
 
     List<ClaimRequest> findByProblemAndStatus(Problem problem, ClaimRequestStatus status);
 
     boolean existsByProblemIdAndSolverIdAndStatusIn(UUID problemId, UUID solverId, List<ClaimRequestStatus> statuses);
-
     @Modifying
     @Query("UPDATE ClaimRequest c SET c.status = 'CANCELLED' WHERE c.problem.id = :problemId AND c.status = 'PENDING'")
     void cancelRemainingPendingRequests(@Param("problemId") UUID problemId);
 
     Optional<ClaimRequest> findTopByProblemIdAndSolverIdOrderByCreatedAtDesc(UUID problemId, UUID solverId);
-    // Check pending/approved proposal for aaa specific subtask (not whole problem)
+
     boolean existsByProblemIdAndTargetSubtaskIdAndSolverIdAndStatusIn(
             UUID problemId, UUID subtaskId, UUID solverId, List<ClaimRequestStatus> statuses);
 
-    // Get solver's latest proposal for aaa specific subtask
+
     Optional<ClaimRequest> findTopByProblemIdAndTargetSubtaskIdAndSolverIdOrderByCreatedAtDesc(
             UUID problemId, UUID subtaskId, UUID solverId);
 
-    // Cancel pending requests for aaa specific subtask when capacity is reached
+
     @Modifying
     @Query("UPDATE ClaimRequest c SET c.status = 'CANCELLED' WHERE c.problem.id = :problemId AND c.targetSubtask.id = :subtaskId AND c.status = 'PENDING'")
     void cancelRemainingPendingRequestsForSubtask(@Param("problemId") UUID problemId, @Param("subtaskId") UUID subtaskId);
@@ -43,10 +43,13 @@ public interface ClaimRequestRepository extends JpaRepository<ClaimRequest, UUID
     List<ClaimRequest> findByProblemAndTargetSubtaskAndStatus(
             Problem problem, ProblemSubtask targetSubtask, ClaimRequestStatus status);
 
-    // Add this inside ClaimRequestRepository
+
     Page<ClaimRequest> findBySolverAndStatusOrderByCreatedAtDesc(
             SolverProfile solver,
             ClaimRequestStatus status,
             Pageable pageable
     );
+
+    Page<ClaimRequest> findBySolverAndStatus(SolverProfile solver, ClaimRequestStatus status, Pageable pageable);
+
 }

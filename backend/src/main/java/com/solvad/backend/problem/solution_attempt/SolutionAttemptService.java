@@ -3,6 +3,7 @@ package com.solvad.backend.problem.solution_attempt;
 import com.solvad.backend.audit.AuditEventType;
 import com.solvad.backend.problem.attachment.ProblemAttachmentRepository;
 import com.solvad.backend.problem.attachment.AttachmentRequirementResponse;
+import com.solvad.backend.problem.claim.ClaimDetailResponse;
 import com.solvad.backend.problem.claim.ClaimRequestRepository;
 import com.solvad.backend.problem.claim.ClaimRequestStatus;
 import com.solvad.backend.problem.core.ProblemResponse;
@@ -66,6 +67,56 @@ public class SolutionAttemptService {
     @Autowired
     private ClaimRequestRepository claimRequestRepository;
 
+    private SolutionAttemptResponse mapToResponse(SolutionAttempt attempt,
+                                                  List<SubtaskSubmission> submissions,
+                                                  UUID currentUserId) {
+        List<SubtaskSubmissionResponse> submissionResponses = submissions.stream()
+                .map(sub -> mapSubmissionToResponse(sub, currentUserId))
+                .collect(Collectors.toList());
+
+        SolverProfile solver = attempt.getSolver();
+        String profilePictureUrl = solver.getUser().getProfileUrl();
+
+        UUID parentId = attempt.getParentAttempt() != null ? attempt.getParentAttempt().getId() : null;
+        String parentName = attempt.getParentAttempt() != null ? attempt.getParentAttempt().getSolver().getFirstName() + " " + attempt.getParentAttempt().getSolver().getLastName() : null;
+        UUID targetSubtaskId = attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getId() : null;
+        String targetSubtaskTitle = attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : null;
+
+        String parentDesc = null;
+        List<String> parentFiles = new ArrayList<>();
+
+        if (attempt.getParentAttempt() != null && attempt.getTargetSubtask() != null) {
+            Optional<SubtaskSubmission> parentSub = submissionRepository
+                    .findByAttemptAndSubtask(attempt.getParentAttempt(), attempt.getTargetSubtask());
+            if (parentSub.isPresent()) {
+                parentDesc = parentSub.get().getDescription();
+                parentFiles = parentSub.get().getFileUrlsAsList();
+            }
+        }
+
+        return new SolutionAttemptResponse(
+                attempt.getId(),
+                attempt.getProblem().getId(),
+                attempt.getProblem().getTitle(),
+                solver.getId(),
+                solver.getFirstName(),
+                solver.getLastName(),
+                profilePictureUrl,
+                solver.getInstitution(),
+                solver.getDegreeProgram(),
+                attempt.getStatus().name(),
+                submissionResponses,
+                attempt.getClaimedAt(),
+                attempt.getUpdatedAt(),
+                attempt.getCompletedAt(),
+                parentId,
+                parentName,
+                targetSubtaskId,
+                targetSubtaskTitle,
+                parentDesc,
+                parentFiles
+        );
+    }
 
     @Transactional
     public SolutionAttemptResponse initializeApprovedAttempt(ClaimRequest request) {
@@ -620,56 +671,7 @@ public class SolutionAttemptService {
     }
 
 
-    private SolutionAttemptResponse mapToResponse(SolutionAttempt attempt,
-                                                  List<SubtaskSubmission> submissions,
-                                                  UUID currentUserId) {
-        List<SubtaskSubmissionResponse> submissionResponses = submissions.stream()
-                .map(sub -> mapSubmissionToResponse(sub, currentUserId))
-                .collect(Collectors.toList());
 
-        SolverProfile solver = attempt.getSolver();
-        String profilePictureUrl = solver.getUser().getProfileUrl();
-
-        UUID parentId = attempt.getParentAttempt() != null ? attempt.getParentAttempt().getId() : null;
-        String parentName = attempt.getParentAttempt() != null ? attempt.getParentAttempt().getSolver().getFirstName() + " " + attempt.getParentAttempt().getSolver().getLastName() : null;
-        UUID targetSubtaskId = attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getId() : null;
-        String targetSubtaskTitle = attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : null;
-
-        String parentDesc = null;
-        List<String> parentFiles = new ArrayList<>();
-
-        if (attempt.getParentAttempt() != null && attempt.getTargetSubtask() != null) {
-            Optional<SubtaskSubmission> parentSub = submissionRepository
-                    .findByAttemptAndSubtask(attempt.getParentAttempt(), attempt.getTargetSubtask());
-            if (parentSub.isPresent()) {
-                parentDesc = parentSub.get().getDescription();
-                parentFiles = parentSub.get().getFileUrlsAsList();
-            }
-        }
-
-        return new SolutionAttemptResponse(
-                attempt.getId(),
-                attempt.getProblem().getId(),
-                attempt.getProblem().getTitle(),
-                solver.getId(),
-                solver.getFirstName(),
-                solver.getLastName(),
-                profilePictureUrl,
-                solver.getInstitution(),
-                solver.getDegreeProgram(),
-                attempt.getStatus().name(),
-                submissionResponses,
-                attempt.getClaimedAt(),
-                attempt.getUpdatedAt(),
-                attempt.getCompletedAt(),
-                parentId,
-                parentName,
-                targetSubtaskId,
-                targetSubtaskTitle,
-                parentDesc,
-                parentFiles
-        );
-    }
 
     private SubtaskSubmissionResponse mapSubmissionToResponse(SubtaskSubmission submission, UUID currentUserId) {
         UUID ownerUserId = submission.getAttempt().getSolver().getUser().getId();
@@ -747,5 +749,57 @@ public class SolutionAttemptService {
         long count = attemptRepository.countBySolverAndStatus(solver, SolutionAttemptStatus.ACTIVE);
 
         return new ActiveAttemptsCountResponse(count);
+    }
+
+    @Transactional(readOnly = true)
+    public ClaimDetailResponse getClaimDetails(UUID claimId, UUID solverUserId) {
+        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
+                .orElseThrow(() -> new RuntimeException("Solver not found"));
+
+        ClaimRequest claim = claimRequestRepository.findById(claimId)
+                .orElseThrow(() -> new RuntimeException("Proposal not found"));
+
+        if (!claim.getSolver().getId().equals(solver.getId())) {
+            throw new RuntimeException("Unauthorized access to this proposal");
+        }
+
+        return new ClaimDetailResponse(
+                claim.getId(),
+                claim.getProblem().getId(),
+                claim.getProblem().getTitle(),
+                claim.getTargetSubtask() != null ? claim.getTargetSubtask().getTitle() : null,
+                claim.getStatus().name(),
+                claim.getCreatedAt(),
+                claim.getProposedApproach()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public AttemptDetailResponse getAttemptDetails(UUID attemptId, UUID solverUserId) {
+        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
+                .orElseThrow(() -> new RuntimeException("Solver not found"));
+
+        SolutionAttempt attempt = attemptRepository.findById(attemptId)
+                .orElseThrow(() -> new RuntimeException("Attempt not found"));
+
+        if (!attempt.getSolver().getId().equals(solver.getId())) {
+            throw new RuntimeException("Unauthorized access to this attempt");
+        }
+
+        // Grab the latest submission description as the resolution summary
+        String summary = "No submissions recorded.";
+        if (attempt.getSubmissions() != null && !attempt.getSubmissions().isEmpty()) {
+            summary = attempt.getSubmissions().get(attempt.getSubmissions().size() - 1).getDescription();
+        }
+
+        return new AttemptDetailResponse(
+                attempt.getId(),
+                attempt.getProblem().getId(),
+                attempt.getProblem().getTitle(),
+                attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : null,
+                attempt.getStatus().name(),
+                attempt.getCompletedAt() != null ? attempt.getCompletedAt() : attempt.getUpdatedAt(),
+                summary
+        );
     }
 }

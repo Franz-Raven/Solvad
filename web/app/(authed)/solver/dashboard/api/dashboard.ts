@@ -3,8 +3,9 @@ import type {
   DiscoveryDashboardResponse, 
   PaginatedProblemsResponse 
 } from "@/types/problem";
-import type { SolutionAttemptResponse, PaginatedAttemptsResponse } from "@/types/attempt";
+import type { SolutionAttemptResponse, PaginatedAttemptsResponse, PaginatedClaimsResponse } from "@/types/attempt";
 import type { ProblemResponse } from "@/types/problem";
+import type { ClaimDetail, AttemptDetail } from "@/types/attempt";
 
 export interface DiscoveryQuery {
   search?: string;
@@ -80,4 +81,26 @@ export async function getMyActiveAttemptsCount(): Promise<number> {
     method: "GET",
   });
   return response.activeCount;
+}
+export async function getPendingClaims(
+  page: number = 0,
+  size: number = 5
+): Promise<PaginatedClaimsResponse> {
+  const params = new URLSearchParams();
+  params.set("page", page.toString());
+  params.set("size", size.toString());
+  
+  // Make sure this matches the backend endpoint you mapped!
+  return apiRequest<PaginatedClaimsResponse>(
+    `/claims/my-pending?${params.toString()}`,
+    { method: "GET" }
+  );
+}
+
+export async function getClaimDetails(id: string): Promise<ClaimDetail> {
+  return apiRequest<ClaimDetail>(`/claims/${id}`, { method: "GET" });
+}
+
+export async function getAttemptDetails(id: string): Promise<AttemptDetail> {
+  return apiRequest<AttemptDetail>(`/attempts/history/${id}`, { method: "GET" });
 }
