@@ -11,19 +11,19 @@ import {
   Clock 
 } from "lucide-react";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
-import type { ProblemResponse } from "@/types/problem";
+import type { ProblemSummary } from "@/types/problem";
 import type { ProblemStatusGroupDto, SdgDistributionDto } from "@/types/dashboard.types";
 import { BarChart as SdgBarChart } from "@/components/charts/BarChart";
 import { DonutChart } from "@/components/charts/DonutChart";
 import { apiRequest } from "@/lib/api";
 
 interface SeekerOverviewProps {
-  problems: ProblemResponse[];
+  problems: ProblemSummary[];
   loading?: boolean;
 }
 
 // 6 monthly buckets
-function buildMonthlyTimeline(problems: ProblemResponse[]): { month: string; posted: number }[] {
+function buildMonthlyTimeline(problems: ProblemSummary[]): { month: string; posted: number }[] {
   const now = new Date();
   return Array.from({ length: 6 }, (_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
@@ -37,7 +37,7 @@ function buildMonthlyTimeline(problems: ProblemResponse[]): { month: string; pos
 }
 
 /** by preferredProgram, count how many are COMPLETED. */
-function buildDeptData(problems: ProblemResponse[]): { dept: string; completed: number }[] {
+function buildDeptData(problems: ProblemSummary[]): { dept: string; completed: number }[] {
   const map: Record<string, number> = {};
   problems.forEach((p) => {
     if (p.status === "COMPLETED" || p.status === "SOLVED_OPEN_FOR_IMPROVEMENT") {
