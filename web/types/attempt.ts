@@ -90,10 +90,73 @@ export interface ClaimRequestResponse {
 }
 
 
+// 🚀 New lightweight summary for the workspace
+export interface SolutionAttemptSummary {
+  id: string;
+  problemId: string;
+  problemTitle: string;
+  solverFirstName: string;
+  solverLastName: string;
+  profilePictureUrl?: string;
+  solverInstitution: string;
+  solverDegreeProgram: string;
+  status: string;
+  submissionCount: number; // Replaces the array
+  claimedAt: string;
+  updatedAt: string;
+  completedAt?: string | null;
+  parentAttemptId?: string | null;
+  parentSolverName?: string | null;
+  targetSubtaskId?: string;
+  targetSubtaskTitle?: string;
+}
+
 export interface PaginatedAttemptsResponse {
-  attempts: SolutionAttemptResponse[];
+  attempts: SolutionAttemptSummary[]; // 🚀 Update this array
   currentPage: number;
   totalPages: number;
   totalElements: number;
   size: number;
+}
+
+export interface ClaimSummary {
+  id: string;
+  problemId: string;
+  problemTitle: string;
+  targetSubtaskId?: string;
+  targetSubtaskTitle?: string;
+  status: string;
+  submittedAt: string;
+}
+
+export interface PaginatedClaimsResponse {
+  claims: ClaimSummary[];
+  currentPage: number;
+  totalPages: number;
+  totalElements: number;
+  size: number;
+}
+
+//proposal
+export interface ClaimDetail {
+  id: string;
+  problemId: string;
+  problemTitle: string;
+  targetSubtaskTitle?: string;
+  status: string;
+  submittedAt: string;
+  proposalText: string;
+  supportingDocuments?: string | null;
+}
+
+//history
+export interface AttemptDetail {
+  id: string;
+  problemId: string;
+  problemTitle: string;
+  targetSubtaskTitle?: string;
+  status: string;
+  completedAt: string;
+  summary: string;
+  attachedFiles?: string[]; // 🚀 ADD THIS LINE
 }

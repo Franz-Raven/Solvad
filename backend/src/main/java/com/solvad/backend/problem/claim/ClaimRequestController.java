@@ -132,9 +132,24 @@ public class ClaimRequestController {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Helper — map ClaimRequest entity → safe serializable map
-    // -------------------------------------------------------------------------
+    // 🚀 FIX: Changed from "/my-pending" to "/claims/my-pending"
+    @GetMapping("/claims/my-pending")
+    @PreAuthorize("hasRole('SOLVER')")
+    public ResponseEntity<PaginatedClaimsResponse> getMyPendingClaims(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "5") int size) {
+        try {
+            String token = authHeader.substring(7);
+            UUID solverId = jwtService.extractUserId(token);
+
+            PaginatedClaimsResponse response = claimRequestService.getPendingWorkspaceClaims(solverId, page, size);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
     private Map<String, Object> mapToDTO(ClaimRequest r) {
         Map<String, Object> dto = new java.util.HashMap<>();
         var solver = r.getSolver();
@@ -162,6 +177,20 @@ public class ClaimRequestController {
     private UUID extractUserId(String authHeader) {
         String token = authHeader.substring(7);
         return jwtService.extractUserId(token);
+    }
+
+    @GetMapping("/claims/{id}")
+    @PreAuthorize("hasRole('SOLVER')")
+    public ResponseEntity<ClaimDetailResponse> getClaimDetails(
+            @PathVariable UUID id,
+            @RequestHeader("Authorization") String authHeader) {
+        try {
+            String token = authHeader.substring(7);
+            UUID solverId = jwtService.extractUserId(token);
+            return ResponseEntity.ok(claimRequestService.getClaimDetails(id, solverId));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
 

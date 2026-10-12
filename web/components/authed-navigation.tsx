@@ -6,11 +6,13 @@ import { useAuth } from "@/context/auth-context";
 import { getDashboardPath } from "@/lib/auth-utils";
 import ProfileDropdown from "@/components/profile-dropdown";
 
-// Shared nav link styles
+// 🚀 Modern shared nav link styles with interactive cursors, smooth scaling, and pill design
 const baseLink =
-  "rounded text-sm font-bold text-slate-600 transition-colors hover:text-slate-900 " +
-  "focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40";
-const activeLink = "text-accent border-b-2 border-accent pb-1";
+  "px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer " +
+  "active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40";
+
+const activeLink = "text-accent bg-accent/10 shadow-sm border border-accent/20";
+const inactiveLink = "text-slate-500 hover:text-accent hover:bg-slate-50 border border-transparent";
 
 export default function AuthedNavigation() {
   const { user, logout } = useAuth();
@@ -46,17 +48,16 @@ export default function AuthedNavigation() {
   };
 
   const linkClass = (active: boolean) =>
-    `${baseLink} ${active ? activeLink : ""}`;
+    `${baseLink} ${active ? activeLink : inactiveLink}`;
 
   return (
-    <header className="sticky top-0 z-[100] w-full border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur-sm">
-      {/* Width matches the page card so logo and profile line up with it */}
-     <div className="container mx-auto px-6 md:px-8">
-      <div className="flex items-center justify-between h-16">
+    <header className="sticky top-0 z-[100] w-full border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur-md">
+      <div className="container mx-auto px-6 md:px-8">
+        <div className="flex items-center justify-between h-16 md:h-20">
           {/* ── Logo tile + wordmark ── */}
           <Link
             href={homePath}
-            className="group flex items-center gap-2.5 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            className="group flex items-center gap-3 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 cursor-pointer active:scale-[0.98] transition-transform duration-200"
           >
             <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[#22966a] to-[#0f4d36] shadow-md shadow-emerald-900/20 ring-1 ring-inset ring-white/10 transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg group-hover:shadow-emerald-900/30">
               <img
@@ -65,13 +66,13 @@ export default function AuthedNavigation() {
                 className="h-7 w-auto object-contain brightness-0 invert"
               />
             </span>
-            <span className="text-[26px] font-extrabold leading-none tracking-tight text-slate-900">
+            <span className="text-[26px] font-extrabold leading-none tracking-tight text-slate-900 group-hover:text-accent transition-colors">
               Solvad
             </span>
           </Link>
 
           {/* ── Navigation Tabs ── */}
-          <nav className="flex items-center gap-8">
+          <nav className="hidden md:flex items-center gap-2">
             {user?.role === "SEEKER" ? (
               <>
                 <Link
@@ -132,7 +133,7 @@ export default function AuthedNavigation() {
           </nav>
 
           {/* ── Right Side - Profile Dropdown ── */}
-          <div className="flex items-center">
+          <div className="flex items-center gap-4">
             <ProfileDropdown onLogout={handleLogout} />
           </div>
         </div>
