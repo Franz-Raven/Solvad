@@ -10,5 +10,6 @@ public record ClaimDetailResponse(
         String targetSubtaskTitle,
         String status,
         LocalDateTime submittedAt,
-        String proposalText
+        String proposalText,
+        String supportingDocuments // 🚀 Added this field
 ) {}

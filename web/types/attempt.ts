@@ -145,6 +145,7 @@ export interface ClaimDetail {
   status: string;
   submittedAt: string;
   proposalText: string;
+  supportingDocuments?: string | null;
 }
 
 export interface AttemptDetail {

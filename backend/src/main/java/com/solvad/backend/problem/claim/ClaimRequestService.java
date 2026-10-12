@@ -384,7 +384,8 @@ public class ClaimRequestService {
                 claim.getTargetSubtask() != null ? claim.getTargetSubtask().getTitle() : null,
                 claim.getStatus().name(),
                 claim.getCreatedAt(),
-                claim.getProposedApproach()
+                claim.getProposedApproach(),
+                claim.getSupportingDocuments()
         );
     }
 }
