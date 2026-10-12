@@ -90,10 +90,32 @@ export interface ClaimRequestResponse {
 }
 
 
+// 🚀 New lightweight summary for the workspace
+export interface SolutionAttemptSummary {
+  id: string;
+  problemId: string;
+  problemTitle: string;
+  solverFirstName: string;
+  solverLastName: string;
+  profilePictureUrl?: string;
+  solverInstitution: string;
+  solverDegreeProgram: string;
+  status: string;
+  submissionCount: number; // Replaces the array
+  claimedAt: string;
+  updatedAt: string;
+  completedAt?: string | null;
+  parentAttemptId?: string | null;
+  parentSolverName?: string | null;
+  targetSubtaskId?: string;
+  targetSubtaskTitle?: string;
+}
+
 export interface PaginatedAttemptsResponse {
-  attempts: SolutionAttemptResponse[];
+  attempts: SolutionAttemptSummary[]; // 🚀 Update this array
   currentPage: number;
   totalPages: number;
   totalElements: number;
   size: number;
 }
+
