@@ -137,6 +137,7 @@ export interface PaginatedClaimsResponse {
   size: number;
 }
 
+//proposal
 export interface ClaimDetail {
   id: string;
   problemId: string;
@@ -148,6 +149,7 @@ export interface ClaimDetail {
   supportingDocuments?: string | null;
 }
 
+//history
 export interface AttemptDetail {
   id: string;
   problemId: string;
@@ -156,4 +158,5 @@ export interface AttemptDetail {
   status: string;
   completedAt: string;
   summary: string;
+  attachedFiles?: string[]; // 🚀 ADD THIS LINE
 }

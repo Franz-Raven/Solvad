@@ -20,12 +20,11 @@ function SeekerDashboardContent() {
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab") || "home";
 
-  const [problems, setProblems] = useState<ProblemResponse[]>([]);
+  const [problems, setProblems] = useState<any[]>([]);
   const [, setTotalProblems] = useState(0);
 
   useEffect(() => {
-    // 🚀 FIX: We only fetch the problems here now. 
-    // SeekerRecentActivity autonomously manages its own paginated notifications.
+   
     getMyProblems()
       .then(setProblems)
       .catch((err) => console.error("Failed to load problems:", err));

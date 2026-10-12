@@ -1,6 +1,7 @@
 package com.solvad.backend.problem.claim;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 public record ClaimDetailResponse(
@@ -11,5 +12,5 @@ public record ClaimDetailResponse(
         String status,
         LocalDateTime submittedAt,
         String proposalText,
-        String supportingDocuments // 🚀 Added this field
+        String supportingDocuments
 ) {}

@@ -1,6 +1,7 @@
 package com.solvad.backend.problem.solution_attempt;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 public record AttemptDetailResponse(
@@ -10,5 +11,6 @@ public record AttemptDetailResponse(
         String targetSubtaskTitle,
         String status,
         LocalDateTime completedAt,
-        String summary
+        String summary,
+        List<String> attachedFiles
 ) {}

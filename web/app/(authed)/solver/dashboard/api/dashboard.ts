@@ -102,5 +102,6 @@ export async function getClaimDetails(id: string): Promise<ClaimDetail> {
 }
 
 export async function getAttemptDetails(id: string): Promise<AttemptDetail> {
-  return apiRequest<AttemptDetail>(`/attempts/history/${id}`, { method: "GET" });
+  // 🚀 Changed from "/attempts/history/${id}" to "/history/${id}"
+  return apiRequest<AttemptDetail>(`/history/${id}`, { method: "GET" }); 
 }

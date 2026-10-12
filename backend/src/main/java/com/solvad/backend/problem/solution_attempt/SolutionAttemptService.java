@@ -787,10 +787,14 @@ public class SolutionAttemptService {
             throw new RuntimeException("Unauthorized access to this attempt");
         }
 
-        // Grab the latest submission description as the resolution summary
+        // 🚀 Grab the latest submission description AND its files
         String summary = "No submissions recorded.";
+        List<String> attachedFiles = new java.util.ArrayList<>();
+
         if (attempt.getSubmissions() != null && !attempt.getSubmissions().isEmpty()) {
-            summary = attempt.getSubmissions().get(attempt.getSubmissions().size() - 1).getDescription();
+            SubtaskSubmission latestSubmission = attempt.getSubmissions().get(attempt.getSubmissions().size() - 1);
+            summary = latestSubmission.getDescription();
+            attachedFiles = latestSubmission.getFileUrlsAsList(); // Fetch as a clean list!
         }
 
         return new AttemptDetailResponse(
@@ -800,7 +804,8 @@ public class SolutionAttemptService {
                 attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : null,
                 attempt.getStatus().name(),
                 attempt.getCompletedAt() != null ? attempt.getCompletedAt() : attempt.getUpdatedAt(),
-                summary
+                summary,
+                attachedFiles // 🚀 Pass to DTO
         );
     }
 }

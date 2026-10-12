@@ -272,5 +272,18 @@ public class SolutionAttemptController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/api/history/{id}")
+    @PreAuthorize("hasRole('SOLVER')")
+    public ResponseEntity<AttemptDetailResponse> getAttemptDetails(
+            @PathVariable UUID id,
+            @RequestHeader("Authorization") String authHeader) {
+        try {
+            String token = authHeader.substring(7);
+            UUID solverId = jwtService.extractUserId(token);
+            return ResponseEntity.ok(solutionAttemptService.getAttemptDetails(id, solverId));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
 
 }
