@@ -26,16 +26,6 @@ public class AuthController {
         }
     }
 
-    @PostMapping("/register/seeker")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> registerSeeker(@Valid @RequestBody SeekerRegisterRequest request) {
-        try {
-            AuthResponse response = authService.registerSeeker(request);
-            return ResponseEntity.ok(response);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {

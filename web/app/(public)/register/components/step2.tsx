@@ -1,24 +1,12 @@
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+"use client";
+
+import { Loader2 } from "lucide-react";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { programCategories } from "@/lib/data/programs";
 import { cebuUniversities } from "@/lib/data/universities";
 
 interface Step2Props {
-  data: {
-    firstName: string;
-    lastName: string;
-    university: string;
-    course: string;
-    skills: string;
-  };
+  data: { firstName: string; lastName: string; university: string; course: string; skills: string };
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
   onSubmit: (e: React.FormEvent) => void;
   onBack: () => void;
@@ -30,84 +18,54 @@ interface Step2Props {
 export default function Step2({ data, onChange, onSubmit, onBack, isLoading, onUniversityChange, onCourseChange }: Step2Props) {
   return (
     <form onSubmit={onSubmit} className="space-y-5">
-      <div className="space-y-2">
-        <label
-          htmlFor="firstName"
-          className="block text-sm font-medium text-foreground"
-        >
-          First Name
-        </label>
-        <input
-          id="firstName"
-          name="firstName"
-          type="text"
-          value={data.firstName}
-          onChange={onChange}
-          className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all"
-          placeholder="Juan"
-          required
-        />
+      
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <label htmlFor="firstName" className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider pl-1">First Name</label>
+          <input
+            id="firstName" name="firstName" type="text"
+            value={data.firstName} onChange={onChange}
+            className="w-full px-4 py-3.5 bg-slate-50/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all text-slate-900 placeholder:text-slate-400 font-medium"
+            placeholder="Juan" required
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label htmlFor="lastName" className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider pl-1">Last Name</label>
+          <input
+            id="lastName" name="lastName" type="text"
+            value={data.lastName} onChange={onChange}
+            className="w-full px-4 py-3.5 bg-slate-50/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all text-slate-900 placeholder:text-slate-400 font-medium"
+            placeholder="Dela Cruz" required
+          />
+        </div>
       </div>
 
-      <div className="space-y-2">
-        <label
-          htmlFor="lastName"
-          className="block text-sm font-medium text-foreground"
-        >
-          Last Name
-        </label>
-        <input
-          id="lastName"
-          name="lastName"
-          type="text"
-          value={data.lastName}
-          onChange={onChange}
-          className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all"
-          placeholder="Dela Cruz"
-          required
-        />
-      </div>
-
-      <div className="space-y-2">
-        <label
-          htmlFor="university"
-          className="block text-sm font-medium text-foreground"
-        >
-          Institution/University
-        </label>
+      <div className="space-y-1.5">
+        <label htmlFor="university" className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider pl-1">Institution/University</label>
         <Select value={data.university} onValueChange={onUniversityChange}>
-          <SelectTrigger className="w-full px-4 py-3 !h-auto rounded-lg border border-border bg-background text-foreground">
+          <SelectTrigger className="w-full px-4 py-3.5 h-[50px] bg-slate-50/50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all text-slate-900 font-medium">
             <SelectValue placeholder="Select your university" />
           </SelectTrigger>
-          <SelectContent>
-            {cebuUniversities.map((university) => (
-              <SelectItem key={university} value={university}>
-                {university}
-              </SelectItem>
+          <SelectContent className="rounded-xl border-slate-200 shadow-lg">
+            {cebuUniversities.map((uni) => (
+              <SelectItem key={uni} value={uni} className="focus:bg-emerald-50 focus:text-emerald-900 font-medium py-2.5 cursor-pointer">{uni}</SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
 
-      <div className="space-y-2">
-        <label
-          htmlFor="course"
-          className="block text-sm font-medium text-foreground"
-        >
-          Degree Program / Course
-        </label>
+      <div className="space-y-1.5">
+        <label htmlFor="course" className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider pl-1">Degree Program / Course</label>
         <Select value={data.course} onValueChange={onCourseChange}>
-          <SelectTrigger className="w-full px-4 py-3 !h-auto rounded-lg border border-border bg-background text-foreground">
+          <SelectTrigger className="w-full px-4 py-3.5 h-[50px] bg-slate-50/50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all text-slate-900 font-medium">
             <SelectValue placeholder="Select your course" />
           </SelectTrigger>
-          <SelectContent>
-            {programCategories.map((category) => (
-              <SelectGroup key={category.name}>
-                <SelectLabel>{category.name}</SelectLabel>
-                {category.programs.map((program) => (
-                  <SelectItem key={program} value={program}>
-                    {program}
-                  </SelectItem>
+          <SelectContent className="rounded-xl border-slate-200 shadow-lg max-h-[300px]">
+            {programCategories.map((cat) => (
+              <SelectGroup key={cat.name}>
+                <SelectLabel className="text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/80 py-2">{cat.name}</SelectLabel>
+                {cat.programs.map((prog) => (
+                  <SelectItem key={prog} value={prog} className="focus:bg-emerald-50 focus:text-emerald-900 font-medium py-2.5 cursor-pointer">{prog}</SelectItem>
                 ))}
               </SelectGroup>
             ))}
@@ -115,53 +73,30 @@ export default function Step2({ data, onChange, onSubmit, onBack, isLoading, onU
         </Select>
       </div>
 
-      <div className="space-y-2">
-        <label
-          htmlFor="skills"
-          className="block text-sm font-medium text-foreground"
-        >
-          Skills & interests (optional)
-        </label>
+      <div className="space-y-1.5">
+        <label htmlFor="skills" className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider pl-1">Skills & Interests <span className="normal-case font-medium">(Optional)</span></label>
         <input
-          id="skills"
-          name="skills"
-          type="text"
-          value={data.skills}
-          onChange={onChange}
-          className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all"
-          placeholder="e.g. react, api design, machine learning (comma-separated)"
+          id="skills" name="skills" type="text"
+          value={data.skills} onChange={onChange}
+          className="w-full px-4 py-3.5 bg-slate-50/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all text-slate-900 placeholder:text-slate-400 font-medium"
+          placeholder="e.g. react, data science, agile (comma separated)"
         />
-        <p className="text-xs text-muted-foreground">
-          Used for problem recommendations. Your course is included automatically if left blank.
-        </p>
+        <p className="text-[11px] font-medium text-slate-400 pl-1 mt-1">Used to power your automated problem recommendations.</p>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
-        <Button
-          type="button"
-          variant="outline"
-          size="lg"
-          onClick={onBack}
-          className="col-span-1 font-medium"
+      <div className="flex gap-3 pt-4">
+        <button
+          type="button" onClick={onBack}
+          className="px-6 py-4 bg-white border border-slate-200 text-slate-700 font-bold rounded-full transition-all hover:bg-slate-50 active:scale-[0.98] cursor-pointer shadow-sm"
         >
           Back
-        </Button>
-        <Button
-          type="submit"
-          variant="secondary"
-          size="lg"
-          disabled={isLoading}
-          className="col-span-2 font-semibold shadow-lg shadow-secondary/20 hover:shadow-xl hover:shadow-secondary/30 transition-all"
+        </button>
+        <button
+          type="submit" disabled={isLoading || !data.firstName || !data.lastName || !data.university || !data.course}
+          className="flex-1 px-6 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-full transition-all shadow-[0_4px_14px_0_rgba(16,185,129,0.39)] hover:shadow-[0_6px_20px_rgba(16,185,129,0.23)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center cursor-pointer"
         >
-          {isLoading ? (
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              Creating account...
-            </div>
-          ) : (
-            "Complete Registration"
-          )}
-        </Button>
+          {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Complete Registration"}
+        </button>
       </div>
     </form>
   );
