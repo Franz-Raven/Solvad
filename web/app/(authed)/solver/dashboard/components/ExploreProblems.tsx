@@ -141,8 +141,18 @@ export function ExploreProblems() {
                 key={problem.id} 
                 className="group flex flex-col md:flex-row items-start md:items-center gap-5 p-5 bg-white rounded-xl border border-slate-200 hover:border-accent/40 hover:shadow-md transition-all cursor-pointer block"
               >
-                <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center text-slate-400 font-bold shrink-0 shadow-sm group-hover:bg-accent/5 group-hover:border-accent/20 group-hover:text-accent transition-colors">
-                  {(explorePage * EXPLORE_PAGE_SIZE) + index + 1}
+                <div className="shrink-0 relative group">
+                  {problem.seekerProfileUrl ? (
+                    <img
+                      src={problem.seekerProfileUrl}
+                      alt={problem.organizationName}
+                      className="w-12 h-12 rounded-2xl object-cover shadow-sm border border-slate-200 group-hover:border-emerald-300 transition-colors"
+                    />
+                  ) : (
+                    <div className="flex w-12 h-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-lg font-bold text-white shadow-sm border border-emerald-400/50 group-hover:shadow-md transition-all">
+                      {problem.organizationName ? problem.organizationName.charAt(0).toUpperCase() : "S"}
+                    </div>
+                  )}
                 </div>
                 
                 <div className="flex-1 min-w-0">

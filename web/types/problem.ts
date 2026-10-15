@@ -103,19 +103,18 @@ export interface SeekerNotification {
   timestamp: string;
 }
 
-// 🚀 UNIFIED LIGHTWEIGHT SUMMARY
 export interface ProblemSummary {
   id: string;
   title: string;
   organizationName: string;
   preferredProgram: string;
   status: string;
-  subtaskCount: number; 
+  subtaskCount: number;
   createdAt: string;
-  courseMatch?: boolean;
-  matchScore?: number;
-  sdgFocus?: string;
-
+  courseMatch: boolean;
+  matchScore: number;
+  sdgFocus: string;
+  seekerProfileUrl?: string; // Add this line
 }
 
 export interface PaginatedProblemsResponse {
