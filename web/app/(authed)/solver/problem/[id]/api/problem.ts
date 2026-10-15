@@ -2,6 +2,8 @@ import { apiRequest } from "@/lib/api";
 import type { ProblemResponse } from "@/types/problem";
 import type { SolutionAttemptResponse, AuditLogEntry, AttemptNodeSummary } from "@/types/attempt";
 import type { SolutionAttemptSummary } from "@/types/attempt";
+import type { AuditDateSummary } from "@/types/audit";
+import type { AuditLog } from "@/types/audit";
 
 export async function getProblemById(
   problemId: string
@@ -77,4 +79,12 @@ export async function getProblemTree(problemId: string): Promise<SolutionAttempt
 // 2. Fetch the heavy details ONLY when a node is clicked (reuses your existing endpoint)
 export async function getFullAttemptDetails(attemptId: string): Promise<SolutionAttemptResponse> {
   return apiRequest<SolutionAttemptResponse>(`/attempts/${attemptId}`, { method: "GET" });
+}
+
+export async function getAuditSummaries(problemId: string): Promise<AuditDateSummary[]> {
+  return apiRequest<AuditDateSummary[]>(`/audit/problem/${problemId}/summary`, { method: "GET" });
+}
+
+export async function getAuditLogsByDate(problemId: string, date: string): Promise<AuditLog[]> {
+  return apiRequest<AuditLog[]>(`/audit/problem/${problemId}?date=${date}`, { method: "GET" });
 }

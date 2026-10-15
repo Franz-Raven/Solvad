@@ -4,6 +4,7 @@ import type { ClaimSummaryResponse } from "@/types/attempt";
 import type { SolutionAttemptResponse } from "@/types/attempt";
 import { AuditLogEntry } from "@/types/attempt";
 import type { SolutionAttemptSummary } from "@/types/attempt";
+import type { AuditDateSummary, AuditLog } from "@/types/audit";
 
 export async function getProblemById(
   problemId: string
@@ -117,4 +118,13 @@ export async function getPendingProposalsSummary(problemId: string): Promise<Cla
 
 export async function getFullProposalDetails(proposalId: string): Promise<ClaimRequestResponse> {
   return apiRequest<ClaimRequestResponse>(`/proposals/${proposalId}/details`, { method: "GET" });
+}
+
+
+export async function getAuditSummaries(problemId: string): Promise<AuditDateSummary[]> {
+  return apiRequest<AuditDateSummary[]>(`/audit/problem/${problemId}/summary`, { method: "GET" });
+}
+
+export async function getAuditLogsByDate(problemId: string, date: string): Promise<AuditLog[]> {
+  return apiRequest<AuditLog[]>(`/audit/problem/${problemId}?date=${date}`, { method: "GET" });
 }
