@@ -6,7 +6,6 @@ import { useAuth } from "@/context/auth-context";
 import { getDashboardPath } from "@/lib/auth-utils";
 import ProfileDropdown from "@/components/profile-dropdown";
 
-// 🚀 Modern shared nav link styles with interactive cursors, smooth scaling, and pill design
 const baseLink =
   "px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer " +
   "active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40";
@@ -25,13 +24,9 @@ export default function AuthedNavigation() {
     router.push("/landing");
   };
 
-  // Get the home path based on user role
   const homePath = user?.role ? getDashboardPath(user.role) : "/";
-
-  // Check if current path matches
   const isActive = (path: string) => pathname === path;
 
-  // Check if tab is active for seeker dashboard
   const isSeekerTabActive = (tab: string) => {
     if (pathname !== "/seeker/dashboard") return false;
     const currentTab = searchParams.get("tab");
@@ -39,7 +34,6 @@ export default function AuthedNavigation() {
     return currentTab === tab;
   };
 
-  // Check if tab is active for solver dashboard
   const isSolverTabActive = (tab: string) => {
     if (pathname !== "/solver/dashboard") return false;
     const currentTab = searchParams.get("tab");
@@ -54,16 +48,16 @@ export default function AuthedNavigation() {
     <header className="sticky top-0 z-[100] w-full border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur-md">
       <div className="container mx-auto px-6 md:px-8">
         <div className="flex items-center justify-between h-16 md:h-20">
-          {/* ── Logo tile + wordmark ── */}
+          {/* ── Logo tile + wordmark with Photo Logo ── */}
           <Link
             href={homePath}
             className="group flex items-center gap-3 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 cursor-pointer active:scale-[0.98] transition-transform duration-200"
           >
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[#22966a] to-[#0f4d36] shadow-md shadow-emerald-900/20 ring-1 ring-inset ring-white/10 transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg group-hover:shadow-emerald-900/30">
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 border border-emerald-100 shadow-sm transition-all duration-300 group-hover:scale-105 p-2">
               <img
                 src="/solvad_logo.png"
                 alt="Solvad Logo"
-                className="h-7 w-auto object-contain brightness-0 invert"
+                className="h-full w-auto object-contain"
               />
             </span>
             <span className="text-[26px] font-extrabold leading-none tracking-tight text-slate-900 group-hover:text-accent transition-colors">
@@ -121,7 +115,6 @@ export default function AuthedNavigation() {
               </Link>
             )}
 
-            {/* Admin-specific tabs */}
             {user?.role === "ADMIN" && (
               <Link
                 href="/admin/add-industry"
