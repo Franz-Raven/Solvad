@@ -1,13 +1,10 @@
-import { Button } from "@/components/ui/button";
-import { Eye, EyeOff } from "lucide-react";
+"use client";
+
+import { Eye, EyeOff, Loader2, Check, X } from "lucide-react";
 import { useMemo } from "react";
 
 interface Step1Props {
-  data: {
-    email: string;
-    password: string;
-    confirmPassword: string;
-  };
+  data: { email: string; password: string; confirmPassword: string };
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSubmit: (e: React.FormEvent) => void;
   isLoading: boolean;
@@ -17,235 +14,110 @@ interface Step1Props {
   setShowConfirmPassword: (value: boolean) => void;
 }
 
-interface PasswordRequirement {
-  label: string;
-  test: (password: string) => boolean;
-}
-
-const passwordRequirements: PasswordRequirement[] = [
-  {
-    label: "At least 8 characters",
-    test: (password) => password.length >= 8,
-  },
-  {
-    label: "Contains uppercase and lowercase letters",
-    test: (password) => /[a-z]/.test(password) && /[A-Z]/.test(password),
-  },
-  {
-    label: "Includes a special character (!@#$%^&*)",
-    test: (password) => /[!@#$%^&*(),.?":{}|<>]/.test(password),
-  },
+const passwordRequirements = [
+  { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
+  { label: "Contains uppercase & lowercase", test: (p: string) => /[a-z]/.test(p) && /[A-Z]/.test(p) },
+  { label: "Includes special character", test: (p: string) => /[!@#$%^&*(),.?":{}|<>]/.test(p) },
 ];
 
 export default function Step1({ 
-  data, 
-  onChange, 
-  onSubmit, 
-  isLoading,
-  showPassword,
-  setShowPassword,
-  showConfirmPassword,
-  setShowConfirmPassword,
+  data, onChange, onSubmit, isLoading, showPassword, setShowPassword, showConfirmPassword, setShowConfirmPassword 
 }: Step1Props) {
+  
   const passwordValidation = useMemo(() => {
-    return passwordRequirements.map((req) => ({
-      label: req.label,
-      met: req.test(data.password),
-    }));
+    return passwordRequirements.map((req) => ({ label: req.label, met: req.test(data.password) }));
   }, [data.password]);
 
   const isPasswordValid = passwordValidation.every((req) => req.met);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!isPasswordValid) {
-      return;
-    }
-    
-    if (data.password !== data.confirmPassword) {
-      return;
-    }
-    
+    if (!isPasswordValid || data.password !== data.confirmPassword) return;
     onSubmit(e);
   };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      <div className="space-y-2">
-        <label
-          htmlFor="email"
-          className="block text-sm font-medium text-foreground"
-        >
+      
+      <div className="space-y-1.5">
+        <label htmlFor="email" className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider pl-1">
           Email Address
         </label>
         <input
-          id="email"
-          name="email"
-          type="email"
-          value={data.email}
-          onChange={onChange}
-          className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all"
-          placeholder="you@example.com"
-          required
+          id="email" name="email" type="email"
+          value={data.email} onChange={onChange}
+          className="w-full px-4 py-3.5 bg-slate-50/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all text-slate-900 placeholder:text-slate-400 font-medium"
+          placeholder="e.g., student@university.edu" required
         />
       </div>
 
-      <div className="space-y-2">
-        <label
-          htmlFor="password"
-          className="block text-sm font-medium text-foreground"
-        >
+      <div className="space-y-1.5">
+        <label htmlFor="password" className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider pl-1">
           Password
         </label>
         <div className="relative">
           <input
-            id="password"
-            name="password"
-            type={showPassword ? "text" : "password"}
-            value={data.password}
-            onChange={onChange}
-            className="w-full px-4 py-3 pr-12 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all"
-            placeholder="••••••••"
-            required
+            id="password" name="password" type={showPassword ? "text" : "password"}
+            value={data.password} onChange={onChange}
+            className="w-full px-4 py-3.5 pr-12 bg-slate-50/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all text-slate-900 placeholder:text-slate-400 font-medium"
+            placeholder="••••••••" required
           />
           <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-            aria-label={showPassword ? "Hide password" : "Show password"}
+            type="button" onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
           >
-            {showPassword ? (
-              <EyeOff className="w-5 h-5" />
-            ) : (
-              <Eye className="w-5 h-5" />
-            )}
+            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
           </button>
         </div>
         
         {data.password && (
-          <div className="mt-3 space-y-2 p-3 rounded-lg bg-muted/50 border border-border animate-in fade-in slide-in-from-top-2 duration-300">
-            <p className="text-xs font-medium text-muted-foreground mb-2">
-              Password Requirements:
-            </p>
-            {passwordValidation.map((req, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <div
-                  className={`w-4 h-4 rounded-full flex items-center justify-center transition-all duration-200 ${
-                    req.met
-                      ? "bg-green-500/20 border border-green-500 scale-100"
-                      : "bg-red-500/20 border border-red-500 scale-100"
-                  }`}
-                >
-                  {req.met ? (
-                    <svg
-                      className="w-2.5 h-2.5 text-green-600 animate-in zoom-in duration-150"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={3}
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                  ) : (
-                    <svg
-                      className="w-2.5 h-2.5 text-red-600 animate-in zoom-in duration-150"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={3}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  )}
+          <div className="mt-3 p-4 rounded-xl bg-slate-50 border border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
+            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3">Password Requirements:</p>
+            <div className="space-y-2">
+              {passwordValidation.map((req, i) => (
+                <div key={i} className="flex items-center gap-2.5">
+                  <div className={`w-4 h-4 rounded-full flex items-center justify-center transition-all ${req.met ? "bg-emerald-100 text-emerald-600" : "bg-slate-200 text-slate-400"}`}>
+                    {req.met ? <Check className="w-3 h-3 stroke-[3]" /> : <X className="w-3 h-3 stroke-[3]" />}
+                  </div>
+                  <span className={`text-xs font-medium transition-colors ${req.met ? "text-emerald-700" : "text-slate-500"}`}>{req.label}</span>
                 </div>
-                <span
-                  className={`text-xs transition-all duration-200 ${
-                    req.met ? "text-green-600 font-medium" : "text-red-600"
-                  }`}
-                >
-                  {req.label}
-                </span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
       </div>
 
-      <div className="space-y-2">
-        <label
-          htmlFor="confirmPassword"
-          className="block text-sm font-medium text-foreground"
-        >
+      <div className="space-y-1.5">
+        <label htmlFor="confirmPassword" className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider pl-1">
           Confirm Password
         </label>
         <div className="relative">
           <input
-            id="confirmPassword"
-            name="confirmPassword"
-            type={showConfirmPassword ? "text" : "password"}
-            value={data.confirmPassword}
-            onChange={onChange}
-            className="w-full px-4 py-3 pr-12 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all"
-            placeholder="••••••••"
-            required
+            id="confirmPassword" name="confirmPassword" type={showConfirmPassword ? "text" : "password"}
+            value={data.confirmPassword} onChange={onChange}
+            className={`w-full px-4 py-3.5 pr-12 bg-slate-50/50 border rounded-xl focus:outline-none focus:ring-4 transition-all text-slate-900 placeholder:text-slate-400 font-medium ${data.confirmPassword && data.password !== data.confirmPassword ? "border-rose-300 focus:ring-rose-500/10 focus:border-rose-500" : "border-slate-200 focus:ring-emerald-500/10 focus:border-emerald-500"}`}
+            placeholder="••••••••" required
           />
           <button
-            type="button"
-            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-            aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+            type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
           >
-            {showConfirmPassword ? (
-              <EyeOff className="w-5 h-5" />
-            ) : (
-              <Eye className="w-5 h-5" />
-            )}
+            {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
           </button>
         </div>
         {data.confirmPassword && data.password !== data.confirmPassword && (
-          <p className="text-xs text-red-600 flex items-center gap-1">
-            <svg
-              className="w-3 h-3"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-            Passwords do not match
-          </p>
+          <p className="text-xs font-bold text-rose-600 mt-1.5 pl-1">Passwords do not match</p>
         )}
       </div>
 
-      <Button
+      {/* 🚀 FIX: Removed black background, replaced with emerald theme */}
+      <button
         type="submit"
-        variant="secondary"
-        size="lg"
         disabled={isLoading || !isPasswordValid || data.password !== data.confirmPassword}
-        className="w-full font-semibold shadow-lg shadow-secondary/20 hover:shadow-xl hover:shadow-secondary/30 transition-all"
+        className="w-full px-6 py-4 mt-6 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-full transition-all shadow-[0_4px_14px_0_rgba(16,185,129,0.39)] hover:shadow-[0_6px_20px_rgba(16,185,129,0.23)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center cursor-pointer"
       >
-        {isLoading ? (
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            Processing...
-          </div>
-        ) : (
-          "Continue"
-        )}
-      </Button>
+        {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Continue to Next Step"}
+      </button>
     </form>
   );
 }

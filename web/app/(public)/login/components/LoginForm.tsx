@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Eye, EyeOff } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Eye, EyeOff, AlertCircle, Loader2 } from "lucide-react";
 import { loginUser } from "../api/login";
 import { setAuthCookies, setAuthStorage, getDashboardPath } from "@/lib/auth-utils";
 
@@ -24,11 +23,9 @@ export function LoginForm() {
     try {
       const response = await loginUser({ email, password });
       
-      // Store auth data
       setAuthStorage(response);
       setAuthCookies(response.token, response.role);
 
-      // Redirect to role-specific dashboard
       router.push(getDashboardPath(response.role));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed. Please try again.");
@@ -40,13 +37,14 @@ export function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
-        <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
-          {error}
+        <div className="p-4 rounded-xl bg-rose-50 border border-rose-100 flex items-start gap-3 animate-in fade-in zoom-in-95 duration-300">
+          <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+          <p className="text-sm font-bold text-rose-800 leading-relaxed">{error}</p>
         </div>
       )}
       
-      <div className="space-y-2">
-        <label htmlFor="email" className="block text-sm font-medium text-foreground">
+      <div className="space-y-1.5">
+        <label htmlFor="email" className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider pl-1">
           Email Address
         </label>
         <input
@@ -54,69 +52,69 @@ export function LoginForm() {
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all"
-          placeholder="you@example.com"
+          className="w-full px-4 py-3.5 bg-slate-50/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all text-slate-900 placeholder:text-slate-400 font-medium"
+          placeholder="e.g., student@university.edu"
           required
         />
       </div>
 
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <label htmlFor="password" className="block text-sm font-medium text-foreground">
-            Password
-          </label>
-          <Link href="/forgot-password" className="text-sm font-medium text-secondary hover:text-accent transition-colors">
-            Forgot password?
-          </Link>
-        </div>
+      <div className="space-y-1.5">
+        <label htmlFor="password" className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider pl-1">
+          Password
+        </label>
         <div className="relative">
           <input
             id="password"
             type={showPassword ? "text" : "password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-3 pr-12 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all"
+            className="w-full px-4 py-3.5 pr-12 bg-slate-50/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all text-slate-900 placeholder:text-slate-400 font-medium"
             placeholder="••••••••"
             required
           />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
             aria-label={showPassword ? "Hide password" : "Show password"}
           >
             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
           </button>
         </div>
+        
+        {/* 🚀 FIX: Forgot Password relocated BELOW the input field */}
+        <div className="flex justify-end pt-1.5 pr-1">
+          <Link href="/forgot-password" className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 transition-colors uppercase tracking-wider">
+            Forgot Password?
+          </Link>
+        </div>
       </div>
 
-      <div className="flex items-center">
+      <div className="flex items-center pt-2">
         <input
           id="remember"
           type="checkbox"
-          className="w-4 h-4 rounded border-border text-secondary focus:ring-secondary focus:ring-offset-0"
+          className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 focus:ring-offset-0 cursor-pointer"
         />
-        <label htmlFor="remember" className="ml-2 block text-sm text-muted-foreground">
-          Remember me?
+        <label htmlFor="remember" className="ml-2.5 block text-sm font-medium text-slate-600 cursor-pointer select-none">
+          Keep me signed in
         </label>
       </div>
 
-      <Button
+      <button
         type="submit"
-        variant="secondary"
-        size="lg"
         disabled={isLoading}
-        className="w-full font-semibold shadow-lg shadow-secondary/20 hover:shadow-xl hover:shadow-secondary/30 transition-all"
+        className="w-full px-6 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-full transition-all shadow-[0_4px_14px_0_rgba(16,185,129,0.39)] hover:shadow-[0_6px_20px_rgba(16,185,129,0.23)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center cursor-pointer mt-4"
       >
         {isLoading ? (
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            Signing in...
+            <Loader2 className="w-5 h-5 animate-spin" />
+            Authenticating...
           </div>
         ) : (
           "Sign In"
         )}
-      </Button>
+      </button>
     </form>
   );
 }
