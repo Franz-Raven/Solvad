@@ -137,7 +137,7 @@ export default function ProfilePage() {
         <div className="mb-8 flex flex-col gap-2 items-start">
           <button
             onClick={() => router.back()}
-            className="inline-flex items-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider hover:text-emerald-600 transition-colors group cursor-pointer"
+            className="inline-flex items-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider hover:text-emerald-600 transition-colors group cursor-pointer outline-none"
           >
             <ArrowLeft className="h-4 w-4 transform group-hover:-translate-x-1 transition-transform" /> Back
           </button>
@@ -156,14 +156,14 @@ export default function ProfilePage() {
           />
 
           {/* ── Main Content Area ── */}
-          <div className="overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-[0_8px_30px_rgba(0,0,0,0.04)] flex flex-col animate-in fade-in slide-in-from-right-4 duration-500 delay-100 fill-mode-both">
+          <div className="overflow-visible rounded-[2rem] border border-slate-100 bg-white shadow-[0_8px_30px_rgba(0,0,0,0.04)] flex flex-col animate-in fade-in slide-in-from-right-4 duration-500 delay-100 fill-mode-both">
             
             {/* ── Tabs Navigation ── */}
-            <div className="border-b border-slate-100 bg-slate-50/80 p-2 shrink-0">
+            <div className="border-b border-slate-100 bg-slate-50/80 p-2 shrink-0 rounded-t-[2rem]">
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setActiveTab("profile")}
-                  className={`flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                  className={`flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer outline-none ${
                     activeTab === "profile" 
                       ? "bg-white text-emerald-700 shadow-sm border border-slate-200" 
                       : "text-slate-400 hover:bg-slate-100/50 hover:text-slate-600 border border-transparent"
@@ -173,7 +173,7 @@ export default function ProfilePage() {
                 </button>
                 <button
                   onClick={() => setActiveTab("settings")}
-                  className={`flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                  className={`flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer outline-none ${
                     activeTab === "settings" 
                       ? "bg-white text-emerald-700 shadow-sm border border-slate-200" 
                       : "text-slate-400 hover:bg-slate-100/50 hover:text-slate-600 border border-transparent"
@@ -184,7 +184,7 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="p-6 sm:p-8 flex-1">
+            <div className="p-6 sm:p-8 flex-1 overflow-visible">
               
               {/* ── Status Alerts ── */}
               {success && (
@@ -213,7 +213,8 @@ export default function ProfilePage() {
                       {/* ── Generic Account Info ── */}
                       <div className="rounded-[2rem] border border-slate-100 p-6 md:p-8 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
                         <div className="mb-8 flex items-center gap-4">
-                          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-slate-900 text-white shadow-md shrink-0">
+                          {/* 🚀 REMOVED BLACK COLOR: Changed to emerald theme */}
+                          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 shadow-sm shrink-0">
                             <Shield className="h-5 w-5" />
                           </div>
                           <div>
@@ -283,7 +284,7 @@ export default function ProfilePage() {
 
             {/* ── Footer Actions ── */}
             {activeTab === "profile" && (
-              <div className="flex flex-col-reverse sm:flex-row gap-3 border-t border-slate-100 bg-slate-50/50 p-6 sm:px-8 shrink-0">
+              <div className="flex flex-col-reverse sm:flex-row gap-3 border-t border-slate-100 bg-slate-50/50 p-6 sm:px-8 shrink-0 rounded-b-[2rem]">
                 <button
                   onClick={() => router.back()}
                   className="px-6 py-3.5 bg-white border border-slate-200 text-slate-700 font-bold rounded-full transition-all hover:bg-slate-50 active:scale-[0.98] cursor-pointer shadow-sm sm:w-auto w-full text-center"

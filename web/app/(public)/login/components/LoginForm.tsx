@@ -82,23 +82,11 @@ export function LoginForm() {
           </button>
         </div>
         
-        {/* 🚀 FIX: Forgot Password relocated BELOW the input field */}
         <div className="flex justify-end pt-1.5 pr-1">
           <Link href="/forgot-password" className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 transition-colors uppercase tracking-wider">
             Forgot Password?
           </Link>
         </div>
-      </div>
-
-      <div className="flex items-center pt-2">
-        <input
-          id="remember"
-          type="checkbox"
-          className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 focus:ring-offset-0 cursor-pointer"
-        />
-        <label htmlFor="remember" className="ml-2.5 block text-sm font-medium text-slate-600 cursor-pointer select-none">
-          Keep me signed in
-        </label>
       </div>
 
       <button

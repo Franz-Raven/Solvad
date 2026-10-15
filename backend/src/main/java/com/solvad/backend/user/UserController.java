@@ -87,8 +87,7 @@ public class UserController {
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
-            // Upload to Cloudinary in the profiles folder
-            String profileUrl = cloudinaryService.uploadFile(file, "profiles");
+            String profileUrl = cloudinaryService.uploadProfilePicture(file, "profiles");
 
             // Update user's profile URL
             user.setProfileUrl(profileUrl);

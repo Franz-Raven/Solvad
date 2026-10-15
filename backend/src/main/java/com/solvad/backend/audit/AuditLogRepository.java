@@ -21,4 +21,11 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, UUID> {
     List<AuditLog> findNotificationsForProblems(
             @Param("problemIds") List<UUID> problemIds,
             @Param("eventTypes") List<AuditEventType> eventTypes);
+
+    List<AuditLog> findByProblemIdOrderByTimestampDesc(UUID problemId);
+    List<AuditLog> findByProblemIdAndTimestampBetweenOrderByTimestampDesc(
+            UUID problemId,
+            java.time.LocalDateTime start,
+            java.time.LocalDateTime end
+    );
 }

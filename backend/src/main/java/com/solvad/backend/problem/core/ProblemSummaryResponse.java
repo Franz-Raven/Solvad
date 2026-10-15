@@ -14,5 +14,7 @@ public record ProblemSummaryResponse(
         LocalDateTime createdAt,
         Boolean courseMatch,
         Double matchScore,
-        String sdgFocus
+        String sdgFocus,
+        String seekerProfileUrl // 🚀 ADDED FIELD
+
 ) {}

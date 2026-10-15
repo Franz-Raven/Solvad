@@ -445,7 +445,8 @@ public class ProblemService {
                             pr.getCreatedAt(),
                             pr.getCourseMatch(),
                             result.getScore(),
-                            pr.getSdgFocus()
+                            pr.getSdgFocus(),
+                            seeker.getUser().getProfileUrl()
                     );
                 })
                 .collect(Collectors.toList());
@@ -614,7 +615,8 @@ public class ProblemService {
                             p.getCreatedAt(),
                             null,
                             null,
-                            p.getSdgFocus()
+                            p.getSdgFocus(),
+                            seeker.getUser().getProfileUrl()
                     );
                 })
                 .collect(Collectors.toList());
@@ -676,7 +678,8 @@ public class ProblemService {
                 problem.getCreatedAt(),
                 isCourseMatch,
                 matchScore,
-                problem.getSdgFocus()
+                problem.getSdgFocus(),
+                problem.getSeeker().getUser().getProfileUrl()
         );
     }
 }

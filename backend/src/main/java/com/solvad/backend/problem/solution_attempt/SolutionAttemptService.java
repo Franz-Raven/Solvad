@@ -312,13 +312,12 @@ public class SolutionAttemptService {
                     solver, List.of(SolutionAttemptStatus.COMPLETED, SolutionAttemptStatus.ABANDONED, SolutionAttemptStatus.TERMINATED), pageable);
         } else if ("PENDING".equalsIgnoreCase(tab)) {
             attemptPage = attemptRepository.findBySolverAndStatusOrderByUpdatedAtDesc(
-                    solver, SolutionAttemptStatus.PENDING_REVIEW, pageable); // 🚀 Fixed to match your enum
+                    solver, SolutionAttemptStatus.PENDING_REVIEW, pageable);
         } else {
             attemptPage = attemptRepository.findBySolverAndStatusOrderByUpdatedAtDesc(
                     solver, SolutionAttemptStatus.ACTIVE, pageable);
         }
 
-        // 🚀 Map directly to the lightweight summary
         List<SolutionAttemptSummaryResponse> summaries = attemptPage.getContent().stream()
                 .map(attempt -> {
                     String parentName = null;
@@ -338,7 +337,7 @@ public class SolutionAttemptService {
                             attempt.getProblem().getTitle(),
                             solver.getFirstName(),
                             solver.getLastName(),
-                            null, // 🚀 FIX 1: Passed null since the workspace UI doesn't use the picture
+                            null,
                             solver.getInstitution(),
                             solver.getDegreeProgram(),
                             attempt.getStatus().name(),
@@ -346,8 +345,6 @@ public class SolutionAttemptService {
                             attempt.getClaimedAt(),
                             attempt.getUpdatedAt(),
                             attempt.getCompletedAt(),
-                            // 🚀 FIX 2: If your record requires Strings for IDs, append .toString() to these!
-                            // Example: parentId != null ? parentId.toString() : null,
                             parentId,
                             parentName,
                             subtaskId,
@@ -364,8 +361,6 @@ public class SolutionAttemptService {
                 attemptPage.getSize()
         );
     }
-
-
 
     @Transactional
     public SubtaskSubmissionResponse deleteFileFromSubmission(UUID solverUserId, UUID submissionId, String fileUrl) {
@@ -671,9 +666,6 @@ public class SolutionAttemptService {
         return mapToResponse(savedAttempt, submissions, solverUserId);
     }
 
-
-
-
     private SubtaskSubmissionResponse mapSubmissionToResponse(SubtaskSubmission submission, UUID currentUserId) {
         UUID ownerUserId = submission.getAttempt().getSolver().getUser().getId();
         boolean isOwner = currentUserId != null && currentUserId.equals(ownerUserId);
@@ -741,7 +733,7 @@ public class SolutionAttemptService {
                 problem.getMaxConcurrentSolvers()
         );
     }
-    // Add this inside your SolutionAttemptService class
+
     @Transactional(readOnly = true)
     public ActiveAttemptsCountResponse getMyActiveAttemptsCount(UUID solverUserId) {
         SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
@@ -788,14 +780,13 @@ public class SolutionAttemptService {
             throw new RuntimeException("Unauthorized access to this attempt");
         }
 
-        // 🚀 Grab the latest submission description AND its files
         String summary = "No submissions recorded.";
         List<String> attachedFiles = new java.util.ArrayList<>();
 
         if (attempt.getSubmissions() != null && !attempt.getSubmissions().isEmpty()) {
             SubtaskSubmission latestSubmission = attempt.getSubmissions().get(attempt.getSubmissions().size() - 1);
             summary = latestSubmission.getDescription();
-            attachedFiles = latestSubmission.getFileUrlsAsList(); // Fetch as a clean list!
+            attachedFiles = latestSubmission.getFileUrlsAsList();
         }
 
         return new AttemptDetailResponse(
@@ -806,7 +797,7 @@ public class SolutionAttemptService {
                 attempt.getStatus().name(),
                 attempt.getCompletedAt() != null ? attempt.getCompletedAt() : attempt.getUpdatedAt(),
                 summary,
-                attachedFiles // 🚀 Pass to DTO
+                attachedFiles
         );
     }
 
@@ -855,7 +846,6 @@ public class SolutionAttemptService {
         return attemptRepository.countByProblemAndStatus(problem, SolutionAttemptStatus.ACTIVE);
     }
 
-    // 🚀 1. Fetches ONLY active workspaces (bypasses the entire tree structure)
     @Transactional(readOnly = true)
     public List<SolutionAttemptSummaryResponse> getActiveWorkspaces(UUID problemId) {
         Problem problem = problemRepository.findById(problemId)
@@ -895,7 +885,6 @@ public class SolutionAttemptService {
                 .filter(a -> a.getTargetSubtask() != null)
                 .collect(Collectors.groupingBy(a -> a.getTargetSubtask().getId(), Collectors.counting()));
 
-        // 🚀 FIX: Fetch the subtasks from the repository instead of the Problem entity directly!
         List<ProblemSubtask> subtasks = subtaskRepository.findByProblem(problem);
 
         return subtasks.stream()
@@ -925,7 +914,6 @@ public class SolutionAttemptService {
                     map.put("status", claim.getStatus().name());
                     map.put("createdAt", claim.getCreatedAt());
 
-                    // Count files instead of sending the massive URL string
                     int fileCount = 0;
                     if (claim.getSupportingDocuments() != null && !claim.getSupportingDocuments().isBlank()) {
                         fileCount = claim.getSupportingDocuments().split(",").length;
@@ -944,7 +932,6 @@ public class SolutionAttemptService {
                 .collect(Collectors.toList());
     }
 
-    // 🚀 2. The Heavy Payload (Fires ONLY when clicking "Review")
     @Transactional(readOnly = true)
     public Map<String, Object> getProposalDetailsForSeeker(UUID proposalId) {
         ClaimRequest claim = claimRequestRepository.findById(proposalId)
@@ -952,8 +939,8 @@ public class SolutionAttemptService {
 
         Map<String, Object> map = new java.util.HashMap<>();
         map.put("id", claim.getId());
-        map.put("proposedApproach", claim.getProposedApproach()); // Heavy Text
-        map.put("supportingDocuments", claim.getSupportingDocuments()); // Heavy URLs
+        map.put("proposedApproach", claim.getProposedApproach());
+        map.put("supportingDocuments", claim.getSupportingDocuments());
         map.put("status", claim.getStatus().name());
         map.put("createdAt", claim.getCreatedAt());
         map.put("targetSubtaskId", claim.getTargetSubtask() != null ? claim.getTargetSubtask().getId() : null);
@@ -969,7 +956,6 @@ public class SolutionAttemptService {
         return map;
     }
 
-    // 🚀 FIX: Accept UUID instead of User object, matching your other secure endpoints
     @Transactional(readOnly = true)
     public List<SolutionAttemptSummaryResponse> getMyLightweightAttemptsByUserId(UUID solverUserId) {
         SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
@@ -997,5 +983,4 @@ public class SolutionAttemptService {
                 ))
                 .collect(Collectors.toList());
     }
-
 }

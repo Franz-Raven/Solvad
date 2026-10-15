@@ -5,6 +5,7 @@ import com.cloudinary.utils.ObjectUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import com.cloudinary.Transformation;
 
 import java.io.IOException;
 import java.util.Map;
@@ -133,6 +134,45 @@ public class CloudinaryService {
             throw new RuntimeException("Invalid Cloudinary URL format");
         } catch (Exception e) {
             throw new RuntimeException("Failed to extract public ID from URL: " + url, e);
+        }
+    }
+
+    /**
+     * Upload an optimized profile picture to Cloudinary.
+     * Automatically crops to a 400x400 square centered on the user's face to save storage.
+     *
+     * @param file The multipart file to upload
+     * @param folder The folder path (e.g., "profiles")
+     * @return The secure URL of the optimized image
+     */
+    @SuppressWarnings("unchecked")
+    public String uploadProfilePicture(MultipartFile file, String folder) {
+        try {
+            if (file.isEmpty()) {
+                throw new RuntimeException("File is empty");
+            }
+
+            // 🚀 Force Cloudinary to crop, resize, and compress BEFORE saving
+            Map<String, Object> uploadParams = ObjectUtils.asMap(
+                    "folder", "solvad/" + folder,
+                    "transformation", new Transformation<>()
+                            .width(400)
+                            .height(400)
+                            .crop("fill")             // Fill the 400x400 box
+                            .gravity("face")          // Use AI to center crop on the face
+                            .quality("auto")          // Apply aggressive compression
+                            .fetchFormat("auto")      // Convert to modern formats like WebP/AVIF
+            );
+
+            Map<String, Object> uploadResult = cloudinary.uploader().upload(
+                    file.getBytes(),
+                    uploadParams
+            );
+
+            return uploadResult.get("secure_url").toString();
+
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to upload profile picture: " + e.getMessage(), e);
         }
     }
 }

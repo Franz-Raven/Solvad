@@ -23,8 +23,8 @@ const carouselSlides = [
     desc: "Monitor the evolution of your solutions with an immutable, transparent solution tree and version control.",
     icon1: GitBranch,
     icon2: Network,
-    bg: "bg-slate-800",
-    glow: "bg-slate-500",
+    bg: "bg-blue-600",
+    glow: "bg-blue-400",
   },
   {
     title: "AI-Powered Insights",
@@ -114,40 +114,41 @@ export default function RegisterPage() {
       <div className="absolute -top-24 -right-24 w-96 h-96 bg-emerald-100/40 rounded-full blur-3xl -z-10" />
       <div className="absolute top-48 -left-24 w-72 h-72 bg-slate-200/40 rounded-full blur-3xl -z-10" />
 
-      <div className="max-w-5xl w-full bg-white rounded-[2rem] shadow-[0_8px_40px_rgba(0,0,0,0.06)] flex flex-col lg:flex-row h-[750px] max-h-[90vh] border border-slate-100 relative z-10 overflow-hidden">
+      {/* Main Container - Balanced height constraint to completely avoid inner page scrolling */}
+      <div className="max-w-5xl w-full bg-white rounded-[2rem] shadow-[0_8px_40px_rgba(0,0,0,0.06)] flex flex-col lg:flex-row h-[720px] max-h-[90vh] border border-slate-100 relative z-10 overflow-hidden">
 
         {/* ── Left Side: Interactive Dynamic Branding Panel ── */}
         <div 
           onClick={handleNextSlide}
-          className={`hidden lg:flex w-1/2 relative flex-col justify-between p-12 overflow-hidden cursor-pointer group transition-colors duration-1000 ${carouselSlides[currentSlide].bg}`}
+          className={`hidden lg:flex w-1/2 relative flex-col justify-between p-10 overflow-hidden cursor-pointer group transition-colors duration-1000 ${carouselSlides[currentSlide].bg}`}
         >
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-500 z-20" />
+          <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors duration-500 z-20" />
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff15_1px,transparent_1px),linear-gradient(to_bottom,#ffffff15_1px,transparent_1px)] bg-[size:24px_24px] z-0" />
           
           <div className={`absolute -top-24 -left-24 w-96 h-96 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-pulse transition-colors duration-1000 z-0 ${carouselSlides[currentSlide].glow}`} />
-          <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-slate-900/40 rounded-full mix-blend-multiply filter blur-3xl opacity-30 z-0" />
+          <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-white/20 rounded-full mix-blend-overlay filter blur-3xl opacity-40 z-0" />
 
-          <div className="relative z-10 flex-1 flex flex-col items-center justify-center mt-8">
-            <div key={`icons-${currentSlide}`} className="relative w-48 h-48 flex items-center justify-center animate-in fade-in zoom-in-95 duration-500 transition-transform group-hover:scale-105">
+          <div className="relative z-10 flex-1 flex flex-col items-center justify-center">
+            <div key={`icons-${currentSlide}`} className="relative w-40 h-40 flex items-center justify-center animate-in fade-in zoom-in-95 duration-500 transition-transform group-hover:scale-105">
               <div className="absolute inset-0 bg-white/5 rounded-full blur-2xl" />
-              <div className="relative bg-white/10 p-8 rounded-3xl backdrop-blur-md border border-white/20 transform -rotate-6 shadow-xl">
-                 <SlideIcon1 className="w-16 h-16 text-white" />
+              <div className="relative bg-white/10 p-6 rounded-3xl backdrop-blur-md border border-white/20 transform -rotate-6 shadow-xl">
+                 <SlideIcon1 className="w-14 h-14 text-white" />
               </div>
-              <div className="absolute -bottom-6 -right-4 bg-white/20 p-5 rounded-2xl backdrop-blur-md border border-white/30 transform rotate-12 shadow-lg">
-                 <SlideIcon2 className="w-10 h-10 text-white" />
+              <div className="absolute -bottom-4 -right-3 bg-white/20 p-4 rounded-2xl backdrop-blur-md border border-white/30 transform rotate-12 shadow-lg">
+                 <SlideIcon2 className="w-8 h-8 text-white" />
               </div>
             </div>
           </div>
 
-          <div className="relative z-10 text-center mt-8 h-32 flex flex-col justify-end">
+          <div className="relative z-10 text-center h-28 flex flex-col justify-end">
             <div key={`text-${currentSlide}`} className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-              <h2 className="text-2xl font-bold text-white mb-3 tracking-tight drop-shadow-sm">{carouselSlides[currentSlide].title}</h2>
-              <p className="text-white/90 text-sm font-medium max-w-sm mx-auto leading-relaxed h-10">
+              <h2 className="text-xl font-bold text-white mb-2 tracking-tight drop-shadow-sm">{carouselSlides[currentSlide].title}</h2>
+              <p className="text-white/90 text-xs font-medium max-w-sm mx-auto leading-relaxed">
                 {carouselSlides[currentSlide].desc}
               </p>
             </div>
             
-            <div className="flex items-center justify-center gap-2 mt-8">
+            <div className="flex items-center justify-center gap-2 mt-6">
               {carouselSlides.map((_, i) => (
                 <button
                   key={i}
@@ -165,33 +166,33 @@ export default function RegisterPage() {
         {/* ── Right Side: Registration Form ── */}
         <div className="w-full lg:w-1/2 flex flex-col bg-white relative">
           
-          <div className="flex-1 overflow-y-auto p-8 sm:p-12 lg:p-16 overflow-x-hidden">
-            <div className="min-h-full flex flex-col justify-center max-w-md mx-auto animate-in fade-in slide-in-from-right-4 duration-500">
+          <div className="flex-1 flex flex-col justify-center px-8 sm:px-12 py-6">
+            <div className="w-full max-w-sm mx-auto animate-in fade-in slide-in-from-right-4 duration-500">
               
               <Link 
                 href="/" 
-                className="inline-flex items-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider hover:text-emerald-600 transition-colors mb-12 group self-start"
+                className="inline-flex items-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider hover:text-emerald-600 transition-colors mb-4 group self-start"
               >
                 <ArrowLeft className="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" /> Back to Home
               </Link>
 
-              <div className="mb-8">
-                <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight mb-2">
+              <div className="mb-5">
+                <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight mb-1">
                   {currentStep === 1 ? "Create Account" : "Complete Profile"}
                 </h1>
-                <p className="text-sm font-medium text-slate-500">
+                <p className="text-xs font-medium text-slate-500">
                   {currentStep === 1 ? "Step 1 of 2: Setup your credentials" : "Step 2 of 2: Tell us about your background"}
                 </p>
                 
-                <div className="flex items-center gap-2 mt-4">
-                  <div className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${currentStep === 1 ? 'bg-emerald-500' : 'bg-emerald-200'}`} />
-                  <div className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${currentStep === 2 ? 'bg-emerald-500' : 'bg-slate-100'}`} />
+                <div className="flex items-center gap-2 mt-3">
+                  <div className={`h-1 flex-1 rounded-full transition-all duration-300 ${currentStep === 1 ? 'bg-emerald-500' : 'bg-emerald-200'}`} />
+                  <div className={`h-1 flex-1 rounded-full transition-all duration-300 ${currentStep === 2 ? 'bg-emerald-500' : 'bg-slate-100'}`} />
                 </div>
               </div>
 
               {error && (
-                <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-100 flex items-start gap-3 animate-in fade-in zoom-in-95 duration-300">
-                  <p className="text-sm font-bold text-rose-800 leading-relaxed">{error}</p>
+                <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-100 flex items-start gap-3 animate-in fade-in zoom-in-95 duration-300">
+                  <p className="text-xs font-bold text-rose-800 leading-relaxed">{error}</p>
                 </div>
               )}
               
@@ -210,7 +211,7 @@ export default function RegisterPage() {
                 )}
               </div>
 
-              <p className="text-center text-sm font-medium text-slate-500 mt-8">
+              <p className="text-center text-xs font-medium text-slate-500 mt-5">
                 Already have an account?{" "}
                 <Link
                   href="/login"
