@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Rocket, ArrowRight } from "lucide-react";
+import { LayoutDashboard, ArrowRight } from "lucide-react";
 
 interface WorkspaceBannerProps {
   isLoading: boolean;
@@ -13,7 +13,7 @@ export function WorkspaceBanner({ isLoading, activeCount }: WorkspaceBannerProps
     return (
       <div className="bg-secondary/5 border border-secondary/10 rounded-2xl p-4 mb-8 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm animate-pulse">
         <div className="flex items-center gap-4 w-full">
-          <div className="w-12 h-12 bg-gray-300/50 rounded-full shrink-0" />
+          <div className="w-12 h-12 bg-gray-300/50 rounded-xl shrink-0" />
           <div className="space-y-2 w-full max-w-md">
             <div className="h-4 bg-gray-300/50 rounded w-3/4" />
             <div className="h-3 bg-gray-200/50 rounded w-1/2" />
@@ -29,8 +29,8 @@ export function WorkspaceBanner({ isLoading, activeCount }: WorkspaceBannerProps
   return (
     <div className="bg-secondary/10 border border-secondary/20 rounded-2xl p-4 mb-8 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
       <div className="flex items-center gap-4">
-        <div className="w-12 h-12 bg-secondary text-white rounded-full flex items-center justify-center shadow-sm shrink-0">
-          <Rocket className="w-6 h-6" />
+        <div className="w-12 h-12 bg-white text-secondary rounded-xl border border-secondary/20 flex items-center justify-center shadow-sm shrink-0">
+          <LayoutDashboard className="w-5 h-5" strokeWidth={2} />
         </div>
         <div>
           <h3 className="font-bold text-secondary-dark text-base">

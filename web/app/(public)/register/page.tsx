@@ -164,7 +164,7 @@ export default function RegisterPage() {
         </div>
 
         {/* ── Right Side: Registration Form ── */}
-        <div className="w-full lg:w-1/2 flex flex-col bg-white relative">
+        <div className="w-full lg:w-1/2 flex flex-col bg-white relative overflow-y-auto [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent]">
           
           <div className="flex-1 flex flex-col justify-center px-8 sm:px-12 py-6">
             <div className="w-full max-w-sm mx-auto animate-in fade-in slide-in-from-right-4 duration-500">

@@ -48,19 +48,17 @@ export default function AuthedNavigation() {
     <header className="sticky top-0 z-[100] w-full border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur-md">
       <div className="container mx-auto px-6 md:px-8">
         <div className="flex items-center justify-between h-16 md:h-20">
-          {/* ── Logo tile + wordmark with Photo Logo ── */}
+          {/* ── Logo + wordmark ── */}
           <Link
             href={homePath}
             className="group flex items-center gap-3 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 cursor-pointer active:scale-[0.98] transition-transform duration-200"
           >
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 border border-emerald-100 shadow-sm transition-all duration-300 group-hover:scale-105 p-2">
-              <img
-                src="/solvad_logo.png"
-                alt="Solvad Logo"
-                className="h-full w-auto object-contain"
-              />
-            </span>
-            <span className="text-[26px] font-extrabold leading-none tracking-tight text-slate-900 group-hover:text-accent transition-colors">
+            <img
+              src="/solvad_logo.png"
+              alt="Solvad Logo"
+              className="h-12 w-auto md:h-14 object-contain transition-transform duration-300 group-hover:scale-105"
+            />
+            <span className="text-[26px] md:text-[28px] font-extrabold leading-none tracking-tight text-slate-900 group-hover:text-accent transition-colors">
               Solvad
             </span>
           </Link>

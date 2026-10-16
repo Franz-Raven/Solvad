@@ -146,11 +146,11 @@ export function ExploreProblems() {
                     <img
                       src={problem.seekerProfileUrl}
                       alt={problem.organizationName}
-                      className="w-12 h-12 rounded-2xl object-cover shadow-sm border border-slate-200 group-hover:border-emerald-300 transition-colors"
+                      className="w-12 h-12 rounded-2xl object-cover shadow-sm border border-slate-200 group-hover:border-accent/40 transition-colors"
                     />
                   ) : (
-                    <div className="flex w-12 h-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-lg font-bold text-white shadow-sm border border-emerald-400/50 group-hover:shadow-md transition-all">
-                      {problem.organizationName ? problem.organizationName.charAt(0).toUpperCase() : "S"}
+                    <div className="flex w-12 h-12 items-center justify-center rounded-2xl bg-white border border-slate-200 shadow-sm group-hover:border-accent/40 transition-colors">
+                      <Building2 className="w-5 h-5 text-slate-400 group-hover:text-accent transition-colors" />
                     </div>
                   )}
                 </div>

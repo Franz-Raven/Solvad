@@ -6,13 +6,21 @@ export default function Footer() {
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Logo & Brand */}
+          {/* Logo & Brand */}
           <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-accent to-primary-foreground rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xl">S</span>
-              </div>
-              <span className="text-2xl font-bold text-gray-900">Solvad</span>
-            </div>
+            <Link
+              href="/"
+              className="group inline-flex items-center gap-3 self-start rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 active:scale-[0.98] transition-transform duration-200"
+            >
+              <img
+                src="/solvad_logo.png"
+                alt="Solvad Logo"
+                className="h-11 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+              />
+              <span className="text-2xl font-extrabold leading-none tracking-tight text-gray-900 group-hover:text-emerald-600 transition-colors">
+                Solvad
+              </span>
+            </Link>
             <p className="text-gray-600 text-sm">
               Connecting industry challenges with academic excellence.
             </p>
