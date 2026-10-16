@@ -74,6 +74,71 @@ public class ProblemService {
     @Autowired
     private CloudinaryService cloudinaryService;
 
+    private ProblemResponse mapToResponse(Problem problem, List<ProblemSubtask> subtasks, SeekerProfile seeker) {
+        List<SubtaskResponse> subtaskResponses = subtasks.stream()
+                .map(subtask -> {
+                    List<AttachmentRequirementResponse> attachmentResponses = attachmentRepository.findBySubtask(subtask)
+                            .stream()
+                            .map(att -> new AttachmentRequirementResponse(
+                                    att.getId(),
+                                    att.getAttachmentTitle(),
+                                    att.getAttachmentType()
+                            ))
+                            .collect(Collectors.toList());
+
+                    return new SubtaskResponse(
+                            subtask.getId(),
+                            subtask.getTitle(),
+                            subtask.getDepartmentFocus(),
+                            subtask.getSdgFocus(),
+                            subtask.getDescription(),
+                            attachmentResponses,
+                            subtask.getMaxConcurrentSolvers()
+                    );
+                })
+                .collect(Collectors.toList());
+
+        List<String> tags = problem.getTags() != null ? problem.getTags() : List.of();
+
+        // 🚀 EXTRACT SEEKER DETAILS DEFENSIVELY
+        String profileUrl = null;
+        String email = null;
+        String contactPerson = null;
+        String contactNumber = null;
+
+        if (seeker != null) {
+            contactPerson = seeker.getContactPerson();
+            contactNumber = seeker.getContactNumber();
+            if (seeker.getUser() != null) {
+                profileUrl = seeker.getUser().getProfileUrl();
+                email = seeker.getUser().getEmail();
+            }
+        }
+
+        return new ProblemResponse(
+                problem.getId(),
+                problem.getTitle(),
+                problem.getBackgroundContext(),
+                problem.getPrimaryStatement(),
+                problem.getObjectives(),
+                problem.getConstraints(),
+                problem.getPreferredProgram(),
+                problem.getSdgFocus(),
+                problem.getStatus().name(),
+                seeker.getId(),
+                seeker.getOrganizationName(),
+                problem.getCreatedAt(),
+                subtaskResponses,
+                tags,
+                problem.getProblemDocumentUrl(),
+                problem.getMaxConcurrentSolvers(),
+                profileUrl,     // 🚀 pass to DTO
+                contactPerson,  // 🚀 pass to DTO
+                contactNumber,  // 🚀 pass to DTO
+                email           // 🚀 pass to DTO
+        );
+    }
+
     public GenerateScopeResponse generateScope(GenerateScopeRequest request, List<MultipartFile> attachments) {
         return geminiService.generateSubtasks(
                 request.getTitle(),
@@ -265,51 +330,7 @@ public class ProblemService {
         problemRepository.delete(problem);
     }
 
-    private ProblemResponse mapToResponse(Problem problem, List<ProblemSubtask> subtasks, SeekerProfile seeker) {
-        List<SubtaskResponse> subtaskResponses = subtasks.stream()
-                .map(subtask -> {
-                    List<AttachmentRequirementResponse> attachmentResponses = attachmentRepository.findBySubtask(subtask)
-                            .stream()
-                            .map(att -> new AttachmentRequirementResponse(
-                                    att.getId(),
-                                    att.getAttachmentTitle(),
-                                    att.getAttachmentType()
-                            ))
-                            .collect(Collectors.toList());
 
-                    return new SubtaskResponse(
-                            subtask.getId(),
-                            subtask.getTitle(),
-                            subtask.getDepartmentFocus(),
-                            subtask.getSdgFocus(),
-                            subtask.getDescription(),
-                            attachmentResponses,
-                            subtask.getMaxConcurrentSolvers()
-                    );
-                })
-                .collect(Collectors.toList());
-
-        List<String> tags = problem.getTags() != null ? problem.getTags() : List.of();
-
-        return new ProblemResponse(
-                problem.getId(),
-                problem.getTitle(),
-                problem.getBackgroundContext(),
-                problem.getPrimaryStatement(),
-                problem.getObjectives(),
-                problem.getConstraints(),
-                problem.getPreferredProgram(),
-                problem.getSdgFocus(),
-                problem.getStatus().name(),
-                seeker.getId(),
-                seeker.getOrganizationName(),
-                problem.getCreatedAt(),
-                subtaskResponses,
-                tags,
-                problem.getProblemDocumentUrl(),
-                problem.getMaxConcurrentSolvers()
-        );
-    }
 
     @Transactional(readOnly = true)
     public PaginatedNotificationsResponse getSeekerNotifications(UUID seekerUserId, String eventType, int page, int size) {

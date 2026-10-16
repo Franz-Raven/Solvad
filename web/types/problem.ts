@@ -72,19 +72,24 @@ export interface ProblemResponse {
   objectives: string;
   constraints: string;
   preferredProgram: string;
-  sdgFocus?: string;
+  sdgFocus: string;
   status: string;
   seekerId: string;
-  organizationName: string;
+  
+  // 🚀 FIXED: Matches your Java backend's @JsonProperty("organizationName")
+  organizationName: string; 
+  
   createdAt: string;
+  subtasks: SubtaskResponse[];
+  tags: string[];
   problemDocumentUrl?: string;
-  subtasks: SubProblem[];
-  tags?: string[];
-  matchScore?: number;
-  courseMatch?: boolean;
-  maxConcurrentSolvers?: number; 
+  maxConcurrentSolvers?: number;
+  
+  seekerProfileUrl?: string;
+  contactPerson?: string;
+  contactNumber?: string;
+  seekerEmail?: string;
 }
-
 export interface DiscoveryDashboardResponse {
   recommended: ProblemResponse[];
   problems: ProblemResponse[];
