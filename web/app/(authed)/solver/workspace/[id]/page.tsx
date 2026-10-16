@@ -3,16 +3,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { ArrowLeft, AlertCircle, Building2, ExternalLink, AlertTriangle } from "lucide-react";
 import { getProblemById } from "../../problem/[id]/api/problem";
-
-import { getMyAttempt } from "./api/workspace";
-import { abandonClaim, submitFullAttempt } from "./api/workspace";
+import { getMyAttempt, abandonClaim } from "./api/workspace";
 import { getMyActiveAttempts } from "../../dashboard/api/dashboard";
 import type { ProblemResponse } from "@/types/problem";
 import type { SolutionAttemptResponse } from "@/types/attempt";
 import { SubtaskForm } from "./component/SubtaskForm";
-
-type ModalType = "abandon" | "submit" | null;
 
 export default function SolverWorkspacePage() {
   const params = useParams();
@@ -23,25 +20,24 @@ export default function SolverWorkspacePage() {
   const [attempt, setAttempt] = useState<SolutionAttemptResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeSubtaskId, setActiveSubtaskId] = useState<string | null>(null);
   
   const [isAbandoning, setIsAbandoning] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activeModal, setActiveModal] = useState<ModalType>(null);
+  const [showAbandonModal, setShowAbandonModal] = useState(false);
   
-  const fetchWorkspace = useCallback(async (showLoading = true) => {
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false); 
+  const [showUnsavedModal, setShowUnsavedModal] = useState(false);
+  const [pendingUrl, setPendingUrl] = useState<string | null>(null);
+  
+  const fetchWorkspace = useCallback(async () => {
     try {
-      if (showLoading) setLoading(true);
+      setLoading(true);
       const probData = await getProblemById(problemId);
       setProblem(probData);
 
       let attemptData: SolutionAttemptResponse | undefined;
       try {
-        // 1. Try the standard active fetch
         attemptData = await getMyAttempt(problemId);
       } catch {
-        // 🚀 2. THE FALLBACK: If the backend auto-transitioned the attempt to PENDING_REVIEW, 
-        // getMyAttempt will fail. We catch the error and search ALL attempts to find it!
         const allAttempts = await getMyActiveAttempts();
         attemptData = allAttempts.find(a => 
           a.problemId === problemId && 
@@ -54,21 +50,10 @@ export default function SolverWorkspacePage() {
       }
       
       setAttempt(attemptData);
-
-      setActiveSubtaskId(prev => {
-        const target = attemptData!.targetSubtaskId
-            ? probData.subtasks.find((s) => s.id === attemptData!.targetSubtaskId)
-            : probData.subtasks[0];
-          if (!prev && target) {
-            return target.id;
-          }
-        return prev;
-      });
-      
     } catch (err: any) {
       setError(err.message || "Failed to load workspace data.");
     } finally {
-      if (showLoading) setLoading(false);
+      setLoading(false);
     }
   }, [problemId]);
 
@@ -77,57 +62,102 @@ export default function SolverWorkspacePage() {
   }, [fetchWorkspace]);
 
   useEffect(() => {
-    if (activeModal) document.body.style.overflow = "hidden";
+    if (showAbandonModal || showUnsavedModal) document.body.style.overflow = "hidden";
     else document.body.style.overflow = "";
     return () => { document.body.style.overflow = ""; };
-  }, [activeModal]);
+  }, [showAbandonModal, showUnsavedModal]);
+
+  // 🚀 INTERCEPTS INTERNAL LINKS TO SHOW CUSTOM MODAL
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (!hasUnsavedChanges) return;
+      
+      const target = e.target as HTMLElement;
+      const anchor = target.closest("a");
+      
+      if (anchor && anchor.href && anchor.target !== "_blank") {
+        if (anchor.href === window.location.href) return; // Ignore if clicking exact same URL
+
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Trigger custom UI modal instead of window.confirm
+        setPendingUrl(anchor.href);
+        setShowUnsavedModal(true);
+      }
+    };
+    
+    window.addEventListener("click", handleClick, { capture: true });
+    return () => window.removeEventListener("click", handleClick, { capture: true });
+  }, [hasUnsavedChanges]);
 
   const executeAbandon = async () => {
     setIsAbandoning(true);
     try {
+      setHasUnsavedChanges(false); 
       await abandonClaim(attempt!.id); 
       router.push("/solver/dashboard");
     } catch (err: any) {
       setError(err.message || "Failed to abandon claim");
       setIsAbandoning(false);
-      setActiveModal(null);
+      setShowAbandonModal(false);
     }
   };
 
-  const executeFinalSubmit = async () => {
-    if (!attempt) return;
-    setIsSubmitting(true);
-    try {
-      await submitFullAttempt(attempt.id);
-      router.push("/solver/dashboard");
-    } catch (err: any) {
-      setError(err.message || "Failed to submit final solution");
-      setIsSubmitting(false);
-      setActiveModal(null);
+  const handleGoBack = () => {
+    if (hasUnsavedChanges) {
+      setPendingUrl(`/solver/problem/${problemId}`);
+      setShowUnsavedModal(true);
+      return;
+    }
+    router.push(`/solver/problem/${problemId}`);
+  };
+
+  const confirmLeave = () => {
+    setHasUnsavedChanges(false);
+    setShowUnsavedModal(false);
+    if (pendingUrl) {
+      router.push(pendingUrl);
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-accent border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-500 font-medium text-sm">Loading Workspace...</p>
-        </div>
+      <div className="min-h-screen bg-slate-50/50 flex flex-col animate-in fade-in duration-500">
+        <header className="bg-white/95 border-b border-slate-200 shadow-sm h-16 flex items-center px-6">
+          <div className="max-w-6xl mx-auto w-full flex justify-between items-center">
+            <div className="w-48 h-5 bg-slate-200 rounded-md animate-pulse" />
+            <div className="w-32 h-8 bg-slate-100 rounded-lg animate-pulse" />
+          </div>
+        </header>
+        <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 py-8 flex flex-col gap-6">
+          <div className="bg-white rounded-[2rem] shadow-[0_8px_30px_rgba(0,0,0,0.02)] border border-slate-100 p-6 md:p-8 flex flex-col md:flex-row gap-8">
+            <div className="flex-1 space-y-4">
+              <div className="w-32 h-6 bg-slate-100 rounded-md animate-pulse" />
+              <div className="w-3/4 h-8 bg-slate-200 rounded-md animate-pulse" />
+              <div className="w-full h-24 bg-slate-50 rounded-xl animate-pulse mt-4" />
+            </div>
+            <div className="w-full md:w-80 h-48 bg-slate-50 rounded-2xl animate-pulse shrink-0 border border-slate-100" />
+          </div>
+          <div className="h-[500px] bg-white border border-slate-100 rounded-[2rem] shadow-[0_8px_30px_rgba(0,0,0,0.02)] p-8 animate-pulse">
+            <div className="w-48 h-6 bg-slate-200 rounded-md mb-8" />
+            <div className="w-full h-64 bg-slate-50 rounded-xl" />
+          </div>
+        </main>
       </div>
     );
   }
 
   if (error || !problem || !attempt) {
     return (
-      <div className="min-h-screen bg-slate-50 p-8 flex items-center justify-center">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-sm border border-red-100 p-8 text-center">
-          <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+      <div className="min-h-screen bg-slate-50/50 p-8 flex items-center justify-center animate-in fade-in duration-500">
+        <div className="max-w-md w-full bg-white rounded-[2rem] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-rose-100 p-8 text-center">
+          <div className="w-16 h-16 bg-rose-50 rounded-2xl flex items-center justify-center mx-auto mb-5 border border-rose-100 shadow-sm">
+            <AlertCircle className="w-7 h-7 text-rose-600" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Workspace Unavailable</h2>
-          <p className="text-gray-600 mb-6 text-sm">{error || "Make sure you have an active claim."}</p>
-          <Link href="/solver/dashboard" className="w-full inline-block px-4 py-2.5 bg-accent text-white rounded-lg hover:bg-secondary transition-colors font-semibold shadow-sm">
+          <h2 className="text-xl font-bold text-slate-900 mb-2">Workspace Unavailable</h2>
+          <p className="text-slate-600 mb-6 text-sm font-medium">{error || "Make sure you have an active claim."}</p>
+          <Link href="/solver/dashboard" className="w-full inline-block px-6 py-3.5 bg-emerald-600 text-white rounded-full hover:bg-emerald-700 transition-colors font-bold shadow-sm active:scale-[0.98]">
             Return to Dashboard
           </Link>
         </div>
@@ -135,194 +165,171 @@ export default function SolverWorkspacePage() {
     );
   }
 
-  const workspaceSubtasks = attempt.targetSubtaskId
-    ? problem.subtasks.filter((s) => s.id === attempt.targetSubtaskId)
-    : problem.subtasks;
+  const activeSubtask = attempt.targetSubtaskId 
+    ? problem.subtasks.find(s => s.id === attempt.targetSubtaskId) || problem.subtasks[0]
+    : problem.subtasks[0];
 
-  const submittedCount = attempt.submissions.filter((s) => s.status === "SUBMITTED").length;
-  const activeSubtask = problem.subtasks.find((s) => s.id === activeSubtaskId);
   const existingSubmission = activeSubtask ? attempt.submissions.find((s) => s.subtaskId === activeSubtask.id) : undefined;
-  
   const isForked = !!attempt.parentAttemptId; 
+  
+  const seekerName = attempt.seekerName || "Industry Partner";
+  const seekerProfileUrl = attempt.seekerProfileUrl || null;
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-50/50 flex flex-col font-sans animate-in fade-in duration-500">
       
-      {/* ── Custom Confirmation Modals ── */}
-      {activeModal && (
+      {/* ── 🚀 Abandon Modal ── */}
+      {showAbandonModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-100">
             <div className="p-8">
-              <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-5 ${activeModal === 'abandon' ? 'bg-red-100 text-red-600' : 'bg-accent/10 text-accent'}`}>
-                {activeModal === 'abandon' ? (
-                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                ) : (
-                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                )}
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-5 bg-rose-50 text-rose-600 border border-rose-100 shadow-sm">
+                <AlertCircle className="w-7 h-7" />
               </div>
-              
-              <h2 className="text-2xl font-bold text-gray-900 text-center mb-2">
-                {activeModal === 'abandon' ? "Abandon Workspace?" : "Submit Final Project?"}
-              </h2>
-              
-              <p className="text-gray-600 text-center text-sm leading-relaxed">
-                {activeModal === 'abandon' 
-                  ? "Are you sure you want to abandon this problem? It will become available for other solvers immediately."
-                  : "Are you sure you want to submit your final solution? You won't be able to edit this attempt anymore."}
+              <h2 className="text-2xl font-bold text-slate-900 text-center mb-2">Abandon Workspace?</h2>
+              <p className="text-slate-500 font-medium text-center text-sm leading-relaxed">
+                Are you sure you want to abandon this problem? It will become available for other solvers immediately.
               </p>
             </div>
             
-            <div className="px-8 py-5 bg-gray-50 border-t border-gray-100 flex gap-3">
+            <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex gap-3">
               <button
-                onClick={() => setActiveModal(null)}
-                disabled={isAbandoning || isSubmitting}
-                className="flex-1 px-4 py-2.5 border border-gray-300 bg-white text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-colors shadow-sm text-sm disabled:opacity-50"
+                onClick={() => setShowAbandonModal(false)}
+                disabled={isAbandoning}
+                className="flex-1 px-4 py-3 bg-white border border-slate-200 text-slate-700 font-bold rounded-full hover:bg-slate-50 transition-colors shadow-sm text-sm disabled:opacity-50 cursor-pointer"
               >
                 Cancel
               </button>
               <button
-                onClick={activeModal === 'abandon' ? executeAbandon : executeFinalSubmit}
-                disabled={isAbandoning || isSubmitting}
-                className={`flex-1 px-4 py-2.5 text-white font-semibold rounded-xl transition-colors shadow-sm text-sm disabled:opacity-50 flex items-center justify-center gap-2 ${
-                  activeModal === 'abandon' ? 'bg-red-600 hover:bg-red-700' : 'bg-secondary hover:bg-accent'
-                }`}
+                onClick={executeAbandon}
+                disabled={isAbandoning}
+                className="flex-1 px-4 py-3 text-white font-bold rounded-full transition-colors shadow-sm text-sm disabled:opacity-50 flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 cursor-pointer"
               >
-                {(isAbandoning || isSubmitting) && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-                {activeModal === 'abandon' ? (isAbandoning ? 'Abandoning...' : 'Yes, Abandon') : (isSubmitting ? 'Submitting...' : 'Yes, Submit')}
+                {isAbandoning && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                {isAbandoning ? 'Abandoning...' : 'Yes, Abandon'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
-        <div className="max-w-[1400px] mx-auto px-6 h-16 flex items-center justify-between">
+      {/* ── 🚀 Custom Unsaved Changes Modal (Rose Theme) ── */}
+      {showUnsavedModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-100">
+            <div className="p-8">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-5 bg-rose-50 text-rose-600 border border-rose-100 shadow-sm">
+                <AlertTriangle className="w-7 h-7" />
+              </div>
+              <h2 className="text-2xl font-bold text-slate-900 text-center mb-2">Unsaved Changes</h2>
+              <p className="text-slate-500 font-medium text-center text-sm leading-relaxed">
+                You have unsaved edits in your workspace. Are you sure you want to leave without saving? Your progress will be lost.
+              </p>
+            </div>
+            
+            <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex gap-3">
+              <button
+                onClick={() => { setShowUnsavedModal(false); setPendingUrl(null); }}
+                className="flex-1 px-4 py-3 bg-white border border-slate-200 text-slate-700 font-bold rounded-full hover:bg-slate-50 transition-colors shadow-sm text-sm cursor-pointer"
+              >
+                Keep Editing
+              </button>
+              <button
+                onClick={confirmLeave}
+                className="flex-1 px-4 py-3 text-white font-bold rounded-full transition-colors shadow-sm text-sm flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 cursor-pointer"
+              >
+                Leave Anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Workspace Sub-Header ── */}
+      <header className="bg-white/95 backdrop-blur border-b border-slate-200 relative z-10 shadow-sm">
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4 min-w-0">
-            <Link href={`/solver/problem/${problemId}`} className="text-sm font-medium text-gray-500 hover:text-accent flex items-center gap-1.5 transition-colors whitespace-nowrap">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-              Details
-            </Link>
-            <div className="h-4 w-px bg-gray-300" />
-            <h1 className="text-base font-bold text-gray-900 truncate">
+            <button onClick={handleGoBack} className="text-xs font-bold text-slate-400 uppercase tracking-wider hover:text-emerald-600 flex items-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer">
+              <ArrowLeft className="w-4 h-4" /> Go Back
+            </button>
+            <div className="h-4 w-px bg-slate-200 hidden sm:block" />
+            <h1 className="text-sm font-bold text-slate-900 truncate hidden sm:block">
               {problem.title}
             </h1>
           </div>
 
           <div className="flex items-center gap-4 flex-shrink-0">
-            <div className="hidden md:flex items-center gap-2 text-sm font-medium">
-              <span className="text-gray-500">Progress:</span>
-              <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${submittedCount === problem.subtasks.length ? 'bg-green-100 text-green-700' : 'bg-accent/10 text-accent'}`}>
-                {submittedCount} / {workspaceSubtasks.length}
-              </span>
-            </div>
+            {/* 🚀 Changed to solid red theme so the destructive action is obvious */}
             <button
-              onClick={() => setActiveModal('abandon')}
-              disabled={isAbandoning || isSubmitting}
-              className="px-4 py-2 text-sm font-semibold text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+              onClick={() => setShowAbandonModal(true)}
+              disabled={isAbandoning}
+              className="px-4 py-2 text-sm font-bold text-rose-600 bg-rose-50 border border-rose-100 hover:bg-rose-100 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
             >
-              Abandon
-            </button>
-            <button
-              onClick={() => setActiveModal('submit')}
-              disabled={isSubmitting || isAbandoning || submittedCount === 0}
-              className="px-5 py-2.5 text-sm font-semibold bg-secondary hover:bg-accent text-white rounded-xl transition-all shadow-sm disabled:opacity-50 flex items-center gap-2"
-            >
-              Submit Project
+              Abandon Project
             </button>
           </div>
         </div>
       </header>
 
-      <main className="flex-1 max-w-[1400px] mx-auto w-full px-6 py-8 flex flex-col lg:flex-row gap-8">
+      {/* ── Main Layout ── */}
+      <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 py-8 flex flex-col gap-6">
         
-        <aside className="lg:w-80 flex-shrink-0">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden sticky top-24">
-            <div className="p-5 border-b border-gray-100 bg-gray-50/50">
-              <h2 className="font-bold text-gray-900">Task Modules</h2>
-              <p className="text-xs text-gray-500 mt-1">Complete at least one to finish.</p>
+        {/* Overview Card with Seeker Profile & Problem Link */}
+        <div className="bg-white rounded-[2rem] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-slate-100 p-6 md:p-8 flex flex-col md:flex-row gap-8">
+          
+          {/* Left Side: Subtask Info */}
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wider rounded-md border border-emerald-100">
+                {activeSubtask.departmentFocus}
+              </span>
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Subtask Module</span>
             </div>
-            <div className="divide-y divide-gray-50 p-2">
-              {workspaceSubtasks.map((subtask, index) => {
-                const submission = attempt.submissions.find((s) => s.subtaskId === subtask.id);
-                const isActive = subtask.id === activeSubtaskId;
-                const isSubmitted = submission?.status === "SUBMITTED";
-                const isDraft = submission?.status === "DRAFT";
-
-                return (
-                  <button
-                    key={subtask.id}
-                    onClick={() => setActiveSubtaskId(subtask.id)}
-                    className={`w-full text-left p-3 rounded-xl transition-all duration-200 flex items-start gap-3 my-1 ${
-                      isActive
-                        ? "bg-accent/5 ring-1 ring-accent/20 shadow-sm"
-                        : "hover:bg-gray-50 text-gray-600"
-                    }`}
-                  >
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5 transition-colors ${
-                      isSubmitted ? "bg-green-100 text-green-700 ring-1 ring-green-200" :
-                      isDraft ? "bg-amber-100 text-amber-700 ring-1 ring-amber-200" :
-                      isActive ? "bg-accent text-white shadow-md" : "bg-gray-100 text-gray-500"
-                    }`}>
-                      {isSubmitted ? <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg> : index + 1}
-                    </div>
-                    <div className="flex-1 min-w-0 pt-1">
-                      <p className={`text-sm font-semibold truncate ${isActive ? 'text-accent' : 'text-gray-900'}`}>
-                        {subtask.title}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wider truncate">
-                          {subtask.departmentFocus}
-                        </p>
-                        {isDraft && !isSubmitted && <span className="w-1.5 h-1.5 rounded-full bg-amber-400" title="Draft saved" />}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+            <h2 className="text-2xl font-bold text-slate-900 mb-3">{activeSubtask.title}</h2>
+            <p className="text-slate-600 font-medium leading-relaxed">{activeSubtask.description}</p>
           </div>
-        </aside>
 
-        <section className="flex-1 min-w-0">
-          {activeSubtask ? (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
-                <div className="flex items-center gap-3 mb-4">
-                  <span className="px-3 py-1 bg-gray-100 text-gray-700 text-xs font-bold uppercase tracking-wider rounded-md">
-                    Module {workspaceSubtasks.findIndex((s) => s.id === activeSubtask.id) + 1}
-                  </span>
-                  <span className="px-3 py-1 bg-secondary/10 text-secondary text-xs font-bold uppercase tracking-wider rounded-md">
-                    {activeSubtask.departmentFocus}
-                  </span>
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-3">{activeSubtask.title}</h2>
-                <p className="text-gray-600 leading-relaxed">{activeSubtask.description}</p>
+          {/* Right Side: Seeker Context & Navigation */}
+          <div className="w-full md:w-80 bg-slate-50/50 rounded-2xl p-6 border border-slate-100 h-fit flex flex-col gap-6 shrink-0">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-white border border-slate-200 shadow-sm overflow-hidden flex items-center justify-center shrink-0">
+                {seekerProfileUrl ? (
+                  <img src={seekerProfileUrl} alt={seekerName} className="w-full h-full object-cover" />
+                ) : (
+                  <Building2 className="w-6 h-6 text-slate-400" />
+                )}
               </div>
-              
-              <SubtaskForm
-                attemptId={attempt.id}
-                subtask={activeSubtask}
-                existingDescription={existingSubmission?.description ?? ""}
-                existingDelta={existingSubmission?.deltaDescription ?? ""}
-                existingFiles={existingSubmission?.fileUrls ?? []}
-                submissionId={existingSubmission?.id}
-                isSubmitted={existingSubmission?.status === "SUBMITTED"}
-                isForked={isForked}
-                parentDescription={attempt.parentDescription ?? undefined}
-                parentFiles={attempt.parentFileUrls ?? []}
-                onSuccess={() => fetchWorkspace(false)} 
-              />
-            </div>
-          ) : (
-            <div className="h-full flex items-center justify-center bg-white rounded-2xl border border-dashed border-gray-300 p-12">
-              <div className="text-center">
-                <svg className="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                <p className="text-gray-500 font-medium">Select a module from the left to begin working.</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Requested By</p>
+                <p className="text-sm font-bold text-slate-900 truncate" title={seekerName}>
+                  {seekerName}
+                </p>
               </div>
             </div>
-          )}
-        </section>
+
+            <Link
+              href={`/solver/problem/${problemId}`}
+              target="_blank"
+              className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-colors shadow-sm text-xs cursor-pointer active:scale-[0.98]"
+            >
+              View Full Details <ExternalLink className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+        </div>
+
+        {/* Editor Form */}
+        <SubtaskForm
+          attemptId={attempt.id}
+          subtask={activeSubtask}
+          existingDescription={existingSubmission?.description ?? ""}
+          existingDelta={existingSubmission?.deltaDescription ?? ""}
+          isSubmitted={existingSubmission?.status === "SUBMITTED"}
+          isForked={isForked}
+          parentDescription={attempt.parentDescription ?? undefined}
+          onDirtyStateChange={setHasUnsavedChanges} 
+        />
+
       </main>
     </div>
   );

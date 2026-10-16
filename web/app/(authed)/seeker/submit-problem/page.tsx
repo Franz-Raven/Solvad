@@ -3,13 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { generateScope, createProblem  } from "./api/submit";
-import type { ProblemPayload, SubProblem, EnhancedProblem, AttachmentRequirement } from "@/types/problem";
+import { generateScope, createProblem } from "./api/submit";
+import type { ProblemPayload, SubProblem, EnhancedProblem } from "@/types/problem";
 import ProblemFormFields from "./components/ProblemFormFields";
 import FileAttachmentUploader from "./components/FileAttachmentUploader";
 import EnhancedProblemPreview from "./components/EnhancedProblemPreview";
 import SubproblemsList from "./components/SubproblemsList";
-import SubmissionRequirements from "./components/SubmissionRequirements";
 
 type ViewState = "FORM_VIEW" | "LOADING_VIEW" | "PREVIEW_VIEW" | "SUCCESS_VIEW";
 
@@ -29,6 +28,7 @@ export default function SubmitProblemPage() {
     preferredProgram: "",
   });
 
+  // Seeker's own reference attachments are kept intact here
   const [attachments, setAttachments] = useState<File[]>([]);
   const [validationErrors, setValidationErrors] = useState<{
     title?: boolean;
@@ -40,7 +40,6 @@ export default function SubmitProblemPage() {
 
   const [enhancedProblem, setEnhancedProblem] = useState<EnhancedProblem | null>(null);
   const [subProblems, setSubProblems] = useState<SubProblem[]>([]);
-  const [globalRequirements, setGlobalRequirements] = useState<AttachmentRequirement[]>([]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -143,14 +142,6 @@ export default function SubmitProblemPage() {
     setAttachments(attachments.filter((_, i) => i !== index));
   };
 
-  const handleSubProblemAttachmentsUpdate = (id: string, attachments: AttachmentRequirement[]) => {
-    setSubProblems(
-      subProblems.map((sp) =>
-        sp.id === id ? { ...sp, attachments } : sp
-      )
-    );
-  };
-
   const handleConfirmAndPublish = async () => {
     if (!enhancedProblem) return;
     
@@ -166,23 +157,13 @@ export default function SubmitProblemPage() {
         constraints: JSON.stringify(enhancedProblem.constraints),
         preferredProgram: formData.preferredProgram,
         sdgFocus: enhancedProblem.sdgFocus,
-        subtasks: subProblems.map((sp) => {
-          const combinedAttachments = [
-            ...globalRequirements,
-            ...(sp.attachments || [])
-          ].map(req => ({
-            attachmentTitle: req.attachmentTitle,
-            attachmentType: req.attachmentType
-          }));
-
-          return {
-            title: sp.title,
-            departmentFocus: sp.departmentFocus,
-            sdgFocus: sp.sdgFocus,
-            description: sp.description,
-            attachments: combinedAttachments,
-          };
-        }),
+        subtasks: subProblems.map((sp) => ({
+          title: sp.title,
+          departmentFocus: sp.departmentFocus,
+          sdgFocus: sp.sdgFocus,
+          description: sp.description,
+          attachments: [], // Send empty array since solvers no longer upload files
+        })),
       });
 
       setProblemId(response.id);
@@ -228,26 +209,12 @@ export default function SubmitProblemPage() {
           <>
             <div className="text-center mb-8">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-secondary text-white mb-4 shadow-lg shadow-secondary/20">
-                <svg
-                  className="w-8 h-8"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
-              <h1 className="text-3xl font-bold text-foreground mb-2">
-                Submit an Industry Problem
-              </h1>
-              <p className="text-muted-foreground">
-                Describe your challenge and let AI help structure it into student-ready tasks
-              </p>
+              <h1 className="text-3xl font-bold text-foreground mb-2">Submit an Industry Problem</h1>
+              <p className="text-muted-foreground">Describe your challenge and let AI help structure it into student-ready tasks</p>
             </div>
 
             <div className="bg-card rounded-2xl shadow-xl border border-border p-8">
@@ -265,6 +232,7 @@ export default function SubmitProblemPage() {
                   onProgramChange={handlePreferredProgramChange}
                 />
 
+                {/* Seeker Proposal Reference Files */}
                 <FileAttachmentUploader
                   attachments={attachments}
                   onFileChange={handleFileChange}
@@ -272,16 +240,10 @@ export default function SubmitProblemPage() {
                 />
 
                 <div className="flex gap-4 pt-4">
-                  <Link
-                    href="/dashboard"
-                    className="flex-1 px-6 py-3 border border-border text-foreground font-semibold rounded-lg hover:bg-accent/10 transition-all text-center"
-                  >
+                  <Link href="/dashboard" className="flex-1 px-6 py-3 border border-border text-foreground font-semibold rounded-lg hover:bg-accent/10 transition-all text-center">
                     Cancel
                   </Link>
-                  <button
-                    type="submit"
-                    className="flex-1 px-6 py-3 bg-secondary hover:bg-accent text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg"
-                  >
+                  <button type="submit" className="flex-1 px-6 py-3 bg-secondary hover:bg-accent text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg">
                     Analyze & Generate Scope
                   </button>
                 </div>
@@ -293,24 +255,16 @@ export default function SubmitProblemPage() {
         {currentView === "LOADING_VIEW" && (
           <div className="flex flex-col items-center justify-center min-h-[60vh]">
             <div className="w-16 h-16 border-4 border-secondary border-t-transparent rounded-full animate-spin mb-6"></div>
-            <h2 className="text-2xl font-bold text-foreground mb-2">
-              Analyzing Your Problem...
-            </h2>
-            <p className="text-muted-foreground text-center max-w-md">
-              Gemini AI is breaking down your problem into departmental sub-tasks and generating a structured scope
-            </p>
+            <h2 className="text-2xl font-bold text-foreground mb-2">Analyzing Your Problem...</h2>
+            <p className="text-muted-foreground text-center max-w-md">Gemini AI is breaking down your problem into departmental sub-tasks and generating a structured scope</p>
           </div>
         )}
 
         {currentView === "PREVIEW_VIEW" && enhancedProblem && (
           <>
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-foreground mb-2">
-                Review Problem Proposal
-              </h1>
-              <p className="text-muted-foreground">
-                Review your finalized proposal and generated sub-tasks before publishing
-              </p>
+              <h1 className="text-3xl font-bold text-foreground mb-2">Review Problem Proposal</h1>
+              <p className="text-muted-foreground">Review your finalized proposal and generated sub-tasks before publishing</p>
             </div>
 
             <div className="bg-card rounded-2xl shadow-xl border border-border p-8">
@@ -335,24 +289,13 @@ export default function SubmitProblemPage() {
                 onAddSubProblem={handleAddSubProblem}
               />
 
-              <SubmissionRequirements
-                subProblems={subProblems}
-                globalRequirements={globalRequirements}
-                setGlobalRequirements={setGlobalRequirements}
-                onSubProblemUpdate={handleSubProblemAttachmentsUpdate}
-              />
+              {/* REMOVED: SubmissionRequirements Component */}
 
               <div className="flex gap-4 pt-4 mt-6">
-                <button
-                  onClick={() => setCurrentView("FORM_VIEW")}
-                  className="flex-1 px-6 py-3 border border-border text-foreground font-semibold rounded-lg hover:bg-accent/10 transition-all"
-                >
+                <button onClick={() => setCurrentView("FORM_VIEW")} className="flex-1 px-6 py-3 border border-border text-foreground font-semibold rounded-lg hover:bg-accent/10 transition-all">
                   Back
                 </button>
-                <button
-                  onClick={handleConfirmAndPublish}
-                  className="flex-1 px-6 py-3 bg-secondary hover:bg-accent text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg"
-                >
+                <button onClick={handleConfirmAndPublish} className="flex-1 px-6 py-3 bg-secondary hover:bg-accent text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg">
                   Confirm & Publish
                 </button>
               </div>
@@ -363,39 +306,19 @@ export default function SubmitProblemPage() {
         {currentView === "SUCCESS_VIEW" && (
           <div className="flex flex-col items-center justify-center min-h-[60vh]">
             <div className="w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center mb-6">
-              <svg
-                className="w-12 h-12 text-green-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
+              <svg className="w-12 h-12 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
 
-            <h1 className="text-3xl font-bold text-foreground mb-2">
-              Problem Published Successfully!
-            </h1>
-            <p className="text-muted-foreground text-center max-w-md mb-8">
-              Your problem has been published and is now available for students to work on
-            </p>
+            <h1 className="text-3xl font-bold text-foreground mb-2">Problem Published Successfully!</h1>
+            <p className="text-muted-foreground text-center max-w-md mb-8">Your problem has been published and is now available for students to work on</p>
 
             <div className="flex gap-4">
-              <Link
-                href="/dashboard"
-                className="px-6 py-3 border border-border text-foreground font-semibold rounded-lg hover:bg-accent/10 transition-all"
-              >
+              <Link href="/dashboard" className="flex-1 px-6 py-3 border border-border text-foreground font-semibold rounded-lg hover:bg-accent/10 transition-all text-center">
                 Return to Dashboard
               </Link>
-              <button
-                onClick={handleDownloadPDF}
-                className="px-6 py-3 bg-secondary hover:bg-accent text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg"
-              >
+              <button onClick={handleDownloadPDF} className="flex-1 px-6 py-3 bg-secondary hover:bg-accent text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg">
                 Download Specification (PDF)
               </button>
             </div>

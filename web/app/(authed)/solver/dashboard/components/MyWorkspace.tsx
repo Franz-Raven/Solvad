@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { 
-  Rocket, CheckCircle2, Hourglass, Inbox, Calendar, GitBranch, ChevronRight, FileText 
+  Inbox, Calendar, ChevronRight, Building2 
 } from "lucide-react";
 import { getWorkspaceAttempts, getPendingClaims } from "../api/dashboard";
 import type { PaginatedAttemptsResponse, PaginatedClaimsResponse } from "@/types/attempt";
@@ -64,32 +64,64 @@ export function MyWorkspace() {
 
   const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
-  // 🚀 NORMALIZE DATA: Smoothly bridges Attempts and Claims into a single renderable format
+  // 🚀 DYNAMIC STATUS COLORS
+  const getStatusStyles = (status: string) => {
+    switch (status.toUpperCase()) {
+      case "ABANDONED":
+      case "REJECTED":
+        return "bg-rose-50 text-rose-700 border-rose-200";
+      case "COMPLETED":
+      case "APPROVED":
+        return "bg-emerald-50 text-emerald-700 border-emerald-200";
+      case "PENDING":
+      case "PENDING_REVIEW":
+        return "bg-amber-50 text-amber-700 border-amber-200";
+      case "ACTIVE":
+        return "bg-blue-50 text-blue-700 border-blue-200";
+      default:
+        return "bg-slate-50 text-slate-700 border-slate-200";
+    }
+  };
+
+  // 🚀 ROBUST SEEKER EXTRACTION
+  const extractSeekerInfo = (item: any) => ({
+    name: item.seekerName || item.seeker?.organizationName || "Industry Partner",
+    url: item.seekerProfileUrl || item.seeker?.profileUrl || item.seeker?.user?.profileUrl || null,
+  });
+
   const normalizedItems = activeTab === "PENDING" 
-    ? (paginatedClaims?.claims || []).map(c => ({
-        id: c.id,
-        title: c.problemTitle,
-        status: c.status,
-        subtask: c.targetSubtaskTitle,
-        date: c.submittedAt,
-        dateLabel: "Applied",
-        href: `/solver/proposal/${c.id}`,
-        icon: <Hourglass className="w-5 h-5 text-amber-500" />,
-        badgeClass: "bg-amber-50 text-amber-700 border-amber-200",
-        btnText: "View Proposal"
-      }))
-    : (paginatedAttempts?.attempts || []).map(a => ({
-        id: a.id,
-        title: a.problemTitle,
-        status: a.status,
-        subtask: a.targetSubtaskTitle,
-        date: activeTab === "HISTORY" ? (a.completedAt || a.updatedAt) : a.claimedAt,
-        dateLabel: activeTab === "HISTORY" ? "Concluded" : "Started",
-        href: activeTab === "HISTORY" ? `/solver/history/${a.id}` : `/solver/workspace/${a.problemId}`,
-        icon: activeTab === "HISTORY" ? <CheckCircle2 className="w-5 h-5 text-emerald-600" /> : <Rocket className="w-5 h-5 text-accent" />,
-        badgeClass: activeTab === "HISTORY" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-accent/10 text-accent border-accent/20",
-        btnText: activeTab === "HISTORY" ? "View Record" : "Enter Workspace"
-      }));
+    ? (paginatedClaims?.claims || []).map(c => {
+        const seeker = extractSeekerInfo(c);
+        return {
+          id: c.id,
+          title: c.problemTitle,
+          status: c.status,
+          subtask: c.targetSubtaskTitle,
+          date: c.submittedAt,
+          dateLabel: "Applied",
+          href: `/solver/proposal/${c.id}`,
+          badgeClass: getStatusStyles(c.status),
+          btnText: "View Proposal",
+          seekerName: seeker.name,
+          seekerProfileUrl: seeker.url
+        };
+      })
+    : (paginatedAttempts?.attempts || []).map(a => {
+        const seeker = extractSeekerInfo(a);
+        return {
+          id: a.id,
+          title: a.problemTitle,
+          status: a.status,
+          subtask: a.targetSubtaskTitle,
+          date: activeTab === "HISTORY" ? (a.completedAt || a.updatedAt) : a.claimedAt,
+          dateLabel: activeTab === "HISTORY" ? "Concluded" : "Started",
+          href: activeTab === "HISTORY" ? `/solver/history/${a.id}` : `/solver/workspace/${a.problemId}`,
+          badgeClass: getStatusStyles(a.status),
+          btnText: activeTab === "HISTORY" ? "View Record" : "Enter Workspace",
+          seekerName: seeker.name,
+          seekerProfileUrl: seeker.url
+        };
+      });
 
   const totalElements = activeTab === "PENDING" ? (paginatedClaims?.totalElements || 0) : (paginatedAttempts?.totalElements || 0);
   const totalPages = activeTab === "PENDING" ? (paginatedClaims?.totalPages || 0) : (paginatedAttempts?.totalPages || 0);
@@ -98,21 +130,21 @@ export function MyWorkspace() {
 
   return (
     <div className="max-w-7xl mx-auto w-full animate-in fade-in duration-300">
-      <div className="bg-white rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.04)] border border-slate-100 p-6 md:p-8 w-full">
+      <div className="bg-white rounded-[2rem] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-slate-100 p-6 md:p-8 w-full">
         <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2">My Workspace</h1>
         <p className="text-sm text-slate-500 mb-6 font-medium">Manage your active solutions, pending applications, and past work.</p>
 
-        {error && <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm font-medium">{error}</div>}
+        {error && <div className="mb-6 bg-rose-50 border border-rose-200 rounded-lg p-4 text-rose-700 text-sm font-medium">{error}</div>}
 
         <div className="flex space-x-1 bg-slate-50 p-1 rounded-xl mb-6 w-fit overflow-x-auto border border-slate-100">
           {(["ACTIVE", "PENDING", "HISTORY"] as WorkspaceTab[]).map((tab) => (
             <button
               key={tab}
               onClick={() => handleTabChange(tab)}
-              className={`px-5 md:px-6 py-2.5 rounded-lg text-sm font-bold transition-all capitalize whitespace-nowrap cursor-pointer active:scale-[0.98] ${
+              className={`px-5 md:px-6 py-2.5 rounded-lg text-sm font-bold transition-all capitalize whitespace-nowrap cursor-pointer active:scale-[0.98] outline-none ${
                 activeTab === tab 
-                  ? "bg-white text-accent shadow-sm border border-slate-200" 
-                  : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
+                  ? "bg-white text-emerald-700 shadow-sm border border-slate-200" 
+                  : "text-slate-500 hover:text-slate-900 hover:bg-slate-100 border border-transparent"
               }`}
             >
               {tab.toLowerCase()}
@@ -147,21 +179,33 @@ export function MyWorkspace() {
                 <Link 
                   href={item.href}
                   key={item.id} 
-                  className="group flex flex-col md:flex-row items-start md:items-center gap-5 p-5 bg-white rounded-xl border border-slate-200 hover:border-accent/40 hover:shadow-md transition-all cursor-pointer block"
+                  className="group flex flex-col md:flex-row items-start md:items-center gap-5 p-5 bg-white rounded-xl border border-slate-200 hover:border-emerald-500/40 hover:shadow-md transition-all cursor-pointer block"
                 >
-                  <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center shrink-0 shadow-sm group-hover:bg-accent/5 group-hover:border-accent/20 transition-colors">
-                    {item.icon}
+                  <div className="w-12 h-12 bg-white border border-slate-200 rounded-xl flex items-center justify-center shrink-0 shadow-sm overflow-hidden group-hover:border-emerald-500/40 transition-colors">
+                    {item.seekerProfileUrl ? (
+                      <img 
+                        src={item.seekerProfileUrl} 
+                        alt={item.seekerName} 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Building2 className="w-6 h-6 text-slate-400" />
+                    )}
                   </div>
                   
                   <div className="flex-1 min-w-0 w-full">
-                    <div className="flex flex-wrap items-center gap-3 mb-2">
-                      <h4 className="font-bold text-slate-900 text-base group-hover:text-accent transition-colors truncate">
+                    <div className="flex flex-wrap items-center gap-3 mb-1">
+                      <h4 className="font-bold text-slate-900 text-base group-hover:text-emerald-700 transition-colors truncate">
                         {item.title || "Untitled Problem"}
                       </h4>
-                      <span className={`text-[11px] px-2.5 py-0.5 rounded-md font-bold border shrink-0 uppercase tracking-wide ${item.badgeClass}`}>
+                      <span className={`text-[10px] px-2.5 py-0.5 rounded-md font-bold border shrink-0 uppercase tracking-wider ${item.badgeClass}`}>
                         {item.status.replace("_", " ")}
                       </span>
                     </div>
+                    
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 truncate">
+                      {item.seekerName}
+                    </p>
                     
                     <p className="text-sm text-slate-600 mb-2 font-medium truncate">
                       {item.subtask ? `Subtask: ${item.subtask}` : "Full Problem"}
@@ -176,7 +220,7 @@ export function MyWorkspace() {
                   </div>
                   
                   <div className="w-full md:w-auto shrink-0 flex justify-end mt-4 md:mt-0">
-                    <span className="w-full md:w-auto px-5 py-2.5 bg-white border border-slate-300 group-hover:border-accent group-hover:bg-slate-50 group-hover:text-accent text-slate-700 text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm">
+                    <span className="w-full md:w-auto px-5 py-2.5 bg-white border border-slate-300 group-hover:border-emerald-600 group-hover:bg-emerald-50 group-hover:text-emerald-700 text-slate-700 text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm">
                       {item.btnText}
                       <ChevronRight className="w-4 h-4" />
                     </span>
@@ -185,7 +229,6 @@ export function MyWorkspace() {
               ))}
             </div>
 
-            {/* Pagination Controls ... (keep exact same as before, just swap paginatedData.totalPages for totalPages variable) */}
              {totalPages > 1 && (
               <div className="mt-8 pt-6 border-t border-slate-100">
                 <Pagination>
