@@ -3,21 +3,20 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import {
   Lock,
-  Paperclip,
   Calendar,
-  CheckCircle2,
-  GitFork,
   GitBranch,
   Network,
   ChevronDown,
   X,
   Loader2,
+  Columns,
+  FileText,
+  XCircle,
+  GitFork
 } from "lucide-react";
 import Portal from "@/components/portal";
-import { getProblemTree } from "../api/problem";
-import { getFullAttemptDetails } from "../api/problem";
-import type {  TreeAttemptNode, SolutionAttemptSummary } from "@/types/attempt";
-import type { SolutionAttemptResponse } from "@/types/attempt";
+import { getProblemTree, getFullAttemptDetails } from "../api/problem";
+import type { TreeAttemptNode, SolutionAttemptSummary } from "@/types/attempt";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -74,14 +73,6 @@ const renderWithLinks = (text?: string | null) => {
     }
     return part;
   });
-};
-
-const getFilenameFromUrl = (url: string) => {
-  try {
-    return decodeURIComponent(url).split("/").pop() || "Attachment";
-  } catch {
-    return "Attachment";
-  }
 };
 
 const sanitizeUrl = (url: string) => {
@@ -191,25 +182,6 @@ function RepoLink({ url, label, muted }: { url: string; label: string; muted?: b
   );
 }
 
-function FileLinks({ urls, label, muted }: { urls: string[]; label: string; muted?: boolean }) {
-  return (
-    <div className="mt-6 pt-5 border-t border-slate-100 flex flex-wrap gap-2">
-      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider w-full mb-1">{label}</p>
-      {urls.map((url, idx) => {
-        const isGithub = url.toLowerCase().includes("github.com");
-        const base = "inline-flex items-center gap-2 text-sm font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm min-w-0";
-        const tone = isGithub ? "bg-slate-900 text-white hover:bg-slate-800" : muted ? "bg-white border border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900" : "bg-accent/5 border border-accent/20 text-accent hover:bg-accent hover:text-white";
-        return (
-          <a key={idx} href={sanitizeUrl(url)} target="_blank" rel="noopener noreferrer" className={`${base} ${tone}`}>
-            {isGithub ? <GithubIcon className="w-4 h-4 flex-shrink-0" /> : <Paperclip className="w-4 h-4 flex-shrink-0" />}
-            <span className="truncate">{isGithub ? "GitHub Repository" : getFilenameFromUrl(url)}</span>
-          </a>
-        );
-      })}
-    </div>
-  );
-}
-
 function AttemptDetailModal({
   node,
   onClose,
@@ -219,22 +191,19 @@ function AttemptDetailModal({
 }) {
   const attemptDate = new Date(node.claimedAt);
   const [activeSubIdx, setActiveSubIdx] = useState(0);
-  const [viewPanel, setViewPanel] = useState<"current" | "previous">("current");
+  const [viewPanel, setViewPanel] = useState<"current" | "previous" | "compare">("current");
 
   const subs = node.submissions || [];
   const activeSub = subs[activeSubIdx] ?? null;
 
-  // 🚀 FIX: Pulling parent data natively instead of searching array
   const predecessorSub = activeSub && node.parentAttemptId ? {
-    description: node.parentDescription || "No description provided.",
-    fileUrls: node.parentFileUrls || []
+    description: node.parentDescription || "No description provided."
   } : null;
 
   const isConfidential = activeSub?.status === "DRAFT" || activeSub?.description?.includes("Confidential Workspace");
 
   const educationInfo = [node.degreeProgram, node.institution].filter(Boolean).join(" · ");
   const initials = `${node.solverFirstName?.[0] || ""}${node.solverLastName?.[0] || ""}`.toUpperCase() || "S";
-  const submittedCount = subs.filter((s) => s.status === "SUBMITTED").length;
   const parentName = node.parentSolverName || "Original";
 
   const currentGithub = extractRepoUrl(activeSub) || extractRepoUrl(node);
@@ -262,19 +231,22 @@ function AttemptDetailModal({
   return (
     <Portal>
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
-          <div className="flex items-start justify-between p-5 md:p-6 border-b border-slate-100 flex-shrink-0 bg-white z-10">
+        
+        {/* 🚀 DYNAMIC WIDTH: Changes to max-w-7xl smoothly when in compare mode */}
+        <div className={`bg-white rounded-2xl shadow-2xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 animate-in zoom-in-95 transition-all duration-300 ease-out ${viewPanel === "compare" ? "max-w-7xl" : "max-w-3xl"}`}>
+          
+          <div className="flex items-start justify-between p-5 md:p-6 border-b border-slate-100 flex-shrink-0 bg-white z-10 transition-all duration-300">
             <div className="flex items-start gap-4 flex-1 min-w-0 pr-4">
               {node.profilePictureUrl ? (
-                <img src={node.profilePictureUrl} alt="" className="w-12 h-12 rounded-2xl object-cover ring-1 ring-slate-200 shrink-0" />
+                <img src={node.profilePictureUrl} alt="" className="w-12 h-12 rounded-2xl object-cover ring-1 ring-slate-200 shrink-0 transition-all" />
               ) : (
-                <div className="w-12 h-12 rounded-2xl bg-accent/10 text-accent border border-accent/20 font-bold text-sm flex items-center justify-center shrink-0 shadow-sm">
+                <div className="w-12 h-12 rounded-2xl bg-accent/10 text-accent border border-accent/20 font-bold text-sm flex items-center justify-center shrink-0 shadow-sm transition-all">
                   {initials}
                 </div>
               )}
 
               <div className="min-w-0">
-                <div className="flex items-center gap-3 flex-wrap mb-1">
+                <div className="flex items-center gap-3 flex-wrap mb-1 transition-all">
                   <h2 className="text-xl font-bold text-slate-900 tracking-tight">
                     {node.solverFirstName} {node.solverLastName}
                   </h2>
@@ -282,17 +254,14 @@ function AttemptDetailModal({
                     {node.status.replace(/_/g, " ")}
                   </span>
                 </div>
-                {educationInfo && <p className="text-xs text-slate-500 font-medium">{educationInfo}</p>}
+                {educationInfo && <p className="text-xs text-slate-500 font-medium transition-all">{educationInfo}</p>}
 
-                <div className="flex items-center gap-3 mt-3 flex-wrap">
+                <div className="flex items-center gap-3 mt-3 flex-wrap transition-all">
                   {node.parentAttemptId && (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 text-slate-600 text-[10px] font-bold uppercase tracking-wider rounded-md">
                       <GitBranch className="w-3 h-3 text-slate-400" /> Forked: {parentName}
                     </span>
                   )}
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold uppercase tracking-wider rounded-md">
-                    <CheckCircle2 className="w-3 h-3" /> {submittedCount} of {subs.length} completed
-                  </span>
                   <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
                     {attemptDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                   </span>
@@ -308,7 +277,7 @@ function AttemptDetailModal({
           {subs.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center p-12 bg-slate-50/50">
               <div className="w-16 h-16 bg-white rounded-full border border-slate-100 shadow-sm flex items-center justify-center mb-4">
-                <Paperclip className="w-8 h-8 text-slate-300" />
+                <FileText className="w-8 h-8 text-slate-300" />
               </div>
               <p className="text-slate-500 text-sm font-medium">No subtask submissions found.</p>
             </div>
@@ -343,7 +312,7 @@ function AttemptDetailModal({
                           <Lock className="w-8 h-8 text-slate-400" />
                         </div>
                         <h4 className="font-bold text-slate-900 text-lg mb-1">Workspace in Draft Mode</h4>
-                        <p className="text-sm text-slate-500 font-medium max-w-sm leading-relaxed">The solver is still drafting. The narrative and attachments become visible once they finalize and lock this module.</p>
+                        <p className="text-sm text-slate-500 font-medium max-w-sm leading-relaxed">The solver is still drafting. The narrative becomes visible once they finalize and lock this module.</p>
                         <span className="mt-5 inline-flex items-center gap-2 px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-md text-[10px] font-bold uppercase tracking-wider">
                           <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" /> Protected by privacy policy
                         </span>
@@ -351,7 +320,7 @@ function AttemptDetailModal({
                     ) : (
                       <>
                         {activeSub.deltaDescription && (
-                          <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-5 shadow-sm">
+                          <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-5 shadow-sm w-full">
                             <p className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider mb-2">What changed from the parent solution</p>
                             <p className="text-sm text-slate-700 italic font-medium leading-relaxed break-words">
                               “{renderWithLinks(activeSub.deltaDescription)}”
@@ -359,29 +328,63 @@ function AttemptDetailModal({
                           </div>
                         )}
 
-                        {predecessorSub && (
-                          <div className="flex items-center gap-1 p-1 bg-slate-200/50 rounded-xl w-fit border border-slate-200 max-w-full">
-                            {(["current", "previous"] as const).map((panel) => (
-                              <button key={panel} onClick={() => setViewPanel(panel)} className={`px-5 py-2 text-[13px] font-bold rounded-lg transition-all truncate cursor-pointer ${viewPanel === panel ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"}`}>
-                                {panel === "current" ? "Current Solution" : `Previous (${parentName})`}
+                        {predecessorSub ? (
+                          <>
+                            <div className="flex items-center gap-1 p-1 bg-slate-200/50 rounded-xl w-fit border border-slate-200 max-w-full overflow-x-auto no-scrollbar">
+                              <button onClick={() => setViewPanel("current")} className={`px-5 py-2 text-[13px] font-bold rounded-lg transition-all truncate cursor-pointer ${viewPanel === "current" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"}`}>
+                                Current Solution
                               </button>
-                            ))}
-                          </div>
-                        )}
+                              <button onClick={() => setViewPanel("previous")} className={`px-5 py-2 text-[13px] font-bold rounded-lg transition-all truncate cursor-pointer ${viewPanel === "previous" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"}`}>
+                                Previous ({parentName})
+                              </button>
+                              <div className="w-px h-6 bg-slate-300 mx-1"></div>
+                              <button onClick={() => setViewPanel("compare")} className={`px-5 py-2 text-[13px] font-bold rounded-lg transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${viewPanel === "compare" ? "bg-blue-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"}`}>
+                                <Columns className="w-4 h-4" /> Compare Side-by-Side
+                              </button>
+                            </div>
 
-                        {viewPanel === "previous" && predecessorSub ? (
-                          <div className="bg-slate-100 border border-slate-200 rounded-2xl p-6 animate-in fade-in duration-300">
-                            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3">{parentName}'s Original Narrative</p>
-                            <p className="text-sm text-slate-600 whitespace-pre-wrap break-words font-medium leading-relaxed">{renderWithLinks(predecessorSub.description)}</p>
-                            {prevGithub && <RepoLink url={prevGithub} label="Original Repository" muted />}
-                            {predecessorSub.fileUrls && predecessorSub.fileUrls.length > 0 && <FileLinks urls={predecessorSub.fileUrls} label="Original Attachments" muted />}
-                          </div>
+                            {/* 🚀 DYNAMIC CONTENT RENDERING WITH FIXED PADDING/SCROLL ISSUE */}
+                            <div className={`transition-all duration-300 items-start ${viewPanel === "compare" ? "grid grid-cols-1 md:grid-cols-2 gap-6" : ""}`}>
+                              
+                              {(viewPanel === "previous" || viewPanel === "compare") && (
+                                <div className={`flex flex-col bg-slate-100 border border-slate-200 rounded-2xl overflow-hidden animate-in fade-in duration-300 ${viewPanel === "compare" ? "opacity-90" : ""}`}>
+                                  <div className="p-5 md:p-6 pb-4 border-b border-slate-200/60 bg-slate-100 shrink-0">
+                                    <div className="flex items-center gap-2">
+                                      {viewPanel === "compare" && <span className="px-2 py-0.5 bg-slate-200 text-slate-600 text-[10px] font-bold rounded uppercase shadow-sm">Before</span>}
+                                      <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{parentName}'s Original Narrative</p>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className={`p-5 md:p-6 pt-4 ${viewPanel === "compare" ? "max-h-[60vh] overflow-y-auto overscroll-contain" : ""}`}>
+                                    <p className="text-sm text-slate-600 whitespace-pre-wrap break-words font-medium leading-relaxed">{renderWithLinks(predecessorSub.description)}</p>
+                                    {prevGithub && <RepoLink url={prevGithub} label="Original Repository" muted />}
+                                  </div>
+                                </div>
+                              )}
+
+                              {(viewPanel === "current" || viewPanel === "compare") && (
+                                <div className="flex flex-col bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden animate-in fade-in duration-300">
+                                  <div className="p-5 md:p-6 pb-4 border-b border-slate-100 bg-white shrink-0">
+                                    <div className="flex items-center gap-2">
+                                      {viewPanel === "compare" && <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold rounded uppercase shadow-sm">After</span>}
+                                      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{node.solverFirstName}'s Modified Narrative</p>
+                                    </div>
+                                  </div>
+
+                                  <div className={`p-5 md:p-6 pt-4 ${viewPanel === "compare" ? "max-h-[60vh] overflow-y-auto overscroll-contain" : ""}`}>
+                                    <p className="text-sm text-slate-800 whitespace-pre-wrap break-words font-medium leading-relaxed">{renderWithLinks(activeSub.description)}</p>
+                                    {currentGithub && <RepoLink url={currentGithub} label="Project Repository" />}
+                                  </div>
+                                </div>
+                              )}
+
+                            </div>
+                          </>
                         ) : (
                           <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6 animate-in fade-in duration-300">
-                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">{predecessorSub ? `${node.solverFirstName}'s Modified Narrative` : "Submitted Narrative"}</p>
+                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">Submitted Narrative</p>
                             <p className="text-sm text-slate-800 whitespace-pre-wrap break-words font-medium leading-relaxed">{renderWithLinks(activeSub.description)}</p>
                             {currentGithub && <RepoLink url={currentGithub} label="Project Repository" />}
-                            {activeSub.fileUrls && activeSub.fileUrls.length > 0 && <FileLinks urls={activeSub.fileUrls} label="Attachments" />}
                           </div>
                         )}
                       </>
@@ -445,10 +448,6 @@ function AttemptCard({
         <p className="flex items-center gap-1.5">
           <Calendar className="w-3.5 h-3.5" />
           {new Date(node.claimedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-        </p>
-        <p className="flex items-center gap-1.5" title="Subtasks submitted">
-          <CheckCircle2 className="w-3.5 h-3.5" />
-          {node.submissionCount} Submissions
         </p>
       </div>
 
@@ -750,7 +749,7 @@ export function SolutionTreeTab({ problemId, highlightedAttemptId }: SolutionTre
                 </h2>
                 <p className="text-sm font-medium text-slate-500 mt-2">
                   {highlightedAttemptId ? "Showing the located proposal source. " : "Monitor how solvers are building upon each other's solutions. "}
-                  Click <strong className="text-slate-700">View Solution</strong> to inspect their code and documentation.
+                  Click <strong className="text-slate-700">View Solution</strong> to inspect their documentation.
                 </p>
               </div>
 

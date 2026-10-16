@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, AlertCircle, Info, Loader2 } from "lucide-react";
+import { CheckCircle2, AlertCircle, Info, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { saveSubtaskDraft, submitSubtaskFinal, submitFullAttempt } from "../api/workspace";
 import type { SubtaskResponse } from "@/types/problem";
 import Portal from "@/components/portal";
@@ -42,7 +42,30 @@ export function SubtaskForm({
   const [error, setError] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
+  // 🚀 Added state for the Original Approach toggle
+  const [showFullOriginal, setShowFullOriginal] = useState(false);
+
+  // 🚀 Added refs to calculate dynamic textarea heights
+  const narrativeRef = useRef<HTMLTextAreaElement>(null);
+  const deltaRef = useRef<HTMLTextAreaElement>(null);
+
   const hasUnsavedChanges = description !== lastSavedDesc || deltaDescription !== lastSavedDelta;
+
+  // ─── DYNAMIC TEXTAREA AUTO-RESIZE ───
+  const adjustTextareaHeight = (element: HTMLTextAreaElement | null) => {
+    if (element) {
+      element.style.height = "auto";
+      element.style.height = `${element.scrollHeight}px`;
+    }
+  };
+
+  useEffect(() => {
+    adjustTextareaHeight(narrativeRef.current);
+  }, [description]);
+
+  useEffect(() => {
+    adjustTextareaHeight(deltaRef.current);
+  }, [deltaDescription]);
 
   // ─── NOTIFY PARENT PAGE OF DIRTY STATE ───
   useEffect(() => {
@@ -184,10 +207,8 @@ export function SubtaskForm({
         <div className="px-8 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <h3 className="font-bold text-slate-900 text-lg">Workspace Editor</h3>
           <div className="flex items-center gap-3">
-            {/* Auto-save Indicators */}
             {saveStatus === "SAVING" && <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider animate-pulse">Saving draft...</span>}
             {saveStatus === "SAVED" && lastSavedTime && <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">Draft saved at {lastSavedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
-            {/* 🚀 Changed to text-rose-600 */}
             {hasUnsavedChanges && saveStatus === "IDLE" && <span className="text-[11px] font-bold text-rose-600 uppercase tracking-wider">Unsaved changes</span>}
             {saveStatus === "ERROR" && <span className="text-[11px] font-bold text-rose-600 uppercase tracking-wider">Failed to save</span>}
           </div>
@@ -207,11 +228,12 @@ export function SubtaskForm({
               Solution Narrative <span className="text-rose-500">*</span>
             </label>
             <textarea
-              className="w-full px-5 py-4 bg-slate-50/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all text-sm font-medium text-slate-900 placeholder:text-slate-400 resize-y"
+              ref={narrativeRef}
+              className="w-full px-5 py-4 bg-slate-50/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-colors text-sm font-medium text-slate-900 placeholder:text-slate-400 overflow-hidden resize-none"
               placeholder="Document your findings, code architecture, or research methodology here..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              style={{ minHeight: "350px" }}
+              style={{ minHeight: "400px" }} // 🚀 Increased initial size
             />
           </div>
 
@@ -221,20 +243,39 @@ export function SubtaskForm({
               <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">
                 Changes from Original Solution <span className="text-rose-500">*</span>
               </label>
-              <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-5 mb-4">
-                <p className="text-[10px] font-bold text-blue-800 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                  <Info className="w-3.5 h-3.5" /> Original Approach
-                </p>
-                <p className="text-sm font-medium text-blue-900/80 line-clamp-3 leading-relaxed">
+              
+              <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-5 mb-4 transition-all duration-300">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-bold text-blue-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <Info className="w-3.5 h-3.5" /> Original Approach
+                  </p>
+                  
+                  {/* 🚀 New See More / See Less Toggle Button */}
+                  <button
+                    type="button"
+                    onClick={() => setShowFullOriginal(!showFullOriginal)}
+                    className="text-[10px] font-bold text-blue-600 hover:text-blue-800 uppercase tracking-wider flex items-center gap-1 transition-colors cursor-pointer"
+                  >
+                    {showFullOriginal ? (
+                      <>See Less <ChevronUp className="w-3 h-3" /></>
+                    ) : (
+                      <>See Full Approach <ChevronDown className="w-3 h-3" /></>
+                    )}
+                  </button>
+                </div>
+                
+                <p className={`text-sm font-medium text-blue-900/80 leading-relaxed transition-all duration-300 ${showFullOriginal ? "whitespace-pre-wrap" : "line-clamp-3"}`}>
                   {parentDescription || "No description provided in the original solution."}
                 </p>
               </div>
+
               <textarea
+                ref={deltaRef}
                 value={deltaDescription}
                 onChange={(e) => setDeltaDescription(e.target.value)}
-                rows={4}
-                className="w-full px-5 py-4 bg-slate-50/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all text-sm font-medium text-slate-900 placeholder:text-slate-400 resize-y"
+                className="w-full px-5 py-4 bg-slate-50/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-colors text-sm font-medium text-slate-900 placeholder:text-slate-400 overflow-hidden resize-none"
                 placeholder="Detail exactly what you improved, fixed, or changed from the original solution..."
+                style={{ minHeight: "250px" }} // 🚀 Increased initial size
               />
             </div>
           )}
