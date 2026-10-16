@@ -85,6 +85,9 @@ export interface ProblemResponse {
   problemDocumentUrl?: string;
   maxConcurrentSolvers?: number;
   
+  matchScore?: number;
+  courseMatch?: boolean;
+  
   seekerProfileUrl?: string;
   contactPerson?: string;
   contactNumber?: string;

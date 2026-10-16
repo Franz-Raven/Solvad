@@ -323,11 +323,18 @@ export function ProposalsTab({ problem, onLocateInTree }: ProposalsTabProps) {
                                       <div className="min-w-0">
                                         <p className="text-sm font-bold text-slate-900 truncate">{proposal.solver.firstName} {proposal.solver.lastName}</p>
                                         <p className="text-[10px] text-slate-500 font-medium truncate mb-0.5">{proposal.solver.institution || "Independent"}</p>
-                                        {proposal.parentAttemptId && (
-                                           <p className="text-[10px] text-accent font-bold flex items-center gap-1 uppercase tracking-wider">
-                                             <GitBranch className="w-3 h-3"/> Forked Solution
-                                           </p>
-                                        )}
+                                          {proposal.parentAttemptId && (
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation(); // Prevents the row's handleOpenDetails from firing
+                                                onLocateInTree(proposal.parentAttemptId!);
+                                              }}
+                                              title="Click to view the source of this fork in the Solution Tree"
+                                              className="inline-flex items-center gap-1.5 mt-1 px-2 py-0.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-sm active:scale-95"
+                                            >
+                                              <GitBranch className="w-3 h-3" /> Forked Solution ➔
+                                            </button>
+                                          )}
                                       </div>
                                     </div>
                                   </td>
