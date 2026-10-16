@@ -95,6 +95,16 @@ public class SolutionAttemptService {
             }
         }
 
+        // 🚀 EXTRACT SEEKER INFO
+        String seekerName = null;
+        String seekerProfileUrl = null;
+        if (attempt.getProblem() != null && attempt.getProblem().getSeeker() != null) {
+            seekerName = attempt.getProblem().getSeeker().getOrganizationName();
+            if (attempt.getProblem().getSeeker().getUser() != null) {
+                seekerProfileUrl = attempt.getProblem().getSeeker().getUser().getProfileUrl();
+            }
+        }
+
         return new SolutionAttemptResponse(
                 attempt.getId(),
                 attempt.getProblem().getId(),
@@ -115,7 +125,9 @@ public class SolutionAttemptService {
                 targetSubtaskId,
                 targetSubtaskTitle,
                 parentDesc,
-                parentFiles
+                parentFiles,
+                seekerName,        // 🚀 pass to DTO
+                seekerProfileUrl   // 🚀 pass to DTO
         );
     }
 
@@ -331,13 +343,24 @@ public class SolutionAttemptService {
                     UUID subtaskId = attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getId() : null;
                     String subtaskTitle = attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : null;
 
+                    // 🚀 ADDED: Extract Seeker Info
+                    String seekerOrgName = null;
+                    String seekerProfileUrl = null;
+                    if (attempt.getProblem() != null && attempt.getProblem().getSeeker() != null) {
+                        SeekerProfile seeker = attempt.getProblem().getSeeker();
+                        seekerOrgName = seeker.getOrganizationName();
+                        if (seeker.getUser() != null) {
+                            seekerProfileUrl = seeker.getUser().getProfileUrl();
+                        }
+                    }
+
                     return new SolutionAttemptSummaryResponse(
                             attempt.getId(),
                             attempt.getProblem().getId(),
                             attempt.getProblem().getTitle(),
                             solver.getFirstName(),
                             solver.getLastName(),
-                            null,
+                            null, // Solver profile URL (Not strictly needed here)
                             solver.getInstitution(),
                             solver.getDegreeProgram(),
                             attempt.getStatus().name(),
@@ -348,7 +371,9 @@ public class SolutionAttemptService {
                             parentId,
                             parentName,
                             subtaskId,
-                            subtaskTitle
+                            subtaskTitle,
+                            seekerOrgName,      // 🚀 Pass to DTO
+                            seekerProfileUrl    // 🚀 Pass to DTO
                     );
                 })
                 .collect(Collectors.toList());
@@ -816,6 +841,16 @@ public class SolutionAttemptService {
                         parentId = attempt.getParentAttempt().getId();
                     }
 
+                    // Extract Seeker Info
+                    String seekerOrgName = null;
+                    String seekerProfileUrl = null;
+                    if (attempt.getProblem() != null && attempt.getProblem().getSeeker() != null) {
+                        seekerOrgName = attempt.getProblem().getSeeker().getOrganizationName();
+                        if (attempt.getProblem().getSeeker().getUser() != null) {
+                            seekerProfileUrl = attempt.getProblem().getSeeker().getUser().getProfileUrl();
+                        }
+                    }
+
                     return new SolutionAttemptSummaryResponse(
                             attempt.getId(),
                             attempt.getProblem().getId(),
@@ -833,7 +868,9 @@ public class SolutionAttemptService {
                             parentId,
                             parentName,
                             attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getId() : null,
-                            attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : null
+                            attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : null,
+                            seekerOrgName,
+                            seekerProfileUrl
                     );
                 })
                 .collect(Collectors.toList());
@@ -852,25 +889,39 @@ public class SolutionAttemptService {
                 .orElseThrow(() -> new RuntimeException("Problem not found"));
 
         return attemptRepository.findByProblemAndStatus(problem, SolutionAttemptStatus.ACTIVE).stream()
-                .map(attempt -> new SolutionAttemptSummaryResponse(
-                        attempt.getId(),
-                        attempt.getProblem().getId(),
-                        attempt.getProblem().getTitle(),
-                        attempt.getSolver().getFirstName(),
-                        attempt.getSolver().getLastName(),
-                        attempt.getSolver().getUser().getProfileUrl(),
-                        attempt.getSolver().getInstitution(),
-                        attempt.getSolver().getDegreeProgram(),
-                        attempt.getStatus().name(),
-                        attempt.getSubmissions() != null ? attempt.getSubmissions().size() : 0,
-                        attempt.getClaimedAt(),
-                        attempt.getUpdatedAt(),
-                        attempt.getCompletedAt(),
-                        attempt.getParentAttempt() != null ? attempt.getParentAttempt().getId() : null,
-                        attempt.getParentAttempt() != null ? attempt.getParentAttempt().getSolver().getFirstName() + " " + attempt.getParentAttempt().getSolver().getLastName() : null,
-                        attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getId() : null,
-                        attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : null
-                ))
+                .map(attempt -> {
+                    // Extract Seeker Info
+                    String seekerOrgName = null;
+                    String seekerProfileUrl = null;
+                    if (attempt.getProblem() != null && attempt.getProblem().getSeeker() != null) {
+                        seekerOrgName = attempt.getProblem().getSeeker().getOrganizationName();
+                        if (attempt.getProblem().getSeeker().getUser() != null) {
+                            seekerProfileUrl = attempt.getProblem().getSeeker().getUser().getProfileUrl();
+                        }
+                    }
+
+                    return new SolutionAttemptSummaryResponse(
+                            attempt.getId(),
+                            attempt.getProblem().getId(),
+                            attempt.getProblem().getTitle(),
+                            attempt.getSolver().getFirstName(),
+                            attempt.getSolver().getLastName(),
+                            attempt.getSolver().getUser().getProfileUrl(),
+                            attempt.getSolver().getInstitution(),
+                            attempt.getSolver().getDegreeProgram(),
+                            attempt.getStatus().name(),
+                            attempt.getSubmissions() != null ? attempt.getSubmissions().size() : 0,
+                            attempt.getClaimedAt(),
+                            attempt.getUpdatedAt(),
+                            attempt.getCompletedAt(),
+                            attempt.getParentAttempt() != null ? attempt.getParentAttempt().getId() : null,
+                            attempt.getParentAttempt() != null ? attempt.getParentAttempt().getSolver().getFirstName() + " " + attempt.getParentAttempt().getSolver().getLastName() : null,
+                            attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getId() : null,
+                            attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : null,
+                            seekerOrgName,
+                            seekerProfileUrl
+                    );
+                })
                 .collect(Collectors.toList());
     }
 
@@ -962,25 +1013,39 @@ public class SolutionAttemptService {
                 .orElseThrow(() -> new RuntimeException("Solver not found"));
 
         return attemptRepository.findBySolver(solver).stream()
-                .map(attempt -> new SolutionAttemptSummaryResponse(
-                        attempt.getId(),
-                        attempt.getProblem().getId(),
-                        attempt.getProblem().getTitle(),
-                        attempt.getSolver().getFirstName(),
-                        attempt.getSolver().getLastName(),
-                        attempt.getSolver().getUser().getProfileUrl(),
-                        attempt.getSolver().getInstitution(),
-                        attempt.getSolver().getDegreeProgram(),
-                        attempt.getStatus().name(),
-                        attempt.getSubmissions() != null ? attempt.getSubmissions().size() : 0,
-                        attempt.getClaimedAt(),
-                        attempt.getUpdatedAt(),
-                        attempt.getCompletedAt(),
-                        attempt.getParentAttempt() != null ? attempt.getParentAttempt().getId() : null,
-                        attempt.getParentAttempt() != null ? attempt.getParentAttempt().getSolver().getFirstName() + " " + attempt.getParentAttempt().getSolver().getLastName() : null,
-                        attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getId() : null,
-                        attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : null
-                ))
+                .map(attempt -> {
+                    // Extract Seeker Info
+                    String seekerOrgName = null;
+                    String seekerProfileUrl = null;
+                    if (attempt.getProblem() != null && attempt.getProblem().getSeeker() != null) {
+                        seekerOrgName = attempt.getProblem().getSeeker().getOrganizationName();
+                        if (attempt.getProblem().getSeeker().getUser() != null) {
+                            seekerProfileUrl = attempt.getProblem().getSeeker().getUser().getProfileUrl();
+                        }
+                    }
+
+                    return new SolutionAttemptSummaryResponse(
+                            attempt.getId(),
+                            attempt.getProblem().getId(),
+                            attempt.getProblem().getTitle(),
+                            attempt.getSolver().getFirstName(),
+                            attempt.getSolver().getLastName(),
+                            attempt.getSolver().getUser().getProfileUrl(),
+                            attempt.getSolver().getInstitution(),
+                            attempt.getSolver().getDegreeProgram(),
+                            attempt.getStatus().name(),
+                            attempt.getSubmissions() != null ? attempt.getSubmissions().size() : 0,
+                            attempt.getClaimedAt(),
+                            attempt.getUpdatedAt(),
+                            attempt.getCompletedAt(),
+                            attempt.getParentAttempt() != null ? attempt.getParentAttempt().getId() : null,
+                            attempt.getParentAttempt() != null ? attempt.getParentAttempt().getSolver().getFirstName() + " " + attempt.getParentAttempt().getSolver().getLastName() : null,
+                            attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getId() : null,
+                            attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : null,
+                            seekerOrgName,
+                            seekerProfileUrl
+                    );
+                })
                 .collect(Collectors.toList());
     }
 }

@@ -8,17 +8,20 @@ export default function Navigation() {
       <div className="container mx-auto px-4">
         {/* Navigation Bar */}
         <div className="flex items-center justify-between h-16">
-          {/* Logo with Light Green Box & Photo Logo */}
-          <Link href="/" className="group flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 border border-emerald-100 shadow-sm transition-transform duration-300 group-hover:scale-105 p-2">
+       
+            <Link
+              href="/"
+              className="group flex items-center gap-3 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 active:scale-[0.98] transition-transform duration-200"
+            >
               <img
                 src="/solvad_logo.png"
                 alt="Solvad Logo"
-                className="h-full w-auto object-contain"
+                className="h-11 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
               />
-            </div>
-            <span className="text-2xl font-bold text-gray-900 group-hover:text-emerald-600 transition-colors">Solvad</span>
-          </Link>
+              <span className="text-2xl font-extrabold leading-none tracking-tight text-gray-900 group-hover:text-emerald-600 transition-colors">
+                Solvad
+              </span>
+            </Link>
 
           {/* Right Side - Login & Sign Up */}
           <div className="flex items-center gap-4">

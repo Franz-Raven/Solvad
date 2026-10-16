@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
+import { SplashScreen } from "@/components/SplashScreen";
 //app layout
 const poppins = Poppins({
   variable: "--font-sans",
@@ -30,6 +31,7 @@ export default function RootLayout({
       className={`${poppins.variable} ${poppinsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <SplashScreen />
         {children}
         <div id="portal-root" />
       </body>

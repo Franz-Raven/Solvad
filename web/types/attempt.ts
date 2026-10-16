@@ -35,6 +35,10 @@ export interface SolutionAttemptResponse {
   parentSolverName?: string | null;
   parentDescription?: string | null;
   parentFileUrls?: string[];
+
+  // 🚀 NEW FIELDS
+  seekerName?: string;
+  seekerProfileUrl?: string;
 }
 
 export interface TreeAttemptNode extends SolutionAttemptResponse {
@@ -109,6 +113,9 @@ export interface SolutionAttemptSummary {
   parentSolverName?: string | null;
   targetSubtaskId?: string;
   targetSubtaskTitle?: string;
+
+  seekerName?: string;
+  seekerProfileUrl?: string;
 }
 
 export interface PaginatedAttemptsResponse {

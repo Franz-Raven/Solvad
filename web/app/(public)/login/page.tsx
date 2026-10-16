@@ -20,8 +20,8 @@ const carouselSlides = [
     desc: "Monitor the evolution of your solutions with an immutable, transparent solution tree and version control.",
     icon1: GitBranch,
     icon2: Network,
-    bg: "bg-slate-800",
-    glow: "bg-slate-500",
+    bg: "bg-green-700",
+    glow: "bg-green-400",
   },
   {
     title: "AI-Powered Insights",
@@ -113,7 +113,7 @@ export default function LoginPage() {
         </div>
 
         {/* ── Right Side: Login Form ── */}
-        <div className="w-full lg:w-1/2 flex flex-col bg-white relative">
+        <div className="w-full lg:w-1/2 flex flex-col bg-white relative overflow-y-auto [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent]">
           
           {/* Optimized padding to keep everything completely visible without scrolling */}
           <div className="flex-1 flex flex-col justify-center px-8 sm:px-12 py-8">

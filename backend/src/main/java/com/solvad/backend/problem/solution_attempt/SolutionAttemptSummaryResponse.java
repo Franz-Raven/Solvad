@@ -20,5 +20,9 @@ public record SolutionAttemptSummaryResponse(
         UUID parentAttemptId,
         String parentSolverName,
         UUID targetSubtaskId,
-        String targetSubtaskTitle
+        String targetSubtaskTitle,
+
+        // 🚀 NEW FIELDS FOR WORKSPACE UI
+        String seekerName,
+        String seekerProfileUrl
 ) {}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Lock, XCircle, FileText, X, GitBranch, Paperclip } from "lucide-react";
+import { Lock, XCircle, FileText, X, GitBranch, Columns } from "lucide-react";
 import Portal from "@/components/portal";
 import type { TreeAttemptNode } from "@/types/attempt";
 
@@ -23,7 +23,8 @@ export function AttemptDetailModal({
   const attemptDate = new Date(node.claimedAt);
 
   const [activeSubIdx, setActiveSubIdx] = useState(0);
-  const [viewPanel, setViewPanel] = useState<"current" | "previous">("current");
+  
+  const [viewPanel, setViewPanel] = useState<"current" | "previous" | "compare">("current");
 
   const activeSub = node.submissions[activeSubIdx] ?? null;
 
@@ -32,7 +33,6 @@ export function AttemptDetailModal({
     fileUrls: node.parentFileUrls || []
   } : null;
 
-  // 🚀 Added initials calculation for the avatar fallback
   const initials = `${node.solverFirstName?.[0] || ""}${node.solverLastName?.[0] || ""}`.toUpperCase() || "S";
 
   useEffect(() => {
@@ -62,29 +62,31 @@ export function AttemptDetailModal({
           if (e.target === e.currentTarget) onClose();
         }}
       >
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+        <div 
+          className={`bg-white rounded-2xl shadow-2xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 animate-in zoom-in-95 transition-all duration-300 ease-out ${
+            viewPanel === "compare" ? "max-w-7xl" : "max-w-3xl"
+          }`}
+        >
           
           {/* ── Header ── */}
-          <div className="flex items-start justify-between p-5 md:p-6 border-b border-slate-100 flex-shrink-0 bg-white z-10">
-            {/* 🚀 Changed to match the Seeker layout with flex row and gap */}
+          <div className="flex items-start justify-between p-5 md:p-6 border-b border-slate-100 flex-shrink-0 bg-white z-10 transition-all duration-300">
             <div className="flex items-start gap-4 flex-1 min-w-0 pr-4">
               
-              {/* 🚀 Added the Avatar block */}
               {node.profilePictureUrl ? (
                 <img
                   src={node.profilePictureUrl}
                   alt=""
-                  className="w-12 h-12 rounded-2xl object-cover ring-1 ring-slate-200 shrink-0"
+                  className="w-12 h-12 rounded-2xl object-cover ring-1 ring-slate-200 shrink-0 transition-all"
                 />
               ) : (
-                <div className="w-12 h-12 rounded-2xl bg-accent/10 text-accent border border-accent/20 font-bold text-sm flex items-center justify-center shrink-0 shadow-sm">
+                <div className="w-12 h-12 rounded-2xl bg-accent/10 text-accent border border-accent/20 font-bold text-sm flex items-center justify-center shrink-0 shadow-sm transition-all">
                   {initials}
                 </div>
               )}
 
               <div className="min-w-0">
                 <div className="flex items-center gap-3 flex-wrap mb-1">
-                  <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                  <h2 className="text-xl font-bold text-slate-900 tracking-tight transition-all">
                     {node.solverFirstName} {node.solverLastName}
                   </h2>
                   <span
@@ -99,11 +101,11 @@ export function AttemptDetailModal({
                     {node.status.replace(/_/g, " ")}
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 font-medium">
+                <p className="text-xs text-slate-500 font-medium transition-all">
                   {node.degreeProgram} · {node.institution}
                 </p>
                 
-                <div className="flex items-center gap-3 mt-3 flex-wrap">
+                <div className="flex items-center gap-3 mt-3 flex-wrap transition-all">
                   {node.parentAttemptId && (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 text-slate-600 text-[10px] font-bold uppercase tracking-wider rounded-md">
                       <GitBranch className="w-3 h-3 text-slate-400" />
@@ -131,7 +133,7 @@ export function AttemptDetailModal({
               )}
               <button
                 onClick={onClose}
-                className="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors bg-slate-50 border border-slate-100"
+                className="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors bg-slate-50 border border-slate-100 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -197,7 +199,7 @@ export function AttemptDetailModal({
                     </div>
 
                     {activeSub.deltaDescription && (
-                      <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-5 shadow-sm">
+                      <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-5 shadow-sm w-full">
                         <p className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider mb-2">
                           What changed from the parent solution
                         </p>
@@ -212,7 +214,7 @@ export function AttemptDetailModal({
                         <div className="flex items-center gap-1 p-1 bg-slate-200/50 rounded-xl w-fit border border-slate-200">
                           <button
                             onClick={() => setViewPanel("current")}
-                            className={`px-5 py-2 text-[13px] font-bold rounded-lg transition-all ${
+                            className={`px-5 py-2 text-[13px] font-bold rounded-lg transition-all cursor-pointer ${
                               viewPanel === "current"
                                 ? "bg-white text-slate-900 shadow-sm"
                                 : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
@@ -222,7 +224,7 @@ export function AttemptDetailModal({
                           </button>
                           <button
                             onClick={() => setViewPanel("previous")}
-                            className={`px-5 py-2 text-[13px] font-bold rounded-lg transition-all ${
+                            className={`px-5 py-2 text-[13px] font-bold rounded-lg transition-all cursor-pointer ${
                               viewPanel === "previous"
                                 ? "bg-white text-slate-900 shadow-sm"
                                 : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
@@ -230,85 +232,78 @@ export function AttemptDetailModal({
                           >
                             Previous ({node.parentSolverName || "Original"})
                           </button>
+                          <div className="w-px h-6 bg-slate-300 mx-1"></div>
+                          <button
+                            onClick={() => setViewPanel("compare")}
+                            className={`px-5 py-2 text-[13px] font-bold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
+                              viewPanel === "compare"
+                                ? "bg-blue-600 text-white shadow-sm"
+                                : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
+                            }`}
+                          >
+                            <Columns className="w-4 h-4" /> Compare Side-by-Side
+                          </button>
                         </div>
 
-                        {viewPanel === "current" && (
-                          <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6 animate-in fade-in duration-300">
-                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">
-                              {node.solverFirstName}'s Approach
-                            </p>
-                            <p className="text-sm text-slate-800 whitespace-pre-wrap break-words font-medium leading-relaxed">
-                              {activeSub.description || "No description provided."}
-                            </p>
-                            {activeSub.fileUrls && activeSub.fileUrls.length > 0 && (
-                              <div className="mt-6 pt-5 border-t border-slate-100 flex flex-wrap gap-2">
-                                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider w-full mb-1">Attached Files</p>
-                                {activeSub.fileUrls.map((url: string, idx: number) => (
-                                  <a
-                                    key={idx}
-                                    href={url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-2 text-sm font-bold bg-accent/5 border border-accent/20 px-4 py-2.5 rounded-xl text-accent hover:bg-accent hover:text-white transition-all shadow-sm min-w-0"
-                                  >
-                                    <Paperclip className="w-4 h-4" /> 
-                                    <span className="truncate">Modified File {idx + 1}</span>
-                                  </a>
-                                ))}
+                        {/* 🚀 FIXED LAYOUT: Headers isolated from the scrolling content area */}
+                        <div className={`transition-all duration-300 items-start ${viewPanel === "compare" ? "grid grid-cols-1 md:grid-cols-2 gap-6" : ""}`}>
+                          
+                          {/* PREVIOUS/LEFT PANEL */}
+                          {(viewPanel === "previous" || viewPanel === "compare") && (
+                            <div className={`flex flex-col bg-slate-100 border border-slate-200 rounded-2xl overflow-hidden animate-in fade-in duration-300 ${viewPanel === "compare" ? "opacity-90" : ""}`}>
+                              
+                              {/* 🚀 Header permanently fixed to top of card */}
+                              <div className="p-5 md:p-6 pb-4 border-b border-slate-200/60 bg-slate-100 shrink-0">
+                                <div className="flex items-center gap-2">
+                                  {viewPanel === "compare" && <span className="px-2 py-0.5 bg-slate-200 text-slate-600 text-[10px] font-bold rounded uppercase shadow-sm">Before</span>}
+                                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                                    {node.parentSolverName || "Original Solver"}'s Approach
+                                  </p>
+                                </div>
                               </div>
-                            )}
-                          </div>
-                        )}
+                              
+                              {/* 🚀 Only the text container scrolls */}
+                              <div className={`p-5 md:p-6 pt-4 ${viewPanel === "compare" ? "max-h-[60vh] overflow-y-auto overscroll-contain" : ""}`}>
+                                <p className="text-sm text-slate-600 whitespace-pre-wrap break-words font-medium leading-relaxed">
+                                  {predecessorSub.description || "No description provided."}
+                                </p>
+                              </div>
+                            </div>
+                          )}
 
-                        {viewPanel === "previous" && (
-                          <div className="bg-slate-100 border border-slate-200 rounded-2xl p-6 animate-in fade-in duration-300">
-                            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3">
-                              {node.parentSolverName || "Original Solver"}'s Approach
-                            </p>
-                            <p className="text-sm text-slate-600 whitespace-pre-wrap break-words font-medium leading-relaxed">
-                              {predecessorSub.description || "No description provided."}
-                            </p>
-                            {predecessorSub.fileUrls && predecessorSub.fileUrls.length > 0 && (
-                              <div className="mt-6 pt-5 border-t border-slate-200 flex flex-wrap gap-2">
-                                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider w-full mb-1">Original Files</p>
-                                {predecessorSub.fileUrls.map((url: string, idx: number) => (
-                                  <a
-                                    key={idx}
-                                    href={url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-2 text-sm font-bold bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-slate-600 hover:border-slate-300 hover:text-slate-900 transition-all shadow-sm min-w-0"
-                                  >
-                                    <Paperclip className="w-4 h-4" /> 
-                                    <span className="truncate">Original File {idx + 1}</span>
-                                  </a>
-                                ))}
+                          {/* CURRENT/RIGHT PANEL */}
+                          {(viewPanel === "current" || viewPanel === "compare") && (
+                            <div className="flex flex-col bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden animate-in fade-in duration-300">
+                              
+                              {/* 🚀 Header permanently fixed to top of card */}
+                              <div className="p-5 md:p-6 pb-4 border-b border-slate-100 bg-white shrink-0">
+                                <div className="flex items-center gap-2">
+                                  {viewPanel === "compare" && <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold rounded uppercase shadow-sm">After</span>}
+                                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                    {node.solverFirstName}'s Approach
+                                  </p>
+                                </div>
                               </div>
-                            )}
-                          </div>
-                        )}
+
+                              {/* 🚀 Only the text container scrolls */}
+                              <div className={`p-5 md:p-6 pt-4 ${viewPanel === "compare" ? "max-h-[60vh] overflow-y-auto overscroll-contain" : ""}`}>
+                                <p className="text-sm text-slate-800 whitespace-pre-wrap break-words font-medium leading-relaxed">
+                                  {activeSub.description || "No description provided."}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                        </div>
                       </>
                     ) : (
                       <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6">
+                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">
+                            {node.solverFirstName}'s Approach
+                        </p>
                         <p className="text-sm text-slate-800 whitespace-pre-wrap font-medium break-words leading-relaxed">
                           {activeSub.description || "No description provided."}
                         </p>
-                        {activeSub.fileUrls && activeSub.fileUrls.length > 0 && (
-                          <div className="mt-6 pt-5 border-t border-slate-100 flex flex-wrap gap-2">
-                            {activeSub.fileUrls.map((url: string, idx: number) => (
-                              <a
-                                key={idx}
-                                href={url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 text-sm font-bold bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-xl text-slate-600 hover:text-accent hover:border-accent/30 hover:bg-accent/5 transition-all shadow-sm min-w-0"
-                              >
-                                <Paperclip className="w-4 h-4" />
-                                <span className="truncate">Attached File {idx + 1}</span>
-                              </a>
-                            ))}
-                          </div>
-                        )}
                       </div>
                     )}
                   </>
@@ -325,7 +320,7 @@ export function AttemptDetailModal({
                   onForkRequest(node.id, node.targetSubtaskId!);
                   onClose();
                 }}
-                className="w-full px-4 py-3 bg-accent hover:bg-accent/90 text-white text-sm font-bold rounded-xl transition-all shadow-sm items-center justify-center gap-2 flex"
+                className="w-full px-4 py-3 bg-accent hover:bg-accent/90 text-white text-sm font-bold rounded-xl transition-all shadow-sm items-center justify-center gap-2 flex cursor-pointer"
               >
                 Build Upon Solution ➔
               </button>

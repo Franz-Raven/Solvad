@@ -1,110 +1,152 @@
 "use client";
 
+import { Building2, UserCircle, Phone, Mail, Users, FileText, Info } from "lucide-react";
 import type { ProblemResponse } from "@/types/problem";
 
-function parseList(raw: string): string[] {
-  try {
-    return JSON.parse(raw).map((s: string) => s.trim()).filter(Boolean);
-  } catch {
-    return [raw.trim()].filter(Boolean);
-  }
-}
-
 export function BlueprintTab({ problem }: { problem: ProblemResponse }) {
-  return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-          <svg className="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          Problem Blueprint
-        </h2>
-        <div className="space-y-6">
-          {problem.backgroundContext && (
-            <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">Background Context</h3>
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <p className="text-gray-800 leading-relaxed">{problem.backgroundContext}</p>
-              </div>
-            </div>
-          )}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">Primary Problem Statement</h3>
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <p className="text-gray-800 leading-relaxed font-medium">{problem.primaryStatement}</p>
-            </div>
-          </div>
-          {problem.objectives && (() => {
-            const items = parseList(problem.objectives);
-            return items.length > 0 && (
-              <div>
-                <h3 className="text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">Objectives</h3>
-                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                  <ul className="list-disc list-inside space-y-1 text-gray-800 leading-relaxed">
-                    {items.map((item, i) => <li key={i}>{item}</li>)}
-                  </ul>
-                </div>
-              </div>
-            );
-          })()}
+  
+  // 🚀 FORMATTING HELPER: Automatically detects stringified JSON arrays like ["A", "B"] 
+  // and converts them into clean bullet points. Fallbacks to normal text if not an array.
+  const formatTextContent = (text: string | undefined) => {
+    if (!text) return null;
+    try {
+      if (text.trim().startsWith("[") && text.trim().endsWith("]")) {
+        const parsed = JSON.parse(text);
+        if (Array.isArray(parsed)) {
+          return (
+            <ul className="list-disc pl-5 space-y-2 marker:text-slate-400">
+              {parsed.map((item, idx) => (
+                <li key={idx} className="pl-1 leading-relaxed">{item}</li>
+              ))}
+            </ul>
+          );
+        }
+      }
+    } catch (e) {
+      // Failsafe: Just return normal text if JSON.parse fails
+    }
+    return <div className="whitespace-pre-wrap">{text}</div>;
+  };
 
-          {problem.constraints && (() => {
-            const items = parseList(problem.constraints);
-            return items.length > 0 && (
-              <div>
-                <h3 className="text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">Constraints</h3>
-                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                  <ul className="list-disc list-inside space-y-1 text-gray-800 leading-relaxed">
-                    {items.map((item, i) => <li key={i}>{item}</li>)}
-                  </ul>
-                </div>
+  return (
+    <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start animate-in fade-in duration-300">
+      
+      {/* ── LEFT SIDE: Main Blueprint Content ── */}
+      <div className="flex-1 w-full bg-white rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100 p-6 md:p-8">
+        <div className="flex items-center gap-3 mb-8">
+          <FileText className="w-6 h-6 text-accent" />
+          <h2 className="text-xl font-bold text-slate-900">Problem Blueprint</h2>
+        </div>
+        
+        <div className="space-y-8">
+          <section>
+            <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">Background Context</h3>
+            <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 text-sm font-medium text-slate-700 leading-relaxed shadow-sm">
+              {formatTextContent(problem.backgroundContext)}
+            </div>
+          </section>
+
+          <section>
+            <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">Primary Problem Statement</h3>
+            <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 text-sm font-bold text-slate-900 leading-relaxed shadow-sm">
+              {formatTextContent(problem.primaryStatement)}
+            </div>
+          </section>
+
+          {problem.objectives && (
+            <section>
+              <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">Objectives</h3>
+              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 text-sm font-medium text-slate-700 leading-relaxed shadow-sm">
+                {formatTextContent(problem.objectives)}
               </div>
-            );
-          })()}
+            </section>
+          )}
+
+          {problem.constraints && (
+            <section>
+              <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">Constraints & Limitations</h3>
+              <div className="bg-rose-50/50 border border-rose-100 rounded-2xl p-6 text-sm font-medium text-slate-700 leading-relaxed shadow-sm">
+                {formatTextContent(problem.constraints)}
+              </div>
+            </section>
+          )}
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-          <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-          </svg>
-          Attachments
-        </h2>
-        
-        {problem.problemDocumentUrl ? (
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <div className="flex items-center gap-3">
-              <svg className="w-8 h-8 text-red-500" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6zm2-8h5v2H8v-2zm0 4h8v2H8v-2z" />
-              </svg>
-              <div>
-                <p className="font-medium text-gray-900">Problem Specification Document</p>
-                <p className="text-sm text-gray-500">PDF</p>
+      {/* ── RIGHT SIDE: Organization Details Card ── */}
+      <div className="w-full lg:w-80 shrink-0 sticky top-24 flex flex-col gap-4">
+        <div className="bg-white rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100 p-6">
+          
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center border border-emerald-100 shadow-sm shrink-0">
+              <Users className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-900">Organization Details</h3>
+              <p className="text-[11px] font-medium text-slate-500 leading-snug mt-0.5">
+                Contact and identity verification.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {/* Org Name */}
+            <div>
+              <label className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1.5 pl-1">
+                <Building2 className="w-3.5 h-3.5" /> Organization Name
+              </label>
+              <div className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 flex items-center gap-3 shadow-sm">
+                {problem.seekerProfileUrl ? (
+                  <img src={problem.seekerProfileUrl} alt="logo" className="w-6 h-6 rounded-full object-cover shrink-0 shadow-sm" />
+                ) : (
+                  <Building2 className="w-6 h-6 text-slate-400 shrink-0" />
+                )}
+                <span className="text-sm font-bold text-slate-900 truncate">
+                  {problem.organizationName || "Industry Partner"}
+                </span>
               </div>
             </div>
-            <a
-              href={problem.problemDocumentUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              download
-              className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              Download specification pdf document
-            </a>
+
+            {/* Contact Person */}
+            {problem.contactPerson && (
+              <div>
+                <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 pl-1">
+                  <UserCircle className="w-3.5 h-3.5" /> Contact Person
+                </label>
+                <div className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 shadow-sm truncate">
+                  {problem.contactPerson}
+                </div>
+              </div>
+            )}
+
+            {/* Contact Number */}
+            {problem.contactNumber && (
+              <div>
+                <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 pl-1">
+                  <Phone className="w-3.5 h-3.5" /> Contact Number
+                </label>
+                <div className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm font-medium text-slate-700 shadow-sm truncate">
+                  {problem.contactNumber}
+                </div>
+              </div>
+            )}
+
+            {/* Email Address */}
+            {problem.seekerEmail && (
+              <div>
+                <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 pl-1">
+                  <Mail className="w-3.5 h-3.5" /> Email Address
+                </label>
+                <div className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm font-medium text-slate-700 shadow-sm truncate">
+                  {problem.seekerEmail}
+                </div>
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-            <svg className="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-            </svg>
-            <p className="text-gray-600 text-sm">No attachments uploaded</p>
-          </div>
-        )}
+        </div>
+
+     
+
       </div>
     </div>
   );

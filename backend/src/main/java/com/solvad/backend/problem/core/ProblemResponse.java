@@ -17,7 +17,7 @@ public class ProblemResponse {
     private String constraints;
     private String preferredProgram;
     private String sdgFocus;
-    private String problemDocumentUrl; // URL of comprehensive problem PDF document
+    private String problemDocumentUrl;
     private String status;
     private UUID seekerId;
     @JsonProperty("organizationName")
@@ -29,6 +29,11 @@ public class ProblemResponse {
     private Boolean courseMatch;
     private int maxConcurrentSolvers = 3;
 
+    // 🚀 NEW FIELDS FOR HEADER UI
+    private String seekerProfileUrl;
+    private String contactPerson;
+    private String contactNumber;
+    private String seekerEmail;
 
     public ProblemResponse() {
     }
@@ -37,7 +42,8 @@ public class ProblemResponse {
                            String objectives, String constraints, String preferredProgram, String sdgFocus, String status,
                            UUID seekerId, String seekerOrganization, LocalDateTime createdAt,
                            List<SubtaskResponse> subtasks, List<String> tags, String problemDocumentUrl,
-                           int maxConcurrentSolvers) {
+                           int maxConcurrentSolvers,
+                           String seekerProfileUrl, String contactPerson, String contactNumber, String seekerEmail) { // 🚀 Added to constructor
         this.id = id;
         this.title = title;
         this.backgroundContext = backgroundContext;
@@ -54,6 +60,21 @@ public class ProblemResponse {
         this.tags = tags != null ? tags : new ArrayList<>();
         this.problemDocumentUrl = problemDocumentUrl;
         this.maxConcurrentSolvers = maxConcurrentSolvers;
+        this.seekerProfileUrl = seekerProfileUrl;
+        this.contactPerson = contactPerson;
+        this.contactNumber = contactNumber;
+        this.seekerEmail = seekerEmail;
+    }
+
+    // 🚀 NEW: Fallback constructor to fix MatchmakingService and SolutionAttemptService errors
+    public ProblemResponse(UUID id, String title, String backgroundContext, String primaryStatement,
+                           String objectives, String constraints, String preferredProgram, String sdgFocus, String status,
+                           UUID seekerId, String seekerOrganization, LocalDateTime createdAt,
+                           List<SubtaskResponse> subtasks, List<String> tags, String problemDocumentUrl,
+                           int maxConcurrentSolvers) {
+        this(id, title, backgroundContext, primaryStatement, objectives, constraints, preferredProgram, sdgFocus,
+                status, seekerId, seekerOrganization, createdAt, subtasks, tags, problemDocumentUrl, maxConcurrentSolvers,
+                null, null, null, null);
     }
 
     public int getMaxConcurrentSolvers() { return maxConcurrentSolvers; }
@@ -194,4 +215,17 @@ public class ProblemResponse {
     public void setCourseMatch(Boolean courseMatch) {
         this.courseMatch = courseMatch;
     }
+
+    // 🚀 NEW GETTERS AND SETTERS
+    public String getSeekerProfileUrl() { return seekerProfileUrl; }
+    public void setSeekerProfileUrl(String seekerProfileUrl) { this.seekerProfileUrl = seekerProfileUrl; }
+
+    public String getContactPerson() { return contactPerson; }
+    public void setContactPerson(String contactPerson) { this.contactPerson = contactPerson; }
+
+    public String getContactNumber() { return contactNumber; }
+    public void setContactNumber(String contactNumber) { this.contactNumber = contactNumber; }
+
+    public String getSeekerEmail() { return seekerEmail; }
+    public void setSeekerEmail(String seekerEmail) { this.seekerEmail = seekerEmail; }
 }
