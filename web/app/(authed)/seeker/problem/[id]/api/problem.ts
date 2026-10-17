@@ -5,6 +5,8 @@ import type { SolutionAttemptResponse } from "@/types/attempt";
 import { AuditLogEntry } from "@/types/attempt";
 import type { SolutionAttemptSummary } from "@/types/attempt";
 import type { AuditDateSummary, AuditLog } from "@/types/audit";
+import type { SolverMetrics } from "@/types/attempt";
+
 
 export async function getProblemById(
   problemId: string
@@ -128,3 +130,9 @@ export async function getAuditSummaries(problemId: string): Promise<AuditDateSum
 export async function getAuditLogsByDate(problemId: string, date: string): Promise<AuditLog[]> {
   return apiRequest<AuditLog[]>(`/audit/problem/${problemId}?date=${date}`, { method: "GET" });
 }
+
+export const getSolverMetrics = async (solverId: string): Promise<SolverMetrics> => {
+  return apiRequest<SolverMetrics>(`/merit/solver/${solverId}`, {
+    method: "GET",
+  });
+};

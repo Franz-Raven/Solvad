@@ -55,4 +55,6 @@ public interface SolutionAttemptRepository extends JpaRepository<SolutionAttempt
     // 🚀 ADD THIS METHOD
     List<SolutionAttempt> findByProblemOrderByClaimedAtAsc(Problem problem);
     List<SolutionAttempt> findBySolver(SolverProfile solver);
+
+
 }

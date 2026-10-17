@@ -28,6 +28,9 @@ public class ClaimRequestController {
     @Autowired
     private JwtService jwtService;
 
+    @Autowired
+    private com.solvad.backend.merit.MeritService meritService;
+
 
 
     // -------------------------------------------------------------------------

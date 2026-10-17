@@ -1,3 +1,5 @@
+import { SolverMetrics } from "./attempt";
+
 export interface SolverProfile {
   id: string;
   userId: string;
@@ -8,6 +10,7 @@ export interface SolverProfile {
   degreeProgram: string;
   skills?: string;
   profileUrl?: string;
+  metrics?: SolverMetrics;
 }
 
 export interface UpdateSolverProfilePayload {

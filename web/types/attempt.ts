@@ -83,13 +83,20 @@ export interface ProposalRequest {
 export interface ClaimRequestResponse {
   id: string;
   problem: { id: string };
-  solver: { id: string; firstName: string; lastName: string; institution?: string; profilePictureUrl?: string;};
+  solver: { 
+    id: string; // 🚀 WE MUST HAVE THIS ID HERE
+    firstName: string; 
+    lastName: string; 
+    institution?: string; 
+    profilePictureUrl?: string;
+    metrics?: SolverMetrics; 
+  };
   proposedApproach: string;
   supportingDocuments?: string;
   status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
   createdAt: string;
-  targetSubtaskId?: string;    // ADD
-  targetSubtaskTitle?: string; // ADD
+  targetSubtaskId?: string;
+  targetSubtaskTitle?: string;
   parentAttemptId?: string;
 }
 
@@ -176,13 +183,24 @@ export interface AttemptNodeSummary {
   status: string;
 }
 
-// 🚀 The new lightweight summary type for the table
 export interface ClaimSummaryResponse {
   id: string;
-  solver: { firstName: string; lastName: string; institution?: string; profilePictureUrl?: string; };
+  solver: { 
+    id: string; // 🚀 Add this ID so we can fetch their specific metrics
+    firstName: string; 
+    lastName: string; 
+    institution?: string; 
+    profilePictureUrl?: string; 
+  };
   targetSubtaskId?: string;
   parentAttemptId?: string;
   status: string;
   createdAt: string;
   fileCount: number;
+}
+
+export interface SolverMetrics {
+  solutionsCompleted: number;
+  completionRate: number;
+  avgTurnaroundDays: number | null;
 }
