@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
+import "driver.js/dist/driver.css";
+import "@/onboarding/onboarding.css";
 import { SplashScreen } from "@/components/SplashScreen";
 //app layout
 const poppins = Poppins({

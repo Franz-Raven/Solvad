@@ -55,6 +55,7 @@ export default function ProblemFormFields({
           type="text"
           id="title"
           name="title"
+          data-helper="problem-title"
           value={formData.title}
           onChange={onInputChange}
           className={`w-full px-4 py-3 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all text-foreground placeholder:text-muted-foreground ${
@@ -78,6 +79,7 @@ export default function ProblemFormFields({
         <AutoResizeTextarea
           id="backgroundContext"
           name="backgroundContext"
+          data-helper="background-context"
           value={formData.backgroundContext}
           onChange={onInputChange}
           minRows={4}
@@ -102,6 +104,7 @@ export default function ProblemFormFields({
         <AutoResizeTextarea
           id="primaryStatement"
           name="primaryStatement"
+          data-helper="primary-statement"
           value={formData.primaryStatement}
           onChange={onInputChange}
           minRows={4}
@@ -126,6 +129,7 @@ export default function ProblemFormFields({
         <AutoResizeTextarea
           id="objectives"
           name="objectives"
+          data-helper="objectives"
           value={formData.objectives}
           onChange={onInputChange}
           minRows={3}
@@ -150,6 +154,7 @@ export default function ProblemFormFields({
         <AutoResizeTextarea
           id="constraints"
           name="constraints"
+          data-helper="constraints"
           value={formData.constraints}
           onChange={onInputChange}
           minRows={3}
@@ -169,7 +174,7 @@ export default function ProblemFormFields({
         </p>
         
         <Select value={formData.preferredProgram} onValueChange={onProgramChange}>
-          <SelectTrigger className="w-full px-4 py-3 !h-auto rounded-lg border border-border bg-background text-foreground">
+          <SelectTrigger data-helper="preferred-program" className="w-full px-4 py-3 !h-auto rounded-lg border border-border bg-background text-foreground">
             <SelectValue placeholder="Select a program" />
           </SelectTrigger>
           <SelectContent>

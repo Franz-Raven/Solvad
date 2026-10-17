@@ -9,12 +9,14 @@ import ProblemFormFields from "./components/ProblemFormFields";
 import FileAttachmentUploader from "./components/FileAttachmentUploader";
 import EnhancedProblemPreview from "./components/EnhancedProblemPreview";
 import SubproblemsList from "./components/SubproblemsList";
+import { TourController, ONBOARDING_TOUR_KEY } from "@/onboarding/TourController";
 
 type ViewState = "FORM_VIEW" | "LOADING_VIEW" | "PREVIEW_VIEW" | "SUCCESS_VIEW";
 
 export default function SubmitProblemPage() {
   const router = useRouter();
   const [currentView, setCurrentView] = useState<ViewState>("FORM_VIEW");
+  const [tourKey, setTourKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [problemId, setProblemId] = useState<string | null>(null);
   const [problemDocumentUrl, setProblemDocumentUrl] = useState<string | null>(null);
@@ -131,6 +133,11 @@ export default function SubmitProblemPage() {
     setFormData({ ...formData, preferredProgram: value });
   };
 
+  const activateGuide = () => {
+    localStorage.removeItem(ONBOARDING_TOUR_KEY);
+    setTourKey((k) => k + 1);
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const filesArray = Array.from(e.target.files);
@@ -207,6 +214,7 @@ export default function SubmitProblemPage() {
       <div className="container mx-auto px-4">
         {currentView === "FORM_VIEW" && (
           <>
+            <TourController key={tourKey} />
             <div className="text-center mb-8">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-secondary text-white mb-4 shadow-lg shadow-secondary/20">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -215,6 +223,13 @@ export default function SubmitProblemPage() {
               </div>
               <h1 className="text-3xl font-bold text-foreground mb-2">Submit an Industry Problem</h1>
               <p className="text-muted-foreground">Describe your challenge and let AI help structure it into student-ready tasks</p>
+              <button
+                type="button"
+                onClick={activateGuide}
+                className="mt-4 px-6 py-3 text-sm font-semibold rounded-lg bg-accent hover:bg-secondary text-white shadow-md hover:shadow-lg transition-all"
+              >
+                Activate Guide
+              </button>
             </div>
 
             <div className="bg-card rounded-2xl shadow-xl border border-border p-8">

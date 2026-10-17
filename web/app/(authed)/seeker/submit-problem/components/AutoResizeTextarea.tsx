@@ -8,6 +8,7 @@ interface AutoResizeTextareaProps {
   id?: string;
   name?: string;
   minRows?: number;
+  "data-helper"?: string;
 }
 
 export default function AutoResizeTextarea({
@@ -18,6 +19,7 @@ export default function AutoResizeTextarea({
   id,
   name,
   minRows = 3,
+  "data-helper": dataHelper,
 }: AutoResizeTextareaProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -36,6 +38,7 @@ export default function AutoResizeTextarea({
       ref={textareaRef}
       id={id}
       name={name}
+      data-helper={dataHelper}
       value={value}
       onChange={onChange}
       placeholder={placeholder}
