@@ -24,4 +24,6 @@ public class MeritController {
         SolverMeritDTO metrics = meritService.getMetricsForSolver(solverId);
         return ResponseEntity.ok(metrics);
     }
+
+
 }

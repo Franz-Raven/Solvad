@@ -7,15 +7,60 @@ import {
   Activity, 
   CheckCircle2, 
   TrendingUp, 
-  BarChart2 
+  BarChart2,
+  Shield, 
+  ShieldCheck, 
+  Circle
 } from "lucide-react";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import type { SolutionAttemptSummary } from "@/types/attempt";
 
 interface SolverOverviewProps {
-  attempts: SolutionAttemptSummary[]; // 🚀 FIX: Swapped to lightweight summary!
+  attempts: SolutionAttemptSummary[]; 
   loading?: boolean;
 }
+
+// --- Rank Details specific to the large Banner ---
+const getBannerTierDetails = (completed: number) => {
+  if (completed >= 10) return { 
+    name: "Elite Solver", 
+    min: 10,
+    icon: <Shield className="w-10 h-10 text-white" fill="currentColor" />, 
+    iconBg: "bg-emerald-600",
+  };
+  
+  if (completed >= 5) return { 
+    name: "Proven Solver", 
+    min: 5,
+    icon: <ShieldCheck className="w-10 h-10 text-emerald-700" />, 
+    iconBg: "bg-emerald-100",
+  };
+  
+  if (completed >= 1) return { 
+    name: "Contributor", 
+    min: 1,
+    icon: <Shield className="w-10 h-10 text-emerald-600" />, 
+    iconBg: "bg-emerald-50",
+  };
+  
+  return { 
+    name: "Initiate", 
+    min: 0,
+    icon: <Circle className="w-10 h-10 text-slate-400" />, 
+    iconBg: "bg-slate-100",
+  };
+};
+
+const getNextRank = (completed: number) => {
+  const thresholds = [10, 5, 1, 0];
+  const names = ["Elite Solver", "Proven Solver", "Contributor", "Initiate"];
+  for (let i = thresholds.length - 1; i >= 0; i--) {
+    if (thresholds[i] > completed) {
+      return { name: names[i], min: thresholds[i] };
+    }
+  }
+  return null;
+};
 
 // Last 6 weeks (weekly attempts)
 function buildWeeklyAttempts(attempts: SolutionAttemptSummary[]) {
@@ -37,20 +82,18 @@ function buildWeeklyAttempts(attempts: SolutionAttemptSummary[]) {
 const timelineConfig: ChartConfig = { attempts: { label: "Attempts", color: "#10b981" } };
 
 // --- UI Components ---
-
 function StatCard({ title, value, icon, description }: { title: string; value: string | number; icon: React.ReactNode; description?: string }) {
   return (
-    <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-[0_2px_10px_rgba(0,0,0,0.02)] relative overflow-hidden group hover:border-emerald-500/30 transition-colors">
-      <div className="absolute -right-6 -top-6 w-24 h-24 bg-emerald-50 rounded-full blur-2xl group-hover:bg-emerald-100 transition-colors" />
-      <div className="flex items-center justify-between mb-4 relative z-10">
-        <h3 className="text-sm font-bold text-slate-500 tracking-wide">{title}</h3>
-        <div className="p-2.5 bg-emerald-50 rounded-xl text-emerald-600 border border-emerald-100 shadow-sm">
+    <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm relative overflow-hidden transition-colors">
+      <div className="flex items-center justify-between mb-6 relative z-10">
+        <h3 className="text-sm font-bold text-slate-600 tracking-wide">{title}</h3>
+        <div className="p-2 bg-emerald-50/50 rounded-full text-emerald-500 border border-emerald-100/50">
           {icon}
         </div>
       </div>
       <div className="relative z-10">
         <h4 className="text-3xl font-bold text-slate-900">{value}</h4>
-        {description && <p className="text-xs font-medium text-slate-500 mt-1">{description}</p>}
+        {description && <p className="text-xs font-medium text-slate-500 mt-2">{description}</p>}
       </div>
     </div>
   );
@@ -58,7 +101,7 @@ function StatCard({ title, value, icon, description }: { title: string; value: s
 
 function SectionCard({ title, subtitle, badge, children }: { title: string; subtitle?: string; badge?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_2px_10px_rgba(0,0,0,0.02)] p-6 flex flex-col h-full hover:shadow-md transition-all">
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 flex flex-col h-full transition-all">
       <div className="flex items-start justify-between mb-6">
         <div>
           <h3 className="font-bold text-slate-900 text-lg">{title}</h3>
@@ -78,7 +121,7 @@ function StatSkeleton() {
     <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm animate-pulse">
       <div className="flex justify-between mb-4">
         <div className="h-4 bg-slate-200 rounded w-24" />
-        <div className="h-10 w-10 bg-slate-100 rounded-xl" />
+        <div className="h-10 w-10 bg-slate-100 rounded-full" />
       </div>
       <div className="h-8 bg-slate-200 rounded w-16 mb-2" />
       <div className="h-3 bg-slate-100 rounded w-32" />
@@ -112,7 +155,6 @@ function EmptyChart({ message }: { message: string }) {
 }
 
 // --- Main Component ---
-
 export function SolverOverview({ attempts, loading = false }: SolverOverviewProps) {
   const stats = useMemo(() => {
     const total = attempts.length;
@@ -125,9 +167,13 @@ export function SolverOverview({ attempts, loading = false }: SolverOverviewProp
   const timelineData = useMemo(() => buildWeeklyAttempts(attempts), [attempts]);
   const totalAttempts = timelineData.reduce((s, w) => s + w.count, 0);
 
+  const tier = getBannerTierDetails(stats.completed);
+  const nextRank = getNextRank(stats.completed);
+
   if (loading) {
     return (
       <div className="space-y-6">
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm h-32 animate-pulse" />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {Array.from({ length: 4 }).map((_, i) => (
             <StatSkeleton key={`stat-${i}`} />
@@ -139,31 +185,70 @@ export function SolverOverview({ attempts, loading = false }: SolverOverviewProp
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-6 animate-in fade-in duration-500">
       
+      {/* --- Rank & Reliability Banner --- */}
+      <div className="bg-white rounded-2xl p-8 border border-slate-100 shadow-sm flex flex-col md:flex-row items-center gap-6 justify-between transition-colors">
+        
+        <div className="flex items-center gap-6 w-full md:w-auto">
+           <div className={`w-20 h-20 rounded-[20px] ${tier.iconBg} shrink-0 flex items-center justify-center`}>
+             {tier.icon}
+           </div>
+           <div>
+             <h2 className="text-2xl font-bold text-slate-900 mb-2">{tier.name}</h2>
+             <div className="flex items-center gap-3">
+               <span className="text-sm font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
+                 {stats.completed} Solutions Completed
+               </span>
+               
+             </div>
+           </div>
+        </div>
+
+        {nextRank ? (
+          <div className="w-full md:w-80 bg-slate-50 p-5 rounded-2xl">
+            <div className="flex items-center justify-between text-sm mb-3">
+              <span className="font-bold text-slate-700">Next Tier: {nextRank.name}</span>
+              <span className="font-bold text-emerald-600">{stats.completed} / {nextRank.min}</span>
+            </div>
+            <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-emerald-500 rounded-full transition-all duration-1000 ease-out" 
+                style={{ width: `${Math.min(100, (stats.completed / nextRank.min) * 100)}%` }} 
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="w-full md:w-80 bg-emerald-50/50 px-8 py-5 rounded-2xl flex flex-col items-center md:items-start justify-center">
+            <span className="font-bold text-emerald-700 text-lg tracking-tight mb-1">Top Tier Achieved!</span>
+            <span className="text-sm font-medium text-emerald-600/80">You are an Elite Solver.</span>
+          </div>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard 
           title="Total Attempts" 
           value={stats.total} 
-          icon={<Target className="w-5 h-5" />} 
+          icon={<Target className="w-4 h-4" />} 
           description="All problems you've claimed" 
         />
         <StatCard 
           title="Active Workspaces" 
           value={stats.active} 
-          icon={<Activity className="w-5 h-5" />} 
+          icon={<Activity className="w-4 h-4" />} 
           description="Currently in progress" 
         />
         <StatCard 
           title="Completed" 
           value={stats.completed} 
-          icon={<CheckCircle2 className="w-5 h-5" />} 
+          icon={<CheckCircle2 className="w-4 h-4" />} 
           description="Successfully solved" 
         />
         <StatCard 
           title="Success Rate" 
           value={`${stats.successRate}%`} 
-          icon={<TrendingUp className="w-5 h-5" />} 
+          icon={<TrendingUp className="w-4 h-4" />} 
           description="Ratio of solved problems" 
         />
       </div>
@@ -172,7 +257,7 @@ export function SolverOverview({ attempts, loading = false }: SolverOverviewProp
         title="Attempts Over Time" 
         subtitle="Weekly breakdown • Last 6 weeks"
         badge={
-          <span className="text-[11px] font-bold bg-emerald-50 text-emerald-700 px-3 py-1 rounded-md uppercase tracking-wider border border-emerald-200 shadow-sm">
+          <span className="text-[11px] font-bold bg-emerald-50 text-emerald-700 px-3 py-1 rounded-md uppercase tracking-wider border border-emerald-100/50 shadow-sm">
             {totalAttempts} Total
           </span>
         }
@@ -183,7 +268,7 @@ export function SolverOverview({ attempts, loading = false }: SolverOverviewProp
               <AreaChart data={timelineData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gradAttempts" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
                     <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                   </linearGradient>
                 </defs>

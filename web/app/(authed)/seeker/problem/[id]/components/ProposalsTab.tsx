@@ -171,11 +171,35 @@ export function ProposalsTab({ problem, onLocateInTree }: ProposalsTabProps) {
   };
 
   // 🚀 Goal 1: Visually distinct Gamification Colors based on Rank
+ // 🚀 Goal 1: Visually distinct Gamification Colors based on Rank
   const getTierDetails = (completed: number) => {
-    if (completed >= 10) return { name: "Elite Solver", icon: <Award className="w-4 h-4" fill="currentColor" />, color: "bg-amber-100 text-amber-900 border-amber-400 shadow-sm" };
-    if (completed >= 5) return { name: "Proven Solver", icon: <ShieldCheck className="w-4 h-4" fill="currentColor" />, color: "bg-emerald-100 text-emerald-900 border-emerald-400 shadow-sm" };
-    if (completed >= 1) return { name: "Contributor", icon: <ShieldHalf className="w-4 h-4" />, color: "bg-emerald-50 text-emerald-700 border-emerald-200" };
-    return { name: "Initiate", icon: <Shield className="w-4 h-4" />, color: "bg-slate-50 text-slate-600 border-slate-200" };
+    // Elite Solver: Solid emerald shield[cite: 3]
+    if (completed >= 10) return { 
+      name: "Elite Solver", 
+      icon: <Shield className="w-4 h-4" fill="currentColor" />, 
+      color: "bg-emerald-600 text-white border-emerald-700 shadow-md" 
+    };
+    
+    // Proven Solver: Emerald shield with check[cite: 3]
+    if (completed >= 5) return { 
+      name: "Proven Solver", 
+      icon: <ShieldCheck className="w-4 h-4" />, 
+      color: "bg-emerald-100 text-emerald-800 border-emerald-300 shadow-sm" 
+    };
+    
+    // Contributor: Outlined emerald icon[cite: 3]
+    if (completed >= 1) return { 
+      name: "Contributor", 
+      icon: <Shield className="w-4 h-4" />, 
+      color: "bg-emerald-50 text-emerald-700 border-emerald-200" 
+    };
+    
+    // Initiate (0 solutions)[cite: 3]
+    return { 
+      name: "Initiate", 
+      icon: <Circle className="w-4 h-4" />, 
+      color: "bg-slate-50 text-slate-500 border-slate-200" 
+    };
   };
 
   const groupedData = useMemo(() => {

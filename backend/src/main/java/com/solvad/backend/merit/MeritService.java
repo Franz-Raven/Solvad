@@ -70,4 +70,6 @@ public class MeritService {
         return getMetricsForSolvers(Set.of(solverId))
                 .getOrDefault(solverId, new SolverMeritDTO(0, 0.0, null));
     }
+
+
 }
