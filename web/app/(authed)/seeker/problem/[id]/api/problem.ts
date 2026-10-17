@@ -136,3 +136,15 @@ export const getSolverMetrics = async (solverId: string): Promise<SolverMetrics>
     method: "GET",
   });
 };
+
+export async function getPendingSolutions(problemId: string): Promise<SolutionAttemptResponse[]> {
+  return apiRequest<SolutionAttemptResponse[]>(`/problems/${problemId}/attempts/pending-review`, { 
+    method: "GET" 
+  });
+}
+
+export async function evaluateSolution(attemptId: string, isApproved: boolean): Promise<SolutionAttemptResponse> {
+  return apiRequest<SolutionAttemptResponse>(`/attempts/${attemptId}/evaluate?isApproved=${isApproved}`, { 
+    method: "POST" 
+  });
+}

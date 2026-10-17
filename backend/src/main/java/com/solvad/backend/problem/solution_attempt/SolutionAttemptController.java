@@ -339,4 +339,39 @@ public class SolutionAttemptController {
 
         return ResponseEntity.ok(solutionAttemptService.getMyLightweightAttemptsByUserId(userId));
     }
+
+    // -------------------------------------------------------------------------
+    // SEEKER: GET PENDING SOLUTIONS FOR REVIEW
+    // -------------------------------------------------------------------------
+    @GetMapping("/api/problems/{problemId}/attempts/pending-review")
+    @PreAuthorize("hasAnyRole('SEEKER', 'ADMIN')")
+    public ResponseEntity<?> getPendingReviewAttempts(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable UUID problemId) {
+        try {
+            UUID currentUserId = extractUserId(authHeader);
+            List<SolutionAttemptResponse> responses = attemptService.getPendingReviewAttempts(problemId, currentUserId);
+            return ResponseEntity.ok(responses);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // SEEKER: EVALUATE FINAL SOLUTION
+    // -------------------------------------------------------------------------
+    @PostMapping("/api/attempts/{attemptId}/evaluate")
+    @PreAuthorize("hasRole('SEEKER')")
+    public ResponseEntity<?> evaluateSolution(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable UUID attemptId,
+            @RequestParam boolean isApproved) {
+        try {
+            UUID seekerUserId = extractUserId(authHeader);
+            SolutionAttemptResponse response = attemptService.evaluateSolution(seekerUserId, attemptId, isApproved);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 }

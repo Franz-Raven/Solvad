@@ -628,68 +628,6 @@ public class SolutionAttemptService {
         }
     }
 
-    @Transactional
-    public SolutionAttemptResponse finalizeAttempt(UUID solverUserId, UUID attemptId) {
-        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
-                .orElseThrow(() -> new RuntimeException("Solver profile not found"));
-
-        SolutionAttempt attempt = attemptRepository.findById(attemptId)
-                .orElseThrow(() -> new RuntimeException("Attempt not found"));
-
-        if (!attempt.getSolver().getId().equals(solver.getId())) {
-            throw new RuntimeException("You do not own this attempt.");
-        }
-
-        if (attempt.getStatus() == SolutionAttemptStatus.COMPLETED) {
-            throw new RuntimeException("This attempt has already been completed.");
-        }
-
-        List<SubtaskSubmission> submissions = submissionRepository.findByAttempt(attempt);
-
-        boolean hasSubmitted = submissions.stream()
-                .anyMatch(sub -> sub.getStatus() == SubtaskSubmissionStatus.SUBMITTED);
-
-        if (!hasSubmitted) {
-            throw new RuntimeException("You must submit your sub-problem solution before finalizing.");
-        }
-
-        String solverFullName = solver.getFirstName() + " " + solver.getLastName();
-        String subtaskTitle = attempt.getTargetSubtask() != null
-                ? attempt.getTargetSubtask().getTitle() : "sub-problem";
-
-        attempt.setStatus(SolutionAttemptStatus.COMPLETED);
-        attempt.setCompletedAt(LocalDateTime.now());
-        SolutionAttempt savedAttempt = attemptRepository.save(attempt);
-
-        auditService.log(
-                attempt.getProblem().getId(),
-                solverUserId,
-                solverFullName,
-                "SOLVER",
-                AuditEventType.ATTEMPT_COMPLETED,
-                solverFullName + " finalized and submitted their attempt for sub-problem \"" + subtaskTitle + "\"."
-        );
-
-        Problem problem = attempt.getProblem();
-
-        long remainingActive = attemptRepository.countByProblemAndStatus(problem, SolutionAttemptStatus.ACTIVE);
-
-        if (remainingActive == 0 && problem.getStatus() != ProblemStatus.SOLVED_OPEN_FOR_IMPROVEMENT) {
-            problem.setStatus(ProblemStatus.OPEN);
-            problemRepository.save(problem);
-
-            auditService.log(
-                    problem.getId(),
-                    null,
-                    "SYSTEM",
-                    "SYSTEM",
-                    AuditEventType.STATUS_CHANGED,
-                    "Status automatically changed back to OPEN — no active attempts remain."
-            );
-        }
-
-        return mapToResponse(savedAttempt, submissions, solverUserId);
-    }
 
     private SubtaskSubmissionResponse mapSubmissionToResponse(SubtaskSubmission submission, UUID currentUserId) {
         UUID ownerUserId = submission.getAttempt().getSolver().getUser().getId();
@@ -1047,5 +985,124 @@ public class SolutionAttemptService {
                     );
                 })
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public SolutionAttemptResponse finalizeAttempt(UUID solverUserId, UUID attemptId) {
+        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
+                .orElseThrow(() -> new RuntimeException("Solver profile not found"));
+
+        SolutionAttempt attempt = attemptRepository.findById(attemptId)
+                .orElseThrow(() -> new RuntimeException("Attempt not found"));
+
+        if (!attempt.getSolver().getId().equals(solver.getId())) {
+            throw new RuntimeException("You do not own this attempt.");
+        }
+
+        if (attempt.getStatus() == SolutionAttemptStatus.COMPLETED) {
+            throw new RuntimeException("This attempt has already been completed.");
+        }
+
+        List<SubtaskSubmission> submissions = submissionRepository.findByAttempt(attempt);
+
+        boolean hasSubmitted = submissions.stream()
+                .anyMatch(sub -> sub.getStatus() == SubtaskSubmissionStatus.SUBMITTED);
+
+        if (!hasSubmitted) {
+            throw new RuntimeException("You must submit your sub-problem solution before finalizing.");
+        }
+
+        String solverFullName = solver.getFirstName() + " " + solver.getLastName();
+        String subtaskTitle = attempt.getTargetSubtask() != null
+                ? attempt.getTargetSubtask().getTitle() : "sub-problem";
+
+        // 🚀 FIX: Move to PENDING_REVIEW instead of COMPLETED
+        attempt.setStatus(SolutionAttemptStatus.PENDING_REVIEW);
+        attempt.setCompletedAt(LocalDateTime.now()); // Mark timestamp of submission
+        SolutionAttempt savedAttempt = attemptRepository.save(attempt);
+
+        auditService.log(
+                attempt.getProblem().getId(),
+                solverUserId,
+                solverFullName,
+                "SOLVER",
+                AuditEventType.ATTEMPT_COMPLETED,
+                solverFullName + " finalized and submitted their attempt for sub-problem \"" + subtaskTitle + "\" and is awaiting seeker approval."
+        );
+
+        return mapToResponse(savedAttempt, submissions, solverUserId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SolutionAttemptResponse> getPendingReviewAttempts(UUID problemId, UUID currentUserId) {
+        Problem problem = problemRepository.findById(problemId)
+                .orElseThrow(() -> new RuntimeException("Problem not found"));
+
+        List<SolutionAttempt> attempts = attemptRepository
+                .findByProblemAndStatus(problem, SolutionAttemptStatus.PENDING_REVIEW);
+
+        if (attempts.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<SubtaskSubmission> allSubmissions = submissionRepository.findByAttemptIn(attempts);
+
+        Map<UUID, List<SubtaskSubmission>> submissionsByAttemptId = allSubmissions.stream()
+                .collect(Collectors.groupingBy(sub -> sub.getAttempt().getId()));
+
+        return attempts.stream().map(attempt -> {
+            List<SubtaskSubmission> attemptSubmissions = submissionsByAttemptId
+                    .getOrDefault(attempt.getId(), new ArrayList<>());
+            return mapToResponse(attempt, attemptSubmissions, currentUserId);
+        }).collect(Collectors.toList());
+    }
+
+    @Transactional
+    public SolutionAttemptResponse evaluateSolution(UUID seekerUserId, UUID attemptId, boolean isApproved) {
+        SeekerProfile seeker = seekerProfileRepository.findByUserId(seekerUserId)
+                .orElseThrow(() -> new RuntimeException("Seeker profile not found"));
+
+        SolutionAttempt attempt = attemptRepository.findById(attemptId)
+                .orElseThrow(() -> new RuntimeException("Attempt not found"));
+
+        if (!attempt.getProblem().getSeeker().getId().equals(seeker.getId())) {
+            throw new RuntimeException("You do not own this problem.");
+        }
+
+        if (attempt.getStatus() != SolutionAttemptStatus.PENDING_REVIEW) {
+            throw new RuntimeException("This attempt is not pending review.");
+        }
+
+        String seekerName = seeker.getOrganizationName();
+        String subtaskTitle = attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : "sub-problem";
+
+        if (isApproved) {
+            attempt.setStatus(SolutionAttemptStatus.COMPLETED);
+
+            auditService.log(
+                    attempt.getProblem().getId(),
+                    seekerUserId,
+                    seekerName,
+                    "SEEKER",
+                    AuditEventType.STATUS_CHANGED, // Or create a new SOLUTION_APPROVED event
+                    seekerName + " approved the final solution for sub-problem \"" + subtaskTitle + "\" from " + attempt.getSolver().getFirstName() + "."
+            );
+        } else {
+            attempt.setStatus(SolutionAttemptStatus.ACTIVE);
+            attempt.setCompletedAt(null); // Reset completion time so they can try again
+
+            auditService.log(
+                    attempt.getProblem().getId(),
+                    seekerUserId,
+                    seekerName,
+                    "SEEKER",
+                    AuditEventType.STATUS_CHANGED, // Or create a new SOLUTION_REJECTED event
+                    seekerName + " rejected the final solution for sub-problem \"" + subtaskTitle + "\" from " + attempt.getSolver().getFirstName() + " and returned it to active."
+            );
+        }
+
+        SolutionAttempt savedAttempt = attemptRepository.save(attempt);
+        List<SubtaskSubmission> submissions = submissionRepository.findByAttempt(savedAttempt);
+        return mapToResponse(savedAttempt, submissions, seekerUserId);
     }
 }

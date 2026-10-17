@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { Suspense, useState, useEffect, useRef } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import {
@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import Portal from "@/components/portal";
 
-// 🚀 FIX: Swapped getAllAttempts for getProblemActiveAttemptsCount
 import { getProblemById, updateProblemStatus, deleteProblem, getProblemActiveAttemptsCount } from "./api/problem";
 import type { ProblemResponse } from "@/types/problem";
 
@@ -128,6 +127,11 @@ const ProposalsTab = dynamic(
   { loading: () => <ProposalsSkeleton /> }
 );
 
+const ReviewSolutionsTab = dynamic(
+  () => import("@/app/(authed)/seeker/problem/[id]/components/ReviewSolutionsTab").then((mod) => mod.ReviewSolutionsTab),
+  { loading: () => <ProposalsSkeleton /> }
+);
+
 const WorkspaceTab = dynamic(
   () => import("@/app/(authed)/seeker/problem/[id]/components/WorkspaceTab").then((mod) => mod.WorkspaceTab),
   { loading: () => <WorkspaceSkeleton /> }
@@ -138,6 +142,7 @@ const SolutionTreeTab = dynamic(
   { loading: () => <TreeSkeletonShell /> }
 );
 
+// Gap analysis lives inside AIInsightsTab, so GapAnalysisView is NOT imported here.
 const AIInsightsTab = dynamic(
   () => import("@/app/(authed)/seeker/problem/[id]/components/AIInsightsTab"),
   { loading: () => <InsightsSkeleton /> }
@@ -155,8 +160,13 @@ const SettingsTab = dynamic(
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-type TabType = "problem" | "proposals" | "workspace" | "insights" | "tree" | "history" | "settings";
+type TabType = "problem" | "proposals" | "workspace" | "review" | "insights" | "tree" | "history" | "settings";
 type ModalMode = "confirm" | "terminate" | "delete" | null;
+
+const VALID_TABS: TabType[] = ["problem", "proposals", "workspace", "review", "tree", "insights", "history", "settings"];
+
+const isValidTab = (value: string | null): value is TabType =>
+  value !== null && (VALID_TABS as string[]).includes(value);
 
 const getBadgeStyle = (status: string) => {
   switch (status) {
@@ -256,11 +266,12 @@ function ConfirmModal({
   );
 }
 
-// ─── Page ────────────────────────────────────────────────────────────────────
+// ─── Page content ────────────────────────────────────────────────────────────
 
-export default function ProblemDetailPage() {
+function ProblemDetailContent() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const problemId = params.id as string;
 
   const [problem, setProblem] = useState<ProblemResponse | null>(null);
@@ -271,7 +282,8 @@ export default function ProblemDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<TabType>("problem");
+  const tabParam = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<TabType>(isValidTab(tabParam) ? tabParam : "problem");
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [highlightedNodeId, setHighlightedNodeId] = useState<string | null>(null);
 
@@ -283,6 +295,23 @@ export default function ProblemDetailPage() {
   useEffect(() => {
     loadProblem();
   }, [problemId]);
+
+  // Keep the active tab in sync with the URL (back/forward buttons, shared links)
+  useEffect(() => {
+    if (isValidTab(tabParam)) setActiveTab(tabParam);
+  }, [tabParam]);
+
+  const handleTabChange = (tabId: TabType) => {
+    setActiveTab(tabId);
+    if (tabId !== "tree") setHighlightedNodeId(null);
+    router.replace(`/seeker/problem/${problemId}?tab=${tabId}`, { scroll: false });
+  };
+
+  const locateInTree = (nodeId: string) => {
+    setHighlightedNodeId(nodeId);
+    setActiveTab("tree");
+    router.replace(`/seeker/problem/${problemId}?tab=tree`, { scroll: false });
+  };
 
   useEffect(() => {
     if (!showStatusDropdown) return;
@@ -307,7 +336,6 @@ export default function ProblemDetailPage() {
       setLoading(true);
       setError(null);
 
-      // 🚀 FIX: Swapped heavy getAllAttempts for lightning-fast getProblemActiveAttemptsCount
       const [problemResult, countResult] = await Promise.allSettled([
         getProblemById(problemId),
         getProblemActiveAttemptsCount(problemId),
@@ -350,7 +378,6 @@ export default function ProblemDetailPage() {
       const updatedProblem = await updateProblemStatus(problemId, status);
       setProblem(updatedProblem);
 
-      // 🚀 FIX: Used lightweight endpoint to refresh count
       const count = await getProblemActiveAttemptsCount(problemId).catch(() => 0);
       setActiveAttemptsCount(count);
     } catch (err) {
@@ -391,7 +418,7 @@ export default function ProblemDetailPage() {
             </div>
             <div className="flex space-x-2 bg-slate-50 p-1 rounded-xl mt-4 w-fit max-w-full overflow-hidden animate-pulse border border-slate-100">
               <div className="w-36 h-9 bg-white rounded-lg border border-slate-200 flex-shrink-0" />
-              {[32, 36, 28, 28, 32, 24].map((w, i) => (
+              {[32, 36, 32, 28, 28, 32, 24].map((w, i) => (
                 <div key={i} className="h-9 bg-slate-200/50 rounded-lg flex-shrink-0" style={{ width: `${w * 4}px` }} />
               ))}
             </div>
@@ -420,8 +447,9 @@ export default function ProblemDetailPage() {
 
   const tabs: { id: TabType; label: string }[] = [
     { id: "problem", label: "Problem Profile" },
-    { id: "proposals", label: "Pending Requests" },
+    { id: "proposals", label: "Pending Proposals" },
     { id: "workspace", label: "Active Workspace" },
+    { id: "review", label: "Pending Solutions" },
     { id: "tree", label: "Solution Tree" },
     { id: "insights", label: "AI Insights" },
     { id: "history", label: "Audit Timeline" },
@@ -516,7 +544,7 @@ export default function ProblemDetailPage() {
 
           <div className="flex space-x-1 bg-slate-50 p-1 rounded-xl mt-4 w-fit max-w-full overflow-x-auto no-scrollbar border border-slate-100">
             {tabs.map((tab) => (
-              <button key={tab.id} onClick={() => { setActiveTab(tab.id); if (tab.id !== "tree") setHighlightedNodeId(null); }} className={`px-5 md:px-6 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${activeTab === tab.id ? "bg-white text-accent shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-900 hover:bg-slate-100 border border-transparent"}`}>
+              <button key={tab.id} onClick={() => handleTabChange(tab.id)} className={`px-5 md:px-6 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${activeTab === tab.id ? "bg-white text-accent shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-900 hover:bg-slate-100 border border-transparent"}`}>
                 {tab.label}
               </button>
             ))}
@@ -543,7 +571,7 @@ export default function ProblemDetailPage() {
                 {activeAttemptsCount === 1 ? "1 solver is currently working on this problem." : `${activeAttemptsCount} solvers are currently working on this problem.`}
               </p>
             </div>
-            <button onClick={() => setActiveTab("workspace")} className="text-sm font-bold text-accent hover:underline transition-all cursor-pointer text-left">
+            <button onClick={() => handleTabChange("workspace")} className="text-sm font-bold text-accent hover:underline transition-all cursor-pointer text-left">
               View workspace →
             </button>
           </div>
@@ -551,8 +579,9 @@ export default function ProblemDetailPage() {
 
         <div key={activeTab} className="animate-in fade-in duration-500">
           {activeTab === "problem" && <ProblemTab problem={problem} />}
-          {activeTab === "workspace" && <WorkspaceTab problem={problem} onProblemUpdate={(updated) => setProblem(updated)} onLocateInTree={(nodeId) => { setHighlightedNodeId(nodeId); setActiveTab("tree"); }} />}
-          {activeTab === "proposals" && <ProposalsTab problem={problem} onLocateInTree={(nodeId) => { setHighlightedNodeId(nodeId); setActiveTab("tree"); }} />}
+          {activeTab === "workspace" && <WorkspaceTab problem={problem} onProblemUpdate={(updated) => setProblem(updated)} onLocateInTree={locateInTree} />}
+          {activeTab === "proposals" && <ProposalsTab problem={problem} onLocateInTree={locateInTree} />}
+          {activeTab === "review" && <ReviewSolutionsTab problem={problem} />}
           {activeTab === "insights" && <AIInsightsTab problemId={problemId} />}
           {activeTab === "tree" && <SolutionTreeTab problemId={problemId} highlightedAttemptId={highlightedNodeId} />}
           {activeTab === "history" && <AuditTimelineTab problemId={problemId} />}
@@ -560,5 +589,15 @@ export default function ProblemDetailPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// ─── Page (Suspense boundary required for useSearchParams) ───────────────────
+
+export default function ProblemDetailPage() {
+  return (
+    <Suspense fallback={null}>
+      <ProblemDetailContent />
+    </Suspense>
   );
 }
