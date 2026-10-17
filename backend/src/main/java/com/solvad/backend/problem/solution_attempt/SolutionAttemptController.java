@@ -10,8 +10,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import com.solvad.backend.user.User;
 
 import java.util.List;
 import java.util.Map;
@@ -30,26 +28,22 @@ public class SolutionAttemptController {
     @Autowired
     private MatchmakingService matchmakingService;
 
-    @Autowired
-    private SolutionAttemptService solutionAttemptService;
+    private UUID extractUserId(String authHeader) {
+        String token = authHeader.substring(7);
+        return jwtService.extractUserId(token);
+    }
 
-    // 🚀 Changed path to 2 segments to permanently bypass the {attemptId} collision
     @GetMapping("/api/attempts/active/count")
     @PreAuthorize("hasRole('SOLVER')")
-    public ResponseEntity<ActiveAttemptsCountResponse> getMyActiveAttemptsCount(
-            @RequestHeader("Authorization") String authHeader) {
-
-        String token = authHeader.substring(7);
-        UUID userId = jwtService.extractUserId(token);
-
-        ActiveAttemptsCountResponse response = solutionAttemptService.getMyActiveAttemptsCount(userId);
+    public ResponseEntity<ActiveAttemptsCountResponse> getMyActiveAttemptsCount(@RequestHeader("Authorization") String authHeader) {
+        UUID userId = extractUserId(authHeader);
+        ActiveAttemptsCountResponse response = attemptService.getMyActiveAttemptsCount(userId);
         return ResponseEntity.ok(response);
     }
+
     @GetMapping("/api/attempts/{attemptId}")
     @PreAuthorize("hasAnyRole('SOLVER', 'SEEKER', 'ADMIN')")
-    public ResponseEntity<?> getAttemptById(
-            @RequestHeader("Authorization") String authHeader,
-            @PathVariable UUID attemptId) {
+    public ResponseEntity<?> getAttemptById(@RequestHeader("Authorization") String authHeader, @PathVariable UUID attemptId) {
         try {
             UUID currentUserId = extractUserId(authHeader);
             SolutionAttemptResponse response = attemptService.getAttemptById(attemptId, currentUserId);
@@ -58,7 +52,6 @@ public class SolutionAttemptController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
-
 
     @GetMapping("/api/problems/open")
     @PreAuthorize("hasRole('SOLVER')")
@@ -71,7 +64,6 @@ public class SolutionAttemptController {
         }
     }
 
-
     @GetMapping("/api/problems/discovery")
     @PreAuthorize("hasRole('SOLVER')")
     public ResponseEntity<?> getDiscoveryDashboard(
@@ -80,33 +72,24 @@ public class SolutionAttemptController {
             @RequestParam(required = false) String tags) {
         try {
             UUID solverUserId = extractUserId(authHeader);
-            DiscoveryDashboardResponse dashboard = matchmakingService.getDiscoveryDashboard(
-                    solverUserId, search, tags);
+            DiscoveryDashboardResponse dashboard = matchmakingService.getDiscoveryDashboard(solverUserId, search, tags);
             return ResponseEntity.ok(dashboard);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
-
-
     @GetMapping("/api/problems/{problemId}/my-attempt")
     @PreAuthorize("hasRole('SOLVER')")
-    public ResponseEntity<?> getMyAttempt(
-            @RequestHeader("Authorization") String authHeader,
-            @PathVariable UUID problemId) {
-
-
+    public ResponseEntity<?> getMyAttempt(@RequestHeader("Authorization") String authHeader, @PathVariable UUID problemId) {
         try {
             UUID solverUserId = extractUserId(authHeader);
             SolutionAttemptResponse response = attemptService.getMyAttempt(solverUserId, problemId);
             return ResponseEntity.ok(response);
-
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
-
 
     @PutMapping("/api/attempts/{attemptId}/subtasks/{subtaskId}/draft")
     @PreAuthorize("hasRole('SOLVER')")
@@ -127,7 +110,6 @@ public class SolutionAttemptController {
         }
     }
 
-
     @PostMapping("/api/attempts/{attemptId}/subtasks/{subtaskId}/submit")
     @PreAuthorize("hasRole('SOLVER')")
     public ResponseEntity<?> lockAndSubmitSubtask(
@@ -147,12 +129,9 @@ public class SolutionAttemptController {
         }
     }
 
-
     @PostMapping("/api/attempts/{attemptId}/complete")
     @PreAuthorize("hasRole('SOLVER')")
-    public ResponseEntity<?> completeAttempt(
-            @RequestHeader("Authorization") String authHeader,
-            @PathVariable UUID attemptId) {
+    public ResponseEntity<?> completeAttempt(@RequestHeader("Authorization") String authHeader, @PathVariable UUID attemptId) {
         try {
             UUID solverUserId = extractUserId(authHeader);
             SolutionAttemptResponse response = attemptService.finalizeAttempt(solverUserId, attemptId);
@@ -162,7 +141,6 @@ public class SolutionAttemptController {
         }
     }
 
-
     @DeleteMapping("/api/submissions/{submissionId}/files")
     @PreAuthorize("hasRole('SOLVER')")
     public ResponseEntity<?> deleteFile(
@@ -171,8 +149,7 @@ public class SolutionAttemptController {
             @RequestParam("fileUrl") String fileUrl) {
         try {
             UUID solverUserId = extractUserId(authHeader);
-            SubtaskSubmissionResponse response = attemptService.deleteFileFromSubmission(
-                    solverUserId, submissionId, fileUrl);
+            SubtaskSubmissionResponse response = attemptService.deleteFileFromSubmission(solverUserId, submissionId, fileUrl);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -181,11 +158,9 @@ public class SolutionAttemptController {
 
     @GetMapping("/api/problems/{problemId}/attempts")
     @PreAuthorize("hasAnyRole('SEEKER', 'SOLVER', 'ADMIN')")
-    public ResponseEntity<?> getAllAttempts(
-            @RequestHeader("Authorization") String authHeader, // 👈 Add this line
-            @PathVariable UUID problemId) {
+    public ResponseEntity<?> getAllAttempts(@RequestHeader("Authorization") String authHeader, @PathVariable UUID problemId) {
         try {
-            UUID currentUserId = extractUserId(authHeader); // 👈 Add this line
+            UUID currentUserId = extractUserId(authHeader);
             List<SolutionAttemptResponse> responses = attemptService.getAllAttemptsForProblem(problemId, currentUserId);
             return ResponseEntity.ok(responses);
         } catch (RuntimeException e) {
@@ -193,19 +168,11 @@ public class SolutionAttemptController {
         }
     }
 
-
-    private UUID extractUserId(String authHeader) {
-        String token = authHeader.substring(7);
-        return jwtService.extractUserId(token);
-    }
-
     @GetMapping("/api/attempts/my-attempts")
     @PreAuthorize("hasRole('SOLVER')")
     public ResponseEntity<?> getMyActiveAttempts(@RequestHeader("Authorization") String authHeader) {
         try {
-            String token = authHeader.substring(7);
-            UUID solverUserId = jwtService.extractUserId(token);
-
+            UUID solverUserId = extractUserId(authHeader);
             List<SolutionAttemptResponse> responses = attemptService.getMyAttempts(solverUserId);
             return ResponseEntity.ok(responses);
         } catch (RuntimeException e) {
@@ -213,15 +180,9 @@ public class SolutionAttemptController {
         }
     }
 
-    // -------------------------------------------------------------------------
-// ABANDON ATTEMPT
-// DELETE /api/attempts/{attemptId}/abandon
-// -------------------------------------------------------------------------
     @DeleteMapping("/api/attempts/{attemptId}/abandon")
     @PreAuthorize("hasRole('SOLVER')")
-    public ResponseEntity<?> abandonAttempt(
-            @RequestHeader("Authorization") String authHeader,
-            @PathVariable UUID attemptId) {
+    public ResponseEntity<?> abandonAttempt(@RequestHeader("Authorization") String authHeader, @PathVariable UUID attemptId) {
         try {
             UUID solverUserId = extractUserId(authHeader);
             attemptService.abandonAttempt(solverUserId, attemptId);
@@ -234,11 +195,11 @@ public class SolutionAttemptController {
     @GetMapping("/api/problems/{problemId}/subtasks/{subtaskId}/attempts")
     @PreAuthorize("hasAnyRole('SEEKER', 'SOLVER', 'ADMIN')")
     public ResponseEntity<?> getAttemptsForSubtask(
-            @RequestHeader("Authorization") String authHeader, // 👈 Add this line
+            @RequestHeader("Authorization") String authHeader,
             @PathVariable UUID problemId,
             @PathVariable UUID subtaskId) {
         try {
-            UUID currentUserId = extractUserId(authHeader); // 👈 Add this line
+            UUID currentUserId = extractUserId(authHeader);
             List<SolutionAttemptResponse> responses = attemptService.getAttemptsForSubtask(problemId, subtaskId, currentUserId);
             return ResponseEntity.ok(responses);
         } catch (RuntimeException e) {
@@ -248,12 +209,10 @@ public class SolutionAttemptController {
 
     @PostMapping("/api/problems/{problemId}/mark-solved")
     @PreAuthorize("hasRole('SEEKER')")
-    public ResponseEntity<?> markAsSolved(
-            @RequestHeader("Authorization") String authHeader,
-            @PathVariable UUID problemId) {
+    public ResponseEntity<?> markAsSolved(@RequestHeader("Authorization") String authHeader, @PathVariable UUID problemId) {
         try {
             UUID seekerUserId = extractUserId(authHeader);
-            attemptService.markAsSolved(seekerUserId, problemId); // void now
+            attemptService.markAsSolved(seekerUserId, problemId);
             return ResponseEntity.ok("Problem marked as solved");
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -266,12 +225,9 @@ public class SolutionAttemptController {
             @RequestHeader("Authorization") String authHeader,
             @RequestParam(defaultValue = "ACTIVE") String tab,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "5") int size
-    ) {
-        String token = authHeader.substring(7);
-        UUID solverId = jwtService.extractUserId(token);
-
-        PaginatedAttemptsResponse response = solutionAttemptService.getWorkspaceAttempts(solverId, tab, page, size);
+            @RequestParam(defaultValue = "5") int size) {
+        UUID solverId = extractUserId(authHeader);
+        PaginatedAttemptsResponse response = attemptService.getWorkspaceAttempts(solverId, tab, page, size);
         return ResponseEntity.ok(response);
     }
 
@@ -281,85 +237,77 @@ public class SolutionAttemptController {
             @PathVariable UUID id,
             @RequestHeader("Authorization") String authHeader) {
         try {
-            String token = authHeader.substring(7);
-            UUID solverId = jwtService.extractUserId(token);
-            return ResponseEntity.ok(solutionAttemptService.getAttemptDetails(id, solverId));
+            UUID solverId = extractUserId(authHeader);
+            return ResponseEntity.ok(attemptService.getAttemptDetails(id, solverId));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().build();
         }
     }
 
-    // 🚀 Update the generic return type from AttemptNodeSummaryResponse to SolutionAttemptSummaryResponse
     @GetMapping("/api/problems/{problemId}/attempts/tree")
     @PreAuthorize("hasAnyRole('SEEKER', 'SOLVER', 'ADMIN')")
-    public ResponseEntity<List<SolutionAttemptSummaryResponse>> getProblemTree(
-            @PathVariable UUID problemId,
-            @RequestHeader("Authorization") String authHeader) {
-        return ResponseEntity.ok(solutionAttemptService.getLightweightTree(problemId));
+    public ResponseEntity<List<SolutionAttemptSummaryResponse>> getProblemTree(@PathVariable UUID problemId) {
+        return ResponseEntity.ok(attemptService.getLightweightTree(problemId));
     }
 
     @GetMapping("/api/problems/{problemId}/attempts/active-count")
     @PreAuthorize("hasAnyRole('SEEKER', 'ADMIN')")
     public ResponseEntity<ActiveAttemptsCountResponse> getProblemActiveAttemptsCount(@PathVariable UUID problemId) {
-        long count = solutionAttemptService.getActiveAttemptsCountForProblem(problemId);
+        long count = attemptService.getActiveAttemptsCountForProblem(problemId);
         return ResponseEntity.ok(new ActiveAttemptsCountResponse(count));
     }
 
     @GetMapping("/api/problems/{problemId}/workspaces/active")
     @PreAuthorize("hasAnyRole('SEEKER', 'ADMIN')")
     public ResponseEntity<List<SolutionAttemptSummaryResponse>> getActiveWorkspaces(@PathVariable UUID problemId) {
-        return ResponseEntity.ok(solutionAttemptService.getActiveWorkspaces(problemId));
+        return ResponseEntity.ok(attemptService.getActiveWorkspaces(problemId));
     }
 
     @GetMapping("/api/problems/{problemId}/subtasks/capacities")
     @PreAuthorize("hasAnyRole('SEEKER', 'ADMIN')")
     public ResponseEntity<List<Map<String, Object>>> getSubtaskCapacities(@PathVariable UUID problemId) {
-        return ResponseEntity.ok(solutionAttemptService.getSubtaskCapacities(problemId));
+        return ResponseEntity.ok(attemptService.getSubtaskCapacities(problemId));
     }
 
     @GetMapping("/api/problems/{problemId}/proposals/pending/summary")
     @PreAuthorize("hasAnyRole('SEEKER', 'ADMIN')")
     public ResponseEntity<List<Map<String, Object>>> getPendingProposalsSummary(@PathVariable UUID problemId) {
-        return ResponseEntity.ok(solutionAttemptService.getLightweightPendingProposals(problemId));
+        return ResponseEntity.ok(attemptService.getLightweightPendingProposals(problemId));
     }
 
     @GetMapping("/api/proposals/{proposalId}/details")
     @PreAuthorize("hasAnyRole('SEEKER', 'ADMIN')")
     public ResponseEntity<Map<String, Object>> getProposalDetailsForSeeker(@PathVariable UUID proposalId) {
-        return ResponseEntity.ok(solutionAttemptService.getProposalDetailsForSeeker(proposalId));
+        return ResponseEntity.ok(attemptService.getProposalDetailsForSeeker(proposalId));
     }
 
     @GetMapping("/api/attempts/me/summary")
     @PreAuthorize("hasRole('SOLVER')")
-    public ResponseEntity<List<SolutionAttemptSummaryResponse>> getMyLightweightAttempts(
-            @RequestHeader("Authorization") String authHeader) {
-
-        String token = authHeader.substring(7);
-        UUID userId = jwtService.extractUserId(token);
-
-        return ResponseEntity.ok(solutionAttemptService.getMyLightweightAttemptsByUserId(userId));
+    public ResponseEntity<List<SolutionAttemptSummaryResponse>> getMyLightweightAttempts(@RequestHeader("Authorization") String authHeader) {
+        UUID userId = extractUserId(authHeader);
+        return ResponseEntity.ok(attemptService.getMyLightweightAttemptsByUserId(userId));
     }
 
-    // -------------------------------------------------------------------------
-    // SEEKER: GET PENDING SOLUTIONS FOR REVIEW
-    // -------------------------------------------------------------------------
     @GetMapping("/api/problems/{problemId}/attempts/pending-review")
     @PreAuthorize("hasAnyRole('SEEKER', 'ADMIN')")
-    public ResponseEntity<?> getPendingReviewAttempts(
+    public ResponseEntity<PaginatedAttemptsResponse> getPendingReviewAttempts(
             @RequestHeader("Authorization") String authHeader,
-            @PathVariable UUID problemId) {
+            @PathVariable UUID problemId,
+            @RequestParam(required = false) UUID subtaskId,
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "newest-first") String sort,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "8") int size) {
         try {
             UUID currentUserId = extractUserId(authHeader);
-            List<SolutionAttemptResponse> responses = attemptService.getPendingReviewAttempts(problemId, currentUserId);
-            return ResponseEntity.ok(responses);
+            PaginatedAttemptsResponse response = attemptService.getPendingReviewAttempts(
+                    problemId, subtaskId, search, sort, page, size, currentUserId);
+            return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.badRequest().build();
         }
     }
 
-    // -------------------------------------------------------------------------
-    // SEEKER: EVALUATE FINAL SOLUTION
-    // -------------------------------------------------------------------------
     @PostMapping("/api/attempts/{attemptId}/evaluate")
     @PreAuthorize("hasRole('SEEKER')")
     public ResponseEntity<?> evaluateSolution(

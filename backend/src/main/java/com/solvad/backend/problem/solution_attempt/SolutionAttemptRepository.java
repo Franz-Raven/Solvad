@@ -55,6 +55,15 @@ public interface SolutionAttemptRepository extends JpaRepository<SolutionAttempt
     // 🚀 ADD THIS METHOD
     List<SolutionAttempt> findByProblemOrderByClaimedAtAsc(Problem problem);
     List<SolutionAttempt> findBySolver(SolverProfile solver);
-
+    @Query("SELECT a FROM SolutionAttempt a WHERE a.problem = :problem AND a.status = :status " +
+            "AND (:subtask IS NULL OR a.targetSubtask = :subtask) " +
+            "AND (:search IS NULL OR :search = '' OR LOWER(a.solver.firstName) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(a.solver.lastName) LIKE LOWER(CONCAT('%', :search, '%')))")
+    Page<SolutionAttempt> findPendingReviews(
+            @Param("problem") Problem problem,
+            @Param("status") SolutionAttemptStatus status,
+            @Param("subtask") ProblemSubtask subtask,
+            @Param("search") String search,
+            Pageable pageable
+    );
 
 }

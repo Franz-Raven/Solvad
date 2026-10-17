@@ -142,7 +142,7 @@ const SolutionTreeTab = dynamic(
   { loading: () => <TreeSkeletonShell /> }
 );
 
-// Gap analysis lives inside AIInsightsTab, so GapAnalysisView is NOT imported here.
+// 🚀 FIXED: Gap Analysis is now completely handled inside AIInsightsTab
 const AIInsightsTab = dynamic(
   () => import("@/app/(authed)/seeker/problem/[id]/components/AIInsightsTab"),
   { loading: () => <InsightsSkeleton /> }
@@ -160,6 +160,7 @@ const SettingsTab = dynamic(
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
+// 🚀 FIXED: Removed "gap" from TabType since it's no longer a standalone tab
 type TabType = "problem" | "proposals" | "workspace" | "review" | "insights" | "tree" | "history" | "settings";
 type ModalMode = "confirm" | "terminate" | "delete" | null;
 
@@ -296,7 +297,6 @@ function ProblemDetailContent() {
     loadProblem();
   }, [problemId]);
 
-  // Keep the active tab in sync with the URL (back/forward buttons, shared links)
   useEffect(() => {
     if (isValidTab(tabParam)) setActiveTab(tabParam);
   }, [tabParam]);
@@ -445,6 +445,7 @@ function ProblemDetailContent() {
     );
   }
 
+  // 🚀 FIXED: Removed the "gap" tab from the navigation array
   const tabs: { id: TabType; label: string }[] = [
     { id: "problem", label: "Problem Profile" },
     { id: "proposals", label: "Pending Proposals" },
@@ -579,11 +580,11 @@ function ProblemDetailContent() {
 
         <div key={activeTab} className="animate-in fade-in duration-500">
           {activeTab === "problem" && <ProblemTab problem={problem} />}
-          {activeTab === "workspace" && <WorkspaceTab problem={problem} onProblemUpdate={(updated) => setProblem(updated)} onLocateInTree={locateInTree} />}
           {activeTab === "proposals" && <ProposalsTab problem={problem} onLocateInTree={locateInTree} />}
+          {activeTab === "workspace" && <WorkspaceTab problem={problem} onProblemUpdate={setProblem} onLocateInTree={locateInTree} />}
           {activeTab === "review" && <ReviewSolutionsTab problem={problem} />}
-          {activeTab === "insights" && <AIInsightsTab problemId={problemId} />}
           {activeTab === "tree" && <SolutionTreeTab problemId={problemId} highlightedAttemptId={highlightedNodeId} />}
+          {activeTab === "insights" && <AIInsightsTab problemId={problemId} />}
           {activeTab === "history" && <AuditTimelineTab problemId={problemId} />}
           {activeTab === "settings" && <SettingsTab problem={problem} onDelete={() => { setActionError(null); setModalMode("delete"); }} />}
         </div>

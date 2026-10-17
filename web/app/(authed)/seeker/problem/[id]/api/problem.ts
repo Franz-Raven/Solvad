@@ -6,7 +6,7 @@ import { AuditLogEntry } from "@/types/attempt";
 import type { SolutionAttemptSummary } from "@/types/attempt";
 import type { AuditDateSummary, AuditLog } from "@/types/audit";
 import type { SolverMetrics } from "@/types/attempt";
-
+import type { PaginatedAttemptsResponse } from "@/types/attempt";
 
 export async function getProblemById(
   problemId: string
@@ -104,6 +104,7 @@ export interface SubtaskCapacity {
   subtaskId: string;
   title: string;
   activeCount: number;
+  pendingReviewCount: number; // 🚀 Added
   maxSolvers: number;
 }
 
@@ -137,14 +138,33 @@ export const getSolverMetrics = async (solverId: string): Promise<SolverMetrics>
   });
 };
 
-export async function getPendingSolutions(problemId: string): Promise<SolutionAttemptResponse[]> {
-  return apiRequest<SolutionAttemptResponse[]>(`/problems/${problemId}/attempts/pending-review`, { 
-    method: "GET" 
+export async function getPendingSolutions(
+  problemId: string,
+  subtaskId: string = "ALL",
+  search: string = "",
+  sort: string = "newest-first",
+  page: number = 0,
+  size: number = 8
+): Promise<PaginatedAttemptsResponse> {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    size: size.toString(),
+    sort: sort
   });
+  if (subtaskId && subtaskId !== "ALL") params.append("subtaskId", subtaskId);
+  if (search) params.append("search", search);
+
+  return apiRequest<PaginatedAttemptsResponse>(
+    `/problems/${problemId}/attempts/pending-review?${params.toString()}`,
+    { method: "GET" }
+  );
+}
+
+// 🚀 Only query this heavy endpoint when the Seeker clicks "Review"
+export async function getAttemptDetailsById(attemptId: string): Promise<SolutionAttemptResponse> {
+  return apiRequest<SolutionAttemptResponse>(`/attempts/${attemptId}`, { method: "GET" });
 }
 
 export async function evaluateSolution(attemptId: string, isApproved: boolean): Promise<SolutionAttemptResponse> {
-  return apiRequest<SolutionAttemptResponse>(`/attempts/${attemptId}/evaluate?isApproved=${isApproved}`, { 
-    method: "POST" 
-  });
+  return apiRequest<SolutionAttemptResponse>(`/attempts/${attemptId}/evaluate?isApproved=${isApproved}`, { method: "POST" });
 }
