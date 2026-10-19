@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { Loader2, GitBranch, Paperclip, X } from "lucide-react";
-import { evaluateProposal, getPendingProposalsSummary, getFullProposalDetails, getSubtaskCapacities } from "../api/problem";
+import { Circle, Loader2, GitBranch, X, Shield, ShieldHalf, ShieldCheck, Award, Clock, Activity, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { evaluateProposal, getPendingProposals, getFullProposalDetails, getSubtaskCapacities, getSolverMetrics } from "../api/problem";
 import type { ClaimSummaryResponse } from "@/types/attempt";
 import type { SubtaskCapacity } from "../api/problem";
 import type { ClaimRequestResponse } from "@/types/attempt";
 import type { ProblemResponse } from "@/types/problem";
+import type { SolverMetrics } from "@/types/attempt";
 
 type SortOrder = "newest-first" | "oldest-first";
 
@@ -23,10 +24,12 @@ export function ProposalsTab({ problem, onLocateInTree }: ProposalsTabProps) {
 
   const [selectedSubtaskId, setSelectedSubtaskId] = useState<string>("ALL");
   const [sortOrder, setSortOrder] = useState<SortOrder>("newest-first");
+  const [searchQuery, setSearchQuery] = useState("");
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   
-  const ITEMS_PER_PAGE = 8;
-  const [visibleItems, setVisibleItems] = useState<Record<string, number>>({});
+  // 🚀 True Pagination State (Tracks the current page for each accordion group)
+  const ITEMS_PER_PAGE = 5;
+  const [pageState, setPageState] = useState<Record<string, number>>({});
 
   const [selectedProposal, setSelectedProposal] = useState<ClaimRequestResponse | null>(null);
   const [fetchingDetailsId, setFetchingDetailsId] = useState<string | null>(null);
@@ -34,6 +37,9 @@ export function ProposalsTab({ problem, onLocateInTree }: ProposalsTabProps) {
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
+  
+  const [solverMetrics, setSolverMetrics] = useState<SolverMetrics | null>(null);
+  const [metricsLoading, setMetricsLoading] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -48,16 +54,34 @@ export function ProposalsTab({ problem, onLocateInTree }: ProposalsTabProps) {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [pendingData, caps] = await Promise.all([
-        getPendingProposalsSummary(problem.id),
+      const [rawProposals, caps] = await Promise.all([
+        getPendingProposals(problem.id),
         getSubtaskCapacities(problem.id)
       ]);
-      setProposals(pendingData);
+      
+      const mappedProposals: ClaimSummaryResponse[] = rawProposals.map(p => ({
+        id: p.id,
+        solver: {
+            id: p.solver.id, 
+            firstName: p.solver.firstName,
+            lastName: p.solver.lastName,
+            institution: p.solver.institution,
+            profilePictureUrl: p.solver.profilePictureUrl
+        },
+        targetSubtaskId: p.targetSubtaskId,
+        parentAttemptId: p.parentAttemptId,
+        status: p.status,
+        createdAt: p.createdAt,
+        fileCount: p.supportingDocuments ? p.supportingDocuments.split(",").length : 0
+      }));
+
+      setProposals(mappedProposals);
       setCapacities(caps);
       
-      const initialVisible: Record<string, number> = {};
-      problem.subtasks.forEach(st => initialVisible[st.id] = ITEMS_PER_PAGE);
-      setVisibleItems(initialVisible);
+      // Initialize page 1 for all subtasks
+      const initialPages: Record<string, number> = {};
+      problem.subtasks.forEach(st => initialPages[st.id] = 1);
+      setPageState(initialPages);
     } catch (err: any) {
       setError(err.message || "Failed to fetch data");
     } finally {
@@ -65,15 +89,33 @@ export function ProposalsTab({ problem, onLocateInTree }: ProposalsTabProps) {
     }
   };
 
-  const handleOpenDetails = async (proposalId: string) => {
+ const handleOpenDetails = async (proposalId: string, solverId?: string) => {
     setFetchingDetailsId(proposalId);
+    setSolverMetrics(null);
+    setMetricsLoading(true);
+    
     try {
       const heavyProposal = await getFullProposalDetails(proposalId);
       setSelectedProposal(heavyProposal);
+      
+      const fallback = { solutionsCompleted: 0, completionRate: 0, avgTurnaroundDays: null };
+      const targetSolverId = solverId;
+      
+      if (!targetSolverId) {
+        setSolverMetrics(fallback);
+      } else {
+        try {
+          const metrics = await getSolverMetrics(targetSolverId);
+          setSolverMetrics(metrics);
+        } catch (metricsErr) {
+          setSolverMetrics(fallback);
+        }
+      }
     } catch(err) {
       setNotification({ type: "error", message: "Failed to load full proposal details." });
     } finally {
       setFetchingDetailsId(null);
+      setMetricsLoading(false);
     }
   };
 
@@ -100,8 +142,8 @@ export function ProposalsTab({ problem, onLocateInTree }: ProposalsTabProps) {
     });
   };
 
-  const loadMore = (groupId: string) => {
-    setVisibleItems(prev => ({ ...prev, [groupId]: (prev[groupId] || ITEMS_PER_PAGE) + ITEMS_PER_PAGE }));
+  const setPage = (groupId: string, page: number) => {
+    setPageState(prev => ({ ...prev, [groupId]: page }));
   };
 
   const getFilenameFromUrl = (url: string) => {
@@ -128,12 +170,50 @@ export function ProposalsTab({ problem, onLocateInTree }: ProposalsTabProps) {
     );
   };
 
+  // 🚀 Goal 1: Visually distinct Gamification Colors based on Rank
+ // 🚀 Goal 1: Visually distinct Gamification Colors based on Rank
+  const getTierDetails = (completed: number) => {
+    // Elite Solver: Solid emerald shield[cite: 3]
+    if (completed >= 10) return { 
+      name: "Elite Solver", 
+      icon: <Shield className="w-4 h-4" fill="currentColor" />, 
+      color: "bg-emerald-600 text-white border-emerald-700 shadow-md" 
+    };
+    
+    // Proven Solver: Emerald shield with check[cite: 3]
+    if (completed >= 5) return { 
+      name: "Proven Solver", 
+      icon: <ShieldCheck className="w-4 h-4" />, 
+      color: "bg-emerald-100 text-emerald-800 border-emerald-300 shadow-sm" 
+    };
+    
+    // Contributor: Outlined emerald icon[cite: 3]
+    if (completed >= 1) return { 
+      name: "Contributor", 
+      icon: <Shield className="w-4 h-4" />, 
+      color: "bg-emerald-50 text-emerald-700 border-emerald-200" 
+    };
+    
+    // Initiate (0 solutions)[cite: 3]
+    return { 
+      name: "Initiate", 
+      icon: <Circle className="w-4 h-4" />, 
+      color: "bg-slate-50 text-slate-500 border-slate-200" 
+    };
+  };
+
   const groupedData = useMemo(() => {
-    const sortedProposals = [...proposals].sort((a, b) => {
-      const timeA = new Date(a.createdAt).getTime();
-      const timeB = new Date(b.createdAt).getTime();
-      return sortOrder === "newest-first" ? timeB - timeA : timeA - timeB;
-    });
+    // 🚀 Goal 5: Apply Search Filtering
+    const filteredAndSorted = proposals
+      .filter(p => {
+        const fullName = `${p.solver.firstName} ${p.solver.lastName}`.toLowerCase();
+        return fullName.includes(searchQuery.toLowerCase());
+      })
+      .sort((a, b) => {
+        const timeA = new Date(a.createdAt).getTime();
+        const timeB = new Date(b.createdAt).getTime();
+        return sortOrder === "newest-first" ? timeB - timeA : timeA - timeB;
+      });
 
     const map = new Map<string, { id: string; title: string; limit: number; proposals: ClaimSummaryResponse[]; activeCount: number }>();
     
@@ -147,14 +227,14 @@ export function ProposalsTab({ problem, onLocateInTree }: ProposalsTabProps) {
       });
     });
 
-    sortedProposals.forEach(p => {
+    filteredAndSorted.forEach(p => {
       if (p.targetSubtaskId && map.has(p.targetSubtaskId)) {
         map.get(p.targetSubtaskId)!.proposals.push(p);
       }
     });
     
     return Array.from(map.values()).filter(g => g.proposals.length > 0);
-  }, [proposals, capacities, sortOrder]);
+  }, [proposals, capacities, sortOrder, searchQuery]);
 
   const filteredGroups = useMemo(() => {
     return groupedData.filter(g => selectedSubtaskId === "ALL" || g.id === selectedSubtaskId);
@@ -248,24 +328,46 @@ export function ProposalsTab({ problem, onLocateInTree }: ProposalsTabProps) {
 
       {/* ── MAIN AREA: Data Table ── */}
       <div className="w-full flex-1 flex flex-col min-w-0">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 ml-1">
-          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-4 ml-1">
+          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider shrink-0">
             {selectedSubtaskId === "ALL" ? "Showing All Requests" : "Filtered Requests"} ({filteredProposalsCount})
           </h3>
-          <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-slate-200 shadow-sm w-fit">
-            {(["newest-first", "oldest-first"] as SortOrder[]).map((opt) => (
-              <button
-                key={opt}
-                onClick={() => setSortOrder(opt)}
-                className={`px-3 py-1.5 rounded-md text-[11px] font-bold transition-all uppercase tracking-wider cursor-pointer ${
-                  sortOrder === opt
-                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-sm"
-                    : "bg-transparent border border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
-                }`}
-              >
-                {opt === "newest-first" ? "Newest" : "Oldest"}
-              </button>
-            ))}
+          
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto">
+            {/* 🚀 Goal 5: Search Bar */}
+            <div className="relative w-full sm:w-64 shrink-0">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-4 w-4 text-slate-400" />
+              </div>
+              <input
+                type="text"
+                placeholder="Search solvers..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all shadow-sm"
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery("")} className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-slate-200 shadow-sm w-full sm:w-auto justify-center sm:justify-start">
+              {(["newest-first", "oldest-first"] as SortOrder[]).map((opt) => (
+                <button
+                  key={opt}
+                  onClick={() => setSortOrder(opt)}
+                  className={`px-3 py-1.5 rounded-md text-[11px] font-bold transition-all uppercase tracking-wider cursor-pointer ${
+                    sortOrder === opt
+                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-sm"
+                      : "bg-transparent border border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  {opt === "newest-first" ? "Newest" : "Oldest"}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -273,17 +375,21 @@ export function ProposalsTab({ problem, onLocateInTree }: ProposalsTabProps) {
           {filteredGroups.length === 0 ? (
             <div className="bg-white rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.02)] border border-slate-100 p-16 text-center animate-in fade-in duration-500">
               <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100 shadow-sm">
-                <svg className="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>
+                <Search className="w-8 h-8 text-slate-300" />
               </div>
-              <h3 className="text-lg font-bold text-slate-900 mb-1">No pending requests here</h3>
-              <p className="text-sm text-slate-500 font-medium">There are no pending proposals matching this filter.</p>
+              <h3 className="text-lg font-bold text-slate-900 mb-1">No results found</h3>
+              <p className="text-sm text-slate-500 font-medium">There are no pending proposals matching your search or filter.</p>
             </div>
           ) : (
             filteredGroups.map((group) => {
               const isCollapsed = collapsedGroups.has(group.id);
-              const visibleCount = visibleItems[group.id] || ITEMS_PER_PAGE;
-              const visibleProposals = group.proposals.slice(0, visibleCount);
-              const hasMore = group.proposals.length > visibleCount;
+              
+              // 🚀 Goal 4: True Pagination Logic per Group
+              const currentPage = pageState[group.id] || 1;
+              const totalItems = group.proposals.length;
+              const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+              const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+              const visibleProposals = group.proposals.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
               return (
                 <div key={group.id} className="flex flex-col bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-[0_2px_20px_rgba(0,0,0,0.02)] transition-colors hover:border-slate-300">
@@ -302,13 +408,13 @@ export function ProposalsTab({ problem, onLocateInTree }: ProposalsTabProps) {
                   {!isCollapsed && (
                     <div className="bg-white flex flex-col h-full overflow-hidden">
                       <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse min-w-[600px]">
+                        <table className="w-full text-left border-collapse min-w-[500px]">
                           <thead>
                             <tr className="bg-slate-50/80 border-b border-slate-100">
-                              <th className="p-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-[45%]">Solver</th>
+                              {/* 🚀 Goal 2: Removed Attachments Column and Resized */}
+                              <th className="p-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-[55%]">Solver</th>
                               <th className="p-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-[25%]">Submitted</th>
-                              <th className="p-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-[15%]">Attachments</th>
-                              <th className="p-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-right w-[15%]">Action</th>
+                              <th className="p-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-right w-[20%]">Action</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
@@ -316,39 +422,34 @@ export function ProposalsTab({ problem, onLocateInTree }: ProposalsTabProps) {
                               const isFetching = fetchingDetailsId === proposal.id;
 
                               return (
-                                <tr key={proposal.id} onClick={() => handleOpenDetails(proposal.id)} className="hover:bg-slate-50 transition-colors group cursor-pointer active:bg-slate-100">
+                                <tr key={proposal.id} onClick={() => handleOpenDetails(proposal.id, proposal.solver.id)} className="hover:bg-slate-50 transition-colors group cursor-pointer active:bg-slate-100">
                                   <td className="p-4">
                                     <div className="flex items-center gap-3">
                                       {renderAvatar(proposal.solver, proposal.id, 40)}
                                       <div className="min-w-0">
-                                        <p className="text-sm font-bold text-slate-900 truncate">{proposal.solver.firstName} {proposal.solver.lastName}</p>
-                                        <p className="text-[10px] text-slate-500 font-medium truncate mb-0.5">{proposal.solver.institution || "Independent"}</p>
-                                          {proposal.parentAttemptId && (
-                                            <button
-                                              onClick={(e) => {
-                                                e.stopPropagation(); // Prevents the row's handleOpenDetails from firing
-                                                onLocateInTree(proposal.parentAttemptId!);
-                                              }}
-                                              title="Click to view the source of this fork in the Solution Tree"
-                                              className="inline-flex items-center gap-1.5 mt-1 px-2 py-0.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-sm active:scale-95"
-                                            >
-                                              <GitBranch className="w-3 h-3" /> Forked Solution ➔
-                                            </button>
-                                          )}
+                                        <p className="text-sm font-bold text-slate-900 truncate">
+                                          {proposal.solver.firstName} {proposal.solver.lastName}
+                                        </p>
+                                        <p className="text-[10px] text-slate-500 font-medium truncate mb-0.5">
+                                          {proposal.solver.institution || "Independent"}
+                                        </p>
+                                        {proposal.parentAttemptId && (
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation(); 
+                                              onLocateInTree(proposal.parentAttemptId!);
+                                            }}
+                                            title="Click to view the source of this fork in the Solution Tree"
+                                            className="inline-flex items-center gap-1.5 mt-1 px-2 py-0.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-sm active:scale-95"
+                                          >
+                                            <GitBranch className="w-3 h-3" /> Forked Solution ➔
+                                          </button>
+                                        )}
                                       </div>
                                     </div>
                                   </td>
                                   <td className="p-4 text-xs font-bold text-slate-600">
                                     {new Date(proposal.createdAt).toLocaleDateString()}
-                                  </td>
-                                  <td className="p-4">
-                                    {proposal.fileCount > 0 ? (
-                                      <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 bg-slate-100 text-slate-600 rounded-md border border-slate-200 uppercase tracking-wider">
-                                         <Paperclip className="w-3 h-3"/> {proposal.fileCount} File{proposal.fileCount > 1 ? 's' : ''}
-                                      </span>
-                                    ) : (
-                                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">None</span>
-                                    )}
                                   </td>
                                   <td className="p-4 text-right">
                                     <button disabled={isFetching} className="text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-600 hover:text-white border border-emerald-200 hover:border-emerald-600 px-4 py-2 rounded-lg transition-all shadow-sm flex items-center justify-center gap-2 ml-auto w-fit active:scale-95 cursor-pointer">
@@ -362,14 +463,31 @@ export function ProposalsTab({ problem, onLocateInTree }: ProposalsTabProps) {
                         </table>
                       </div>
                       
-                      {hasMore && (
-                        <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex justify-center">
-                          <button 
-                            onClick={() => loadMore(group.id)}
-                            className="px-6 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-full shadow-sm hover:bg-slate-50 transition-all cursor-pointer active:scale-95 uppercase tracking-wider"
-                          >
-                            Load More Results
-                          </button>
+                      {/* 🚀 Goal 4: Clean Pagination Controls */}
+                      {totalPages > 1 && (
+                        <div className="p-3 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider pl-2">
+                            Showing {startIndex + 1}-{Math.min(startIndex + ITEMS_PER_PAGE, totalItems)} of {totalItems}
+                          </span>
+                          <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-1 shadow-sm">
+                            <button 
+                              onClick={() => setPage(group.id, currentPage - 1)}
+                              disabled={currentPage === 1}
+                              className="p-1 rounded text-slate-500 hover:bg-slate-100 hover:text-slate-800 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer transition-colors"
+                            >
+                              <ChevronLeft className="w-4 h-4" />
+                            </button>
+                            <span className="text-[11px] font-bold text-slate-700 px-3 py-1 bg-slate-50 rounded">
+                              Page {currentPage} of {totalPages}
+                            </span>
+                            <button 
+                              onClick={() => setPage(group.id, currentPage + 1)}
+                              disabled={currentPage === totalPages}
+                              className="p-1 rounded text-slate-500 hover:bg-slate-100 hover:text-slate-800 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer transition-colors"
+                            >
+                              <ChevronRight className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -381,21 +499,77 @@ export function ProposalsTab({ problem, onLocateInTree }: ProposalsTabProps) {
         </div>
       </div>
 
-      {/* ─── REVIEW MODAL (Heavy Data) ─── */}
+      {/* ─── REVIEW MODAL ─── */}
       {selectedProposal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200" onClick={(e) => { if (e.target === e.currentTarget && !actionLoading) setSelectedProposal(null); }}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200 border border-slate-200">
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/80 rounded-t-2xl z-10">
-              <div className="flex items-center gap-4">
-                {renderAvatar(selectedProposal.solver, `modal-${selectedProposal.id}`, 48)}
-                <div>
-                  <h2 className="text-xl font-bold text-slate-900 tracking-tight">{selectedProposal.solver.firstName} {selectedProposal.solver.lastName}</h2>
-                  <p className="text-sm text-slate-500 font-medium">{selectedProposal.solver.institution || "Independent"} • Submitted {new Date(selectedProposal.createdAt).toLocaleDateString()}</p>
+            
+            <div className="px-6 py-5 border-b border-slate-200 shrink-0 bg-slate-50/80 rounded-t-2xl z-10">
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex items-center gap-4">
+                  {renderAvatar(selectedProposal.solver, `modal-${selectedProposal.id}`, 48)}
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900 tracking-tight">{selectedProposal.solver.firstName} {selectedProposal.solver.lastName}</h2>
+                    <p className="text-sm text-slate-500 font-medium">{selectedProposal.solver.institution || "Independent"} • Submitted {new Date(selectedProposal.createdAt).toLocaleDateString()}</p>
+                  </div>
                 </div>
+                <button onClick={() => setSelectedProposal(null)} disabled={actionLoading !== null} className="text-slate-400 hover:text-slate-700 bg-white border border-slate-200 w-10 h-10 flex items-center justify-center rounded-xl shadow-sm hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-50 shrink-0">
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <button onClick={() => setSelectedProposal(null)} disabled={actionLoading !== null} className="text-slate-400 hover:text-slate-700 bg-white border border-slate-200 w-10 h-10 flex items-center justify-center rounded-xl shadow-sm hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-50">
-                <X className="w-5 h-5" />
-              </button>
+
+              {metricsLoading && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 animate-in fade-in duration-300">
+                  {[1, 2, 3, 4].map(i => (
+                    <div key={i} className="h-16 bg-slate-200 rounded-xl animate-pulse border border-slate-200/60" />
+                  ))}
+                </div>
+              )}
+
+              {!metricsLoading && solverMetrics && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                  {(() => {
+                    const tier = getTierDetails(solverMetrics.solutionsCompleted);
+                    return (
+                      <div className={`p-3 rounded-xl border flex flex-col justify-center transition-colors ${tier.color}`}>
+                        <div className="flex items-center gap-1.5 mb-1 opacity-80">
+                          {tier.icon}
+                          <span className="text-[10px] font-bold uppercase tracking-wider">Solver Tier</span>
+                        </div>
+                        <span className="text-sm font-black tracking-tight">{tier.name}</span>
+                      </div>
+                    );
+                  })()}
+
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
+                    <div className="flex items-center gap-1.5 mb-1 text-slate-500">
+                      <Shield className="w-3.5 h-3.5 text-emerald-500" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider">Completed</span>
+                    </div>
+                    <span className="text-sm font-black text-slate-900">{solverMetrics.solutionsCompleted}</span>
+                  </div>
+
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
+                    <div className="flex items-center gap-1.5 mb-1 text-slate-500">
+                      <Activity className="w-3.5 h-3.5 text-accent" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider">Reliability</span>
+                    </div>
+                    <span className={`text-sm font-black ${solverMetrics.completionRate >= 80 ? "text-emerald-600" : solverMetrics.completionRate >= 50 ? "text-amber-600" : "text-rose-600"}`}>
+                      {solverMetrics.solutionsCompleted === 0 ? "N/A" : `${Math.round(solverMetrics.completionRate)}%`}
+                    </span>
+                  </div>
+
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
+                    <div className="flex items-center gap-1.5 mb-1 text-slate-500">
+                      <Clock className="w-3.5 h-3.5 text-blue-500" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider">Turnaround</span>
+                    </div>
+                    <span className="text-sm font-black text-slate-900">
+                      {solverMetrics.avgTurnaroundDays ? `${Math.round(solverMetrics.avgTurnaroundDays)} days` : "N/A"}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="p-6 overflow-y-auto flex-1 bg-slate-50/30">
@@ -454,7 +628,6 @@ export function ProposalsTab({ problem, onLocateInTree }: ProposalsTabProps) {
         </div>
       )}
 
-      {/* ─── NOTIFICATION MODAL ─── */}
       {notification && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setNotification(null)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center border border-slate-100 animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>

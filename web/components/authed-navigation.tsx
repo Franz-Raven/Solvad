@@ -67,63 +67,26 @@ export default function AuthedNavigation() {
           <nav className="hidden md:flex items-center gap-2">
             {user?.role === "SEEKER" ? (
               <>
-                <Link
-                  href="/seeker/dashboard"
-                  className={linkClass(isSeekerTabActive("home"))}
-                >
-                  Home
-                </Link>
-                <Link
-                  href="/seeker/dashboard?tab=activity"
-                  className={linkClass(isSeekerTabActive("activity"))}
-                >
-                  Recent Activity
-                </Link>
-                <Link
-                  href="/seeker/dashboard?tab=overview"
-                  className={linkClass(isSeekerTabActive("overview"))}
-                >
-                  Overview
-                </Link>
+                <Link href="/seeker/dashboard" className={linkClass(isSeekerTabActive("home"))}>Home</Link>
+                <Link href="/seeker/dashboard?tab=activity" className={linkClass(isSeekerTabActive("activity"))}>Recent Activity</Link>
+                <Link href="/seeker/dashboard?tab=overview" className={linkClass(isSeekerTabActive("overview"))}>Overview</Link>
               </>
             ) : user?.role === "SOLVER" ? (
               <>
-                <Link
-                  href="/solver/dashboard"
-                  className={linkClass(isSolverTabActive("home"))}
-                >
-                  Home
-                </Link>
-                <Link
-                  href="/solver/dashboard?tab=workspace"
-                  className={linkClass(isSolverTabActive("workspace"))}
-                >
-                  Workspace
-                </Link>
-                <Link
-                  href="/solver/dashboard?tab=overview"
-                  className={linkClass(isSolverTabActive("overview"))}
-                >
-                  Overview
-                </Link>
+                <Link href="/solver/dashboard" className={linkClass(isSolverTabActive("home"))}>Home</Link>
+                <Link href="/solver/dashboard?tab=workspace" className={linkClass(isSolverTabActive("workspace"))}>Workspace</Link>
+                <Link href="/solver/dashboard?tab=overview" className={linkClass(isSolverTabActive("overview"))}>Overview</Link>
               </>
             ) : (
-              <Link href={homePath} className={linkClass(isActive(homePath))}>
-                Home
-              </Link>
+              <Link href={homePath} className={linkClass(isActive(homePath))}>Home</Link>
             )}
 
             {user?.role === "ADMIN" && (
-              <Link
-                href="/admin/add-industry"
-                className={linkClass(isActive("/admin/add-industry"))}
-              >
-                Add Industry
-              </Link>
+              <Link href="/admin/add-industry" className={linkClass(isActive("/admin/add-industry"))}>Add Industry</Link>
             )}
           </nav>
 
-          {/* ── Right Side - Profile Dropdown ── */}
+          {/* ── Right Side ── */}
           <div className="flex items-center gap-4">
             <ProfileDropdown onLogout={handleLogout} />
           </div>

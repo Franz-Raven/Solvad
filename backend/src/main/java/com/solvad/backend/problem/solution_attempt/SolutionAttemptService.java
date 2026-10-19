@@ -19,7 +19,6 @@ import com.solvad.backend.profile.solver.SolverProfileRepository;
 import com.solvad.backend.audit.AuditService;
 import com.solvad.backend.storage.CloudinaryService;
 import com.solvad.backend.problem.similarity.MatchmakingService;
-import com.solvad.backend.user.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -63,14 +62,9 @@ public class SolutionAttemptService {
     private AuditService auditService;
 
     @Autowired
-    private SolutionAttemptRepository solutionAttemptRepository;
-
-    @Autowired
     private ClaimRequestRepository claimRequestRepository;
 
-    private SolutionAttemptResponse mapToResponse(SolutionAttempt attempt,
-                                                  List<SubtaskSubmission> submissions,
-                                                  UUID currentUserId) {
+    private SolutionAttemptResponse mapToResponse(SolutionAttempt attempt, List<SubtaskSubmission> submissions, UUID currentUserId) {
         List<SubtaskSubmissionResponse> submissionResponses = submissions.stream()
                 .map(sub -> mapSubmissionToResponse(sub, currentUserId))
                 .collect(Collectors.toList());
@@ -95,7 +89,6 @@ public class SolutionAttemptService {
             }
         }
 
-        // 🚀 EXTRACT SEEKER INFO
         String seekerName = null;
         String seekerProfileUrl = null;
         if (attempt.getProblem() != null && attempt.getProblem().getSeeker() != null) {
@@ -106,28 +99,78 @@ public class SolutionAttemptService {
         }
 
         return new SolutionAttemptResponse(
-                attempt.getId(),
-                attempt.getProblem().getId(),
-                attempt.getProblem().getTitle(),
-                solver.getId(),
-                solver.getFirstName(),
-                solver.getLastName(),
-                profilePictureUrl,
-                solver.getInstitution(),
-                solver.getDegreeProgram(),
+                attempt.getId(), attempt.getProblem().getId(), attempt.getProblem().getTitle(),
+                solver.getId(), solver.getFirstName(), solver.getLastName(), profilePictureUrl,
+                solver.getInstitution(), solver.getDegreeProgram(), attempt.getStatus().name(),
+                submissionResponses, attempt.getClaimedAt(), attempt.getUpdatedAt(), attempt.getCompletedAt(),
+                parentId, parentName, targetSubtaskId, targetSubtaskTitle, parentDesc, parentFiles,
+                seekerName, seekerProfileUrl
+        );
+    }
+
+    private SolutionAttemptSummaryResponse mapToSummaryResponse(SolutionAttempt attempt) {
+        String parentName = null;
+        UUID parentId = null;
+        if (attempt.getParentAttempt() != null) {
+            parentName = attempt.getParentAttempt().getSolver().getFirstName() + " " + attempt.getParentAttempt().getSolver().getLastName();
+            parentId = attempt.getParentAttempt().getId();
+        }
+
+        UUID subtaskId = attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getId() : null;
+        String subtaskTitle = attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : null;
+
+        String seekerOrgName = null;
+        String seekerProfileUrl = null;
+        if (attempt.getProblem() != null && attempt.getProblem().getSeeker() != null) {
+            SeekerProfile seeker = attempt.getProblem().getSeeker();
+            seekerOrgName = seeker.getOrganizationName();
+            if (seeker.getUser() != null) seekerProfileUrl = seeker.getUser().getProfileUrl();
+        }
+
+        String solverProfileUrl = attempt.getSolver().getUser() != null ? attempt.getSolver().getUser().getProfileUrl() : null;
+
+        return new SolutionAttemptSummaryResponse(
+                attempt.getId(), attempt.getProblem().getId(), attempt.getProblem().getTitle(),
+                attempt.getSolver().getFirstName(), attempt.getSolver().getLastName(), solverProfileUrl,
+                attempt.getSolver().getInstitution(), attempt.getSolver().getDegreeProgram(),
                 attempt.getStatus().name(),
-                submissionResponses,
-                attempt.getClaimedAt(),
-                attempt.getUpdatedAt(),
-                attempt.getCompletedAt(),
-                parentId,
-                parentName,
-                targetSubtaskId,
-                targetSubtaskTitle,
-                parentDesc,
-                parentFiles,
-                seekerName,        // 🚀 pass to DTO
-                seekerProfileUrl   // 🚀 pass to DTO
+                attempt.getSubmissions() != null ? attempt.getSubmissions().size() : 0,
+                attempt.getClaimedAt(), attempt.getUpdatedAt(), attempt.getCompletedAt(),
+                parentId, parentName, subtaskId, subtaskTitle, seekerOrgName, seekerProfileUrl
+        );
+    }
+
+    private SubtaskSubmissionResponse mapSubmissionToResponse(SubtaskSubmission submission, UUID currentUserId) {
+        UUID ownerUserId = submission.getAttempt().getSolver().getUser().getId();
+        boolean isOwner = currentUserId != null && currentUserId.equals(ownerUserId);
+        boolean isDraft = submission.getStatus() == SubtaskSubmissionStatus.DRAFT;
+        boolean hideDraft = isDraft && !isOwner;
+
+        return new SubtaskSubmissionResponse(
+                submission.getId(), submission.getSubtask().getId(), submission.getSubtask().getTitle(),
+                submission.getSubtask().getDepartmentFocus(),
+                hideDraft ? "Confidential Workspace: The solver is actively drafting a solution." : submission.getDescription(),
+                hideDraft ? Collections.emptyList() : submission.getFileUrlsAsList(),
+                submission.getStatus().name(), submission.getCreatedAt(), submission.getUpdatedAt(),
+                submission.getSubmittedAt(), hideDraft ? null : submission.getDeltaDescription()
+        );
+    }
+
+    private ProblemResponse mapProblemToResponse(Problem problem, List<ProblemSubtask> subtasks) {
+        List<SubtaskResponse> subtaskResponses = subtasks.stream().map(s -> {
+            List<AttachmentRequirementResponse> attachments = attachmentRepository.findBySubtask(s).stream()
+                    .map(att -> new AttachmentRequirementResponse(att.getId(), att.getAttachmentTitle(), att.getAttachmentType()))
+                    .collect(Collectors.toList());
+            return new SubtaskResponse(s.getId(), s.getTitle(), s.getDepartmentFocus(), s.getSdgFocus(), s.getDescription(), attachments);
+        }).collect(Collectors.toList());
+
+        List<String> tags = problem.getTags() != null ? problem.getTags() : MatchmakingService.buildTagsForProblem(problem, subtasks);
+
+        return new ProblemResponse(
+                problem.getId(), problem.getTitle(), problem.getBackgroundContext(), problem.getPrimaryStatement(),
+                problem.getObjectives(), problem.getConstraints(), problem.getPreferredProgram(), problem.getSdgFocus(),
+                problem.getStatus().name(), problem.getSeeker().getId(), problem.getSeeker().getOrganizationName(),
+                problem.getCreatedAt(), subtaskResponses, tags, problem.getProblemDocumentUrl(), problem.getMaxConcurrentSolvers()
         );
     }
 
@@ -137,9 +180,7 @@ public class SolutionAttemptService {
         SolverProfile solver = request.getSolver();
         ProblemSubtask targetSubtask = request.getTargetSubtask();
 
-        if (targetSubtask == null) {
-            throw new RuntimeException("Claim request has no target sub-problem.");
-        }
+        if (targetSubtask == null) throw new RuntimeException("Claim request has no target sub-problem.");
 
         SolutionAttempt attempt = new SolutionAttempt(problem, solver);
         attempt.setTargetSubtask(targetSubtask);
@@ -153,8 +194,7 @@ public class SolutionAttemptService {
 
             List<SubtaskSubmission> parentSubmissions = submissionRepository.findByAttempt(parent);
             for (SubtaskSubmission parentSub : parentSubmissions) {
-                if (parentSub.getStatus() == SubtaskSubmissionStatus.SUBMITTED
-                        && parentSub.getSubtask().getId().equals(targetSubtask.getId())) {
+                if (parentSub.getStatus() == SubtaskSubmissionStatus.SUBMITTED && parentSub.getSubtask().getId().equals(targetSubtask.getId())) {
                     SubtaskSubmission newDraft = new SubtaskSubmission(savedAttempt, parentSub.getSubtask());
                     newDraft.setStatus(SubtaskSubmissionStatus.DRAFT);
                     submissionRepository.save(newDraft);
@@ -162,246 +202,99 @@ public class SolutionAttemptService {
             }
 
             String parentName = parent.getSolver().getFirstName() + " " + parent.getSolver().getLastName();
-            auditService.log(
-                    problem.getId(),
-                    solverUserId,
-                    solverFullName,
-                    "SOLVER",
-                    AuditEventType.ATTEMPT_FORKED,
-                    solverFullName + "'s proposal was approved. Forked workspace created for sub-problem \""
-                            + targetSubtask.getTitle() + "\" based on " + parentName + "'s attempt."
-            );
-            List<SubtaskSubmission> submissions = submissionRepository.findByAttempt(savedAttempt);
-            return mapToResponse(savedAttempt, submissions, solverUserId);
-
+            auditService.log(problem.getId(), solverUserId, solverFullName, "SOLVER", AuditEventType.ATTEMPT_FORKED,
+                    solverFullName + "'s proposal was approved. Forked workspace created for sub-problem \"" + targetSubtask.getTitle() + "\" based on " + parentName + "'s attempt.");
+            return mapToResponse(savedAttempt, submissionRepository.findByAttempt(savedAttempt), solverUserId);
         } else {
             SolutionAttempt savedAttempt = attemptRepository.save(attempt);
-            auditService.log(
-                    problem.getId(),
-                    solverUserId,
-                    solverFullName,
-                    "SOLVER",
-                    AuditEventType.ATTEMPT_CLAIMED,
-                    solverFullName + "'s proposal was approved. Active workspace created for sub-problem \""
-                            + targetSubtask.getTitle() + "\"."
-            );
-
-            List<SubtaskSubmission> submissions = submissionRepository.findByAttempt(savedAttempt);
-            return mapToResponse(savedAttempt, submissions, solverUserId);
+            auditService.log(problem.getId(), solverUserId, solverFullName, "SOLVER", AuditEventType.ATTEMPT_CLAIMED,
+                    solverFullName + "'s proposal was approved. Active workspace created for sub-problem \"" + targetSubtask.getTitle() + "\".");
+            return mapToResponse(savedAttempt, submissionRepository.findByAttempt(savedAttempt), solverUserId);
         }
     }
 
     public SolutionAttemptResponse getMyAttempt(UUID solverUserId, UUID problemId) {
-        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
-                .orElseThrow(() -> new RuntimeException("Solver profile not found"));
-
-        List<SolutionAttempt> allMyAttempts = attemptRepository.findBySolverOrderByClaimedAtDesc(solver);
-
-        SolutionAttempt targetAttempt = null;
-        for (SolutionAttempt attempt : allMyAttempts) {
-            if (attempt.getProblem().getId().equals(problemId)) {
-                targetAttempt = attempt;
-                break;
-            }
-        }
-
-        if (targetAttempt == null) {
-            throw new RuntimeException("No active attempt found");
-        }
-
-        List<SubtaskSubmission> submissions = submissionRepository.findByAttempt(targetAttempt);
-        return mapToResponse(targetAttempt, submissions, solverUserId);
+        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId).orElseThrow(() -> new RuntimeException("Solver profile not found"));
+        SolutionAttempt targetAttempt = attemptRepository.findBySolverOrderByClaimedAtDesc(solver).stream()
+                .filter(a -> a.getProblem().getId().equals(problemId)).findFirst()
+                .orElseThrow(() -> new RuntimeException("No active attempt found"));
+        return mapToResponse(targetAttempt, submissionRepository.findByAttempt(targetAttempt), solverUserId);
     }
-
 
     @Transactional(readOnly = true)
     public List<SolutionAttemptResponse> getMyAttempts(UUID solverUserId) {
-        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
-                .orElseThrow(() -> new RuntimeException("Solver profile not found"));
+        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId).orElseThrow(() -> new RuntimeException("Solver profile not found"));
+        List<SolutionAttempt> attempts = attemptRepository.findBySolverOrderByClaimedAtDesc(solver);
+        if (attempts.isEmpty()) return Collections.emptyList();
 
-        List<SolutionAttempt> attempts = attemptRepository
-                .findBySolverOrderByClaimedAtDesc(solver);
-
-        if (attempts.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        // Batch fetch submissions
         List<SubtaskSubmission> allSubmissions = submissionRepository.findByAttemptIn(attempts);
-        Map<UUID, List<SubtaskSubmission>> submissionsByAttemptId = allSubmissions.stream()
-                .collect(Collectors.groupingBy(sub -> sub.getAttempt().getId()));
+        Map<UUID, List<SubtaskSubmission>> submissionsByAttemptId = allSubmissions.stream().collect(Collectors.groupingBy(sub -> sub.getAttempt().getId()));
 
-        return attempts.stream().map(attempt -> {
-            List<SubtaskSubmission> attemptSubmissions = submissionsByAttemptId
-                    .getOrDefault(attempt.getId(), new ArrayList<>());
-            return mapToResponse(attempt, attemptSubmissions, solverUserId);
-        }).collect(Collectors.toList());
+        return attempts.stream().map(attempt -> mapToResponse(attempt, submissionsByAttemptId.getOrDefault(attempt.getId(), new ArrayList<>()), solverUserId)).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<SolutionAttemptResponse> getAttemptsForSubtask(UUID problemId, UUID subtaskId, UUID currentUserId) {
-        List<SolutionAttempt> attempts = attemptRepository
-                .findByProblemIdAndTargetSubtaskIdOrderByClaimedAtAsc(problemId, subtaskId);
+        List<SolutionAttempt> attempts = attemptRepository.findByProblemIdAndTargetSubtaskIdOrderByClaimedAtAsc(problemId, subtaskId);
+        if (attempts.isEmpty()) return Collections.emptyList();
 
-        if (attempts.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        // Batch fetch submissions
         List<SubtaskSubmission> allSubmissions = submissionRepository.findByAttemptIn(attempts);
-        Map<UUID, List<SubtaskSubmission>> submissionsByAttemptId = allSubmissions.stream()
-                .collect(Collectors.groupingBy(sub -> sub.getAttempt().getId()));
+        Map<UUID, List<SubtaskSubmission>> submissionsByAttemptId = allSubmissions.stream().collect(Collectors.groupingBy(sub -> sub.getAttempt().getId()));
 
-        return attempts.stream().map(attempt -> {
-            List<SubtaskSubmission> attemptSubmissions = submissionsByAttemptId
-                    .getOrDefault(attempt.getId(), new ArrayList<>());
-            return mapToResponse(attempt, attemptSubmissions, currentUserId);
-        }).collect(Collectors.toList());
+        return attempts.stream().map(attempt -> mapToResponse(attempt, submissionsByAttemptId.getOrDefault(attempt.getId(), new ArrayList<>()), currentUserId)).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<SolutionAttemptResponse> getAllAttemptsForProblem(UUID problemId, UUID currentUserId) {
-        Problem problem = problemRepository.findById(problemId)
-                .orElseThrow(() -> new RuntimeException("Problem not found"));
-
-        List<SolutionAttempt> attempts = attemptRepository
-                .findByProblemOrderByClaimedAtDesc(problem);
-
-        if (attempts.isEmpty()) {
-            return Collections.emptyList();
-        }
+        Problem problem = problemRepository.findById(problemId).orElseThrow(() -> new RuntimeException("Problem not found"));
+        List<SolutionAttempt> attempts = attemptRepository.findByProblemOrderByClaimedAtDesc(problem);
+        if (attempts.isEmpty()) return Collections.emptyList();
 
         List<SubtaskSubmission> allSubmissions = submissionRepository.findByAttemptIn(attempts);
+        Map<UUID, List<SubtaskSubmission>> submissionsByAttemptId = allSubmissions.stream().collect(Collectors.groupingBy(sub -> sub.getAttempt().getId()));
 
-        Map<UUID, List<SubtaskSubmission>> submissionsByAttemptId = allSubmissions.stream()
-                .collect(Collectors.groupingBy(sub -> sub.getAttempt().getId()));
-
-        return attempts.stream().map(attempt -> {
-            List<SubtaskSubmission> attemptSubmissions = submissionsByAttemptId
-                    .getOrDefault(attempt.getId(), new ArrayList<>());
-            return mapToResponse(attempt, attemptSubmissions, currentUserId);
-        }).collect(Collectors.toList());
+        return attempts.stream().map(attempt -> mapToResponse(attempt, submissionsByAttemptId.getOrDefault(attempt.getId(), new ArrayList<>()), currentUserId)).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public SolutionAttemptResponse getAttemptById(UUID attemptId, UUID currentUserId) {
-        SolutionAttempt attempt = attemptRepository.findById(attemptId)
-                .orElseThrow(() -> new RuntimeException("Attempt not found"));
-
-        List<SubtaskSubmission> submissions = submissionRepository.findByAttempt(attempt);
-        return mapToResponse(attempt, submissions, currentUserId);
+        SolutionAttempt attempt = attemptRepository.findById(attemptId).orElseThrow(() -> new RuntimeException("Attempt not found"));
+        return mapToResponse(attempt, submissionRepository.findByAttempt(attempt), currentUserId);
     }
 
     @Transactional(readOnly = true)
     public List<ProblemResponse> getOpenProblems() {
-        List<ProblemStatus> visibleStatuses = Arrays.asList(
-                ProblemStatus.OPEN,
-                ProblemStatus.CLAIMED,
-                ProblemStatus.IN_PROGRESS,
-                ProblemStatus.SOLVED_OPEN_FOR_IMPROVEMENT
-        );
-
-        List<Problem> openProblems = problemRepository.findByStatusIn(visibleStatuses);
-
-        return openProblems.stream()
-                .map(problem -> {
-                    List<ProblemSubtask> subtasks = subtaskRepository.findByProblem(problem);
-                    return mapProblemToResponse(problem, subtasks);
-                })
+        List<ProblemStatus> visibleStatuses = Arrays.asList(ProblemStatus.OPEN, ProblemStatus.CLAIMED, ProblemStatus.IN_PROGRESS, ProblemStatus.SOLVED_OPEN_FOR_IMPROVEMENT);
+        return problemRepository.findByStatusIn(visibleStatuses).stream()
+                .map(problem -> mapProblemToResponse(problem, subtaskRepository.findByProblem(problem)))
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public PaginatedAttemptsResponse getWorkspaceAttempts(UUID solverId, String tab, int page, int size) {
-        SolverProfile solver = solverProfileRepository.findByUserId(solverId)
-                .orElseThrow(() -> new RuntimeException("Solver profile not found"));
-
+        SolverProfile solver = solverProfileRepository.findByUserId(solverId).orElseThrow(() -> new RuntimeException("Solver profile not found"));
         Pageable pageable = PageRequest.of(page, size);
         Page<SolutionAttempt> attemptPage;
 
         if ("HISTORY".equalsIgnoreCase(tab)) {
-            attemptPage = attemptRepository.findBySolverAndStatusInOrderByUpdatedAtDesc(
-                    solver, List.of(SolutionAttemptStatus.COMPLETED, SolutionAttemptStatus.ABANDONED, SolutionAttemptStatus.TERMINATED), pageable);
+            attemptPage = attemptRepository.findBySolverAndStatusInOrderByUpdatedAtDesc(solver, List.of(SolutionAttemptStatus.COMPLETED, SolutionAttemptStatus.ABANDONED, SolutionAttemptStatus.TERMINATED), pageable);
         } else if ("PENDING".equalsIgnoreCase(tab)) {
-            attemptPage = attemptRepository.findBySolverAndStatusOrderByUpdatedAtDesc(
-                    solver, SolutionAttemptStatus.PENDING_REVIEW, pageable);
+            attemptPage = attemptRepository.findBySolverAndStatusOrderByUpdatedAtDesc(solver, SolutionAttemptStatus.PENDING_REVIEW, pageable);
         } else {
-            attemptPage = attemptRepository.findBySolverAndStatusOrderByUpdatedAtDesc(
-                    solver, SolutionAttemptStatus.ACTIVE, pageable);
+            attemptPage = attemptRepository.findBySolverAndStatusOrderByUpdatedAtDesc(solver, SolutionAttemptStatus.ACTIVE, pageable);
         }
 
-        List<SolutionAttemptSummaryResponse> summaries = attemptPage.getContent().stream()
-                .map(attempt -> {
-                    String parentName = null;
-                    UUID parentId = null;
-                    if (attempt.getParentAttempt() != null) {
-                        parentName = attempt.getParentAttempt().getSolver().getFirstName() + " " +
-                                attempt.getParentAttempt().getSolver().getLastName();
-                        parentId = attempt.getParentAttempt().getId();
-                    }
-
-                    UUID subtaskId = attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getId() : null;
-                    String subtaskTitle = attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : null;
-
-                    // 🚀 ADDED: Extract Seeker Info
-                    String seekerOrgName = null;
-                    String seekerProfileUrl = null;
-                    if (attempt.getProblem() != null && attempt.getProblem().getSeeker() != null) {
-                        SeekerProfile seeker = attempt.getProblem().getSeeker();
-                        seekerOrgName = seeker.getOrganizationName();
-                        if (seeker.getUser() != null) {
-                            seekerProfileUrl = seeker.getUser().getProfileUrl();
-                        }
-                    }
-
-                    return new SolutionAttemptSummaryResponse(
-                            attempt.getId(),
-                            attempt.getProblem().getId(),
-                            attempt.getProblem().getTitle(),
-                            solver.getFirstName(),
-                            solver.getLastName(),
-                            null, // Solver profile URL (Not strictly needed here)
-                            solver.getInstitution(),
-                            solver.getDegreeProgram(),
-                            attempt.getStatus().name(),
-                            attempt.getSubmissions() != null ? attempt.getSubmissions().size() : 0,
-                            attempt.getClaimedAt(),
-                            attempt.getUpdatedAt(),
-                            attempt.getCompletedAt(),
-                            parentId,
-                            parentName,
-                            subtaskId,
-                            subtaskTitle,
-                            seekerOrgName,      // 🚀 Pass to DTO
-                            seekerProfileUrl    // 🚀 Pass to DTO
-                    );
-                })
-                .collect(Collectors.toList());
-
-        return new PaginatedAttemptsResponse(
-                summaries,
-                attemptPage.getNumber(),
-                attemptPage.getTotalPages(),
-                attemptPage.getTotalElements(),
-                attemptPage.getSize()
-        );
+        List<SolutionAttemptSummaryResponse> summaries = attemptPage.getContent().stream().map(this::mapToSummaryResponse).collect(Collectors.toList());
+        return new PaginatedAttemptsResponse(summaries, attemptPage.getNumber(), attemptPage.getTotalPages(), attemptPage.getTotalElements(), attemptPage.getSize());
     }
 
     @Transactional
     public SubtaskSubmissionResponse deleteFileFromSubmission(UUID solverUserId, UUID submissionId, String fileUrl) {
-        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
-                .orElseThrow(() -> new RuntimeException("Solver profile not found"));
+        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId).orElseThrow(() -> new RuntimeException("Solver profile not found"));
+        SubtaskSubmission submission = submissionRepository.findById(submissionId).orElseThrow(() -> new RuntimeException("Submission not found"));
 
-        SubtaskSubmission submission = submissionRepository.findById(submissionId)
-                .orElseThrow(() -> new RuntimeException("Submission not found"));
-
-        if (!submission.getAttempt().getSolver().getId().equals(solver.getId())) {
-            throw new RuntimeException("You do not own this submission.");
-        }
-
-        if (submission.getStatus() == SubtaskSubmissionStatus.SUBMITTED) {
-            throw new RuntimeException("Cannot modify a submitted submission.");
-        }
+        if (!submission.getAttempt().getSolver().getId().equals(solver.getId())) throw new RuntimeException("You do not own this submission.");
+        if (submission.getStatus() == SubtaskSubmissionStatus.SUBMITTED) throw new RuntimeException("Cannot modify a submitted submission.");
 
         List<String> urls = new ArrayList<>(submission.getFileUrlsAsList());
         urls.remove(fileUrl);
@@ -409,25 +302,17 @@ public class SolutionAttemptService {
 
         submissionRepository.save(submission);
         storageService.deleteFile(fileUrl);
-
         return mapSubmissionToResponse(submission, solverUserId);
     }
 
     @Transactional
     public void markAsSolved(UUID seekerUserId, UUID problemId) {
-        Problem problem = problemRepository.findById(problemId)
-                .orElseThrow(() -> new RuntimeException("Problem not found"));
+        Problem problem = problemRepository.findById(problemId).orElseThrow(() -> new RuntimeException("Problem not found"));
+        SeekerProfile seeker = seekerProfileRepository.findByUserId(seekerUserId).orElseThrow(() -> new RuntimeException("Seeker profile not found"));
 
-        SeekerProfile seeker = seekerProfileRepository.findByUserId(seekerUserId)
-                .orElseThrow(() -> new RuntimeException("Seeker profile not found"));
+        if (!problem.getSeeker().getId().equals(seeker.getId())) throw new RuntimeException("You do not own this problem.");
 
-        if (!problem.getSeeker().getId().equals(seeker.getId())) {
-            throw new RuntimeException("You do not own this problem.");
-        }
-
-        List<SolutionAttempt> activeAttempts = attemptRepository
-                .findByProblemAndStatus(problem, SolutionAttemptStatus.ACTIVE);
-
+        List<SolutionAttempt> activeAttempts = attemptRepository.findByProblemAndStatus(problem, SolutionAttemptStatus.ACTIVE);
         for (SolutionAttempt attempt : activeAttempts) {
             attempt.setStatus(SolutionAttemptStatus.COMPLETED);
             attempt.setCompletedAt(LocalDateTime.now());
@@ -436,94 +321,38 @@ public class SolutionAttemptService {
 
         problem.setStatus(ProblemStatus.SOLVED_OPEN_FOR_IMPROVEMENT);
         problemRepository.save(problem);
-
-        auditService.log(
-                problem.getId(),
-                seekerUserId,
-                seeker.getOrganizationName(),
-                "SEEKER",
-                AuditEventType.STATUS_CHANGED,
-                "Problem marked as Solved by " + seeker.getOrganizationName() + " and left open for improvement."
-        );
-
-        auditService.log(
-                problem.getId(),
-                null,
-                "SYSTEM",
-                "SYSTEM",
-                AuditEventType.ATTEMPT_COMPLETED,
-                "All active attempts were automatically completed when the problem was marked Solved."
-        );
+        auditService.log(problem.getId(), seekerUserId, seeker.getOrganizationName(), "SEEKER", AuditEventType.STATUS_CHANGED, "Problem marked as Solved by " + seeker.getOrganizationName() + " and left open for improvement.");
     }
 
     @Transactional
-    public SubtaskSubmissionResponse saveSubtaskDraft(UUID solverUserId, UUID attemptId,
-                                                      UUID subtaskId, String description,
-                                                      List<MultipartFile> files,
-                                                      String deltaDescription) {
-        return processSubtask(solverUserId, attemptId, subtaskId, description,
-                files, deltaDescription, false);
+    public SubtaskSubmissionResponse saveSubtaskDraft(UUID solverUserId, UUID attemptId, UUID subtaskId, String description, List<MultipartFile> files, String deltaDescription) {
+        return processSubtask(solverUserId, attemptId, subtaskId, description, files, deltaDescription, false);
     }
 
     @Transactional
-    public SubtaskSubmissionResponse lockAndSubmitSubtask(UUID solverUserId, UUID attemptId,
-                                                          UUID subtaskId, String description,
-                                                          List<MultipartFile> files,
-                                                          String deltaDescription) {
-        return processSubtask(solverUserId, attemptId, subtaskId, description,
-                files, deltaDescription, true);
+    public SubtaskSubmissionResponse lockAndSubmitSubtask(UUID solverUserId, UUID attemptId, UUID subtaskId, String description, List<MultipartFile> files, String deltaDescription) {
+        return processSubtask(solverUserId, attemptId, subtaskId, description, files, deltaDescription, true);
     }
 
-    private SubtaskSubmissionResponse processSubtask(UUID solverUserId, UUID attemptId,
-                                                     UUID subtaskId, String description,
-                                                     List<MultipartFile> files,
-                                                     String deltaDescription,
-                                                     boolean isSubmitting) {
-        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
-                .orElseThrow(() -> new RuntimeException("Solver profile not found"));
+    private SubtaskSubmissionResponse processSubtask(UUID solverUserId, UUID attemptId, UUID subtaskId, String description, List<MultipartFile> files, String deltaDescription, boolean isSubmitting) {
+        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId).orElseThrow(() -> new RuntimeException("Solver profile not found"));
+        SolutionAttempt attempt = attemptRepository.findById(attemptId).orElseThrow(() -> new RuntimeException("Solution attempt not found"));
 
-        SolutionAttempt attempt = attemptRepository.findById(attemptId)
-                .orElseThrow(() -> new RuntimeException("Solution attempt not found"));
+        if (!attempt.getSolver().getId().equals(solver.getId())) throw new RuntimeException("You do not own this solution attempt.");
+        if (attempt.getStatus() != SolutionAttemptStatus.ACTIVE) throw new RuntimeException("This attempt is no longer active.");
 
-        if (!attempt.getSolver().getId().equals(solver.getId())) {
-            throw new RuntimeException("You do not own this solution attempt.");
-        }
+        ProblemSubtask subtask = subtaskRepository.findById(subtaskId).orElseThrow(() -> new RuntimeException("Sub-problem not found"));
+        if (attempt.getTargetSubtask() != null && !attempt.getTargetSubtask().getId().equals(subtask.getId())) throw new RuntimeException("This workspace is scoped to sub-problem \"" + attempt.getTargetSubtask().getTitle() + "\".");
 
-        if (attempt.getStatus() != SolutionAttemptStatus.ACTIVE) {
-            throw new RuntimeException("This attempt is no longer active.");
-        }
-
-        ProblemSubtask subtask = subtaskRepository.findById(subtaskId)
-                .orElseThrow(() -> new RuntimeException("Sub-problem not found"));
-
-        if (attempt.getTargetSubtask() != null
-                && !attempt.getTargetSubtask().getId().equals(subtask.getId())) {
-            throw new RuntimeException("This workspace is scoped to sub-problem \"" + attempt.getTargetSubtask().getTitle() + "\".");
-        }
-
-        if (!subtask.getProblem().getId().equals(attempt.getProblem().getId())) {
-            throw new RuntimeException("Sub-problem does not belong to this problem.");
-        }
-
-        SubtaskSubmission submission = submissionRepository
-                .findByAttemptAndSubtask(attempt, subtask)
-                .orElseGet(() -> new SubtaskSubmission(attempt, subtask));
-
-        if (submission.getStatus() == SubtaskSubmissionStatus.SUBMITTED) {
-            throw new RuntimeException("This sub-problem has already been submitted and cannot be edited.");
-        }
+        SubtaskSubmission submission = submissionRepository.findByAttemptAndSubtask(attempt, subtask).orElseGet(() -> new SubtaskSubmission(attempt, subtask));
+        if (submission.getStatus() == SubtaskSubmissionStatus.SUBMITTED) throw new RuntimeException("This sub-problem has already been submitted and cannot be edited.");
 
         int newFileCount = 0;
-
         if (files != null && !files.isEmpty()) {
-            List<String> existingUrls = submission.getFileUrlsAsList();
-            List<String> newUrls = new ArrayList<>(existingUrls);
-
+            List<String> newUrls = new ArrayList<>(submission.getFileUrlsAsList());
             for (MultipartFile file : files) {
                 if (file != null && !file.isEmpty()) {
-                    String url = storageService.uploadFile(
-                            file, attemptId + "/" + subtaskId);
-                    newUrls.add(url);
+                    newUrls.add(storageService.uploadFile(file, attemptId + "/" + subtaskId));
                     newFileCount++;
                 }
             }
@@ -532,281 +361,102 @@ public class SolutionAttemptService {
 
         submission.setDescription(description);
         submission.setDeltaDescription(deltaDescription);
-
         String solverFullName = solver.getFirstName() + " " + solver.getLastName();
 
         if (isSubmitting) {
             submission.setStatus(SubtaskSubmissionStatus.SUBMITTED);
             submission.setSubmittedAt(LocalDateTime.now());
-
-            Problem problem = attempt.getProblem();
             String msg = "Sub-problem \"" + subtask.getTitle() + "\" submitted by " + solverFullName;
-            if (deltaDescription != null && !deltaDescription.isBlank()) {
-                msg += " — Delta: " + deltaDescription;
-            }
-            if (newFileCount > 0) {
-                msg += " (" + newFileCount + " file(s) attached)";
-            }
-
-            auditService.log(
-                    problem.getId(),
-                    solverUserId,
-                    solverFullName,
-                    "SOLVER",
-                    AuditEventType.SUBTASK_SUBMITTED,
-                    msg
-            );
-
+            if (deltaDescription != null && !deltaDescription.isBlank()) msg += " — Delta: " + deltaDescription;
+            if (newFileCount > 0) msg += " (" + newFileCount + " file(s) attached)";
+            auditService.log(attempt.getProblem().getId(), solverUserId, solverFullName, "SOLVER", AuditEventType.SUBTASK_SUBMITTED, msg);
             attemptRepository.save(attempt);
-
         } else {
             submission.setStatus(SubtaskSubmissionStatus.DRAFT);
-
-            if (newFileCount > 0) {
-                auditService.log(
-                        attempt.getProblem().getId(),
-                        solverUserId,
-                        solverFullName,
-                        "SOLVER",
-                        AuditEventType.FILE_UPLOADED,
-                        solverFullName + " uploaded " + newFileCount + " file(s) to sub-problem \"" + subtask.getTitle() + "\"."
-                );
-            }
+            if (newFileCount > 0) auditService.log(attempt.getProblem().getId(), solverUserId, solverFullName, "SOLVER", AuditEventType.FILE_UPLOADED, solverFullName + " uploaded " + newFileCount + " file(s) to sub-problem \"" + subtask.getTitle() + "\".");
         }
 
-        SubtaskSubmission saved = submissionRepository.save(submission);
-        return mapSubmissionToResponse(saved, solverUserId);
+        return mapSubmissionToResponse(submissionRepository.save(submission), solverUserId);
     }
 
     @Transactional
     public void abandonAttempt(UUID solverUserId, UUID attemptId) {
-        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
-                .orElseThrow(() -> new RuntimeException("Solver profile not found"));
+        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId).orElseThrow(() -> new RuntimeException("Solver profile not found"));
+        SolutionAttempt attempt = attemptRepository.findById(attemptId).orElseThrow(() -> new RuntimeException("Solution attempt not found"));
 
-        SolutionAttempt attempt = attemptRepository.findById(attemptId)
-                .orElseThrow(() -> new RuntimeException("Solution attempt not found"));
-
-        if (!attempt.getSolver().getId().equals(solver.getId())) {
-            throw new RuntimeException("You do not own this attempt.");
-        }
-
-        if (attempt.getStatus() != SolutionAttemptStatus.ACTIVE) {
-            throw new RuntimeException("Attempt is not active.");
-        }
-
-        Problem problem = attempt.getProblem();
-        String solverFullName = solver.getFirstName() + " " + solver.getLastName();
-        String subtaskTitle = attempt.getTargetSubtask() != null
-                ? attempt.getTargetSubtask().getTitle() : "unknown sub-problem";
+        if (!attempt.getSolver().getId().equals(solver.getId())) throw new RuntimeException("You do not own this attempt.");
+        if (attempt.getStatus() != SolutionAttemptStatus.ACTIVE) throw new RuntimeException("Attempt is not active.");
 
         attempt.setStatus(SolutionAttemptStatus.ABANDONED);
         attemptRepository.save(attempt);
 
-        auditService.log(
-                problem.getId(),
-                solverUserId,
-                solverFullName,
-                "SOLVER",
-                AuditEventType.ATTEMPT_ABANDONED,
-                solverFullName + " abandoned their attempt on sub-problem \"" + subtaskTitle + "\"."
-        );
+        String solverFullName = solver.getFirstName() + " " + solver.getLastName();
+        String subtaskTitle = attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : "unknown sub-problem";
+        auditService.log(attempt.getProblem().getId(), solverUserId, solverFullName, "SOLVER", AuditEventType.ATTEMPT_ABANDONED, solverFullName + " abandoned their attempt on sub-problem \"" + subtaskTitle + "\".");
 
-        long remainingActive = attemptRepository.countByProblemAndStatus(problem, SolutionAttemptStatus.ACTIVE);
-
-        if (remainingActive == 0 && problem.getStatus() != ProblemStatus.SOLVED_OPEN_FOR_IMPROVEMENT) {
-            problem.setStatus(ProblemStatus.OPEN);
-            problemRepository.save(problem);
-
-            auditService.log(
-                    problem.getId(),
-                    null,
-                    "SYSTEM",
-                    "SYSTEM",
-                    AuditEventType.STATUS_CHANGED,
-                    "Status automatically changed back to OPEN — no active attempts remain."
-            );
+        if (attemptRepository.countByProblemAndStatus(attempt.getProblem(), SolutionAttemptStatus.ACTIVE) == 0 && attempt.getProblem().getStatus() != ProblemStatus.SOLVED_OPEN_FOR_IMPROVEMENT) {
+            attempt.getProblem().setStatus(ProblemStatus.OPEN);
+            problemRepository.save(attempt.getProblem());
+            auditService.log(attempt.getProblem().getId(), null, "SYSTEM", "SYSTEM", AuditEventType.STATUS_CHANGED, "Status automatically changed back to OPEN — no active attempts remain.");
         }
     }
 
+    // 🚀 RESTORED AND FIXED: Uses PENDING_REVIEW instead of COMPLETED
     @Transactional
     public SolutionAttemptResponse finalizeAttempt(UUID solverUserId, UUID attemptId) {
-        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
-                .orElseThrow(() -> new RuntimeException("Solver profile not found"));
+        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId).orElseThrow(() -> new RuntimeException("Solver profile not found"));
+        SolutionAttempt attempt = attemptRepository.findById(attemptId).orElseThrow(() -> new RuntimeException("Attempt not found"));
 
-        SolutionAttempt attempt = attemptRepository.findById(attemptId)
-                .orElseThrow(() -> new RuntimeException("Attempt not found"));
-
-        if (!attempt.getSolver().getId().equals(solver.getId())) {
-            throw new RuntimeException("You do not own this attempt.");
-        }
-
-        if (attempt.getStatus() == SolutionAttemptStatus.COMPLETED) {
-            throw new RuntimeException("This attempt has already been completed.");
+        if (!attempt.getSolver().getId().equals(solver.getId())) throw new RuntimeException("You do not own this attempt.");
+        if (attempt.getStatus() == SolutionAttemptStatus.COMPLETED || attempt.getStatus() == SolutionAttemptStatus.PENDING_REVIEW) {
+            throw new RuntimeException("This attempt has already been submitted.");
         }
 
         List<SubtaskSubmission> submissions = submissionRepository.findByAttempt(attempt);
+        boolean hasSubmitted = submissions.stream().anyMatch(sub -> sub.getStatus() == SubtaskSubmissionStatus.SUBMITTED);
 
-        boolean hasSubmitted = submissions.stream()
-                .anyMatch(sub -> sub.getStatus() == SubtaskSubmissionStatus.SUBMITTED);
+        if (!hasSubmitted) throw new RuntimeException("You must submit your sub-problem solution before finalizing.");
 
-        if (!hasSubmitted) {
-            throw new RuntimeException("You must submit your sub-problem solution before finalizing.");
-        }
-
-        String solverFullName = solver.getFirstName() + " " + solver.getLastName();
-        String subtaskTitle = attempt.getTargetSubtask() != null
-                ? attempt.getTargetSubtask().getTitle() : "sub-problem";
-
-        attempt.setStatus(SolutionAttemptStatus.COMPLETED);
+        attempt.setStatus(SolutionAttemptStatus.PENDING_REVIEW);
         attempt.setCompletedAt(LocalDateTime.now());
         SolutionAttempt savedAttempt = attemptRepository.save(attempt);
 
-        auditService.log(
-                attempt.getProblem().getId(),
-                solverUserId,
-                solverFullName,
-                "SOLVER",
-                AuditEventType.ATTEMPT_COMPLETED,
-                solverFullName + " finalized and submitted their attempt for sub-problem \"" + subtaskTitle + "\"."
-        );
+        String solverFullName = solver.getFirstName() + " " + solver.getLastName();
+        String subtaskTitle = attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : "sub-problem";
 
-        Problem problem = attempt.getProblem();
-
-        long remainingActive = attemptRepository.countByProblemAndStatus(problem, SolutionAttemptStatus.ACTIVE);
-
-        if (remainingActive == 0 && problem.getStatus() != ProblemStatus.SOLVED_OPEN_FOR_IMPROVEMENT) {
-            problem.setStatus(ProblemStatus.OPEN);
-            problemRepository.save(problem);
-
-            auditService.log(
-                    problem.getId(),
-                    null,
-                    "SYSTEM",
-                    "SYSTEM",
-                    AuditEventType.STATUS_CHANGED,
-                    "Status automatically changed back to OPEN — no active attempts remain."
-            );
-        }
+        auditService.log(attempt.getProblem().getId(), solverUserId, solverFullName, "SOLVER", AuditEventType.ATTEMPT_COMPLETED,
+                solverFullName + " finalized and submitted their attempt for sub-problem \"" + subtaskTitle + "\" and is awaiting seeker approval.");
 
         return mapToResponse(savedAttempt, submissions, solverUserId);
     }
 
-    private SubtaskSubmissionResponse mapSubmissionToResponse(SubtaskSubmission submission, UUID currentUserId) {
-        UUID ownerUserId = submission.getAttempt().getSolver().getUser().getId();
-        boolean isOwner = currentUserId != null && currentUserId.equals(ownerUserId);
-        boolean isDraft = submission.getStatus() == SubtaskSubmissionStatus.DRAFT;
-        boolean hideDraft = isDraft && !isOwner;
-
-        return new SubtaskSubmissionResponse(
-                submission.getId(),
-                submission.getSubtask().getId(),
-                submission.getSubtask().getTitle(),
-                submission.getSubtask().getDepartmentFocus(),
-                hideDraft ? "Confidential Workspace: The solver is actively drafting a solution." : submission.getDescription(),
-                hideDraft ? Collections.emptyList() : submission.getFileUrlsAsList(),
-                submission.getStatus().name(),
-                submission.getCreatedAt(),
-                submission.getUpdatedAt(),
-                submission.getSubmittedAt(),
-                hideDraft ? null : submission.getDeltaDescription()
-        );
-    }
-
-    private ProblemResponse mapProblemToResponse(Problem problem,
-                                                 List<ProblemSubtask> subtasks) {
-        List<SubtaskResponse> subtaskResponses = subtasks.stream()
-                .map(s -> {
-                    List<AttachmentRequirementResponse> attachments = attachmentRepository.findBySubtask(s)
-                            .stream()
-                            .map(att -> new AttachmentRequirementResponse(
-                                    att.getId(),
-                                    att.getAttachmentTitle(),
-                                    att.getAttachmentType()
-                            ))
-                            .collect(Collectors.toList());
-                    return new SubtaskResponse(
-                            s.getId(),
-                            s.getTitle(),
-                            s.getDepartmentFocus(),
-                            s.getSdgFocus(),
-                            s.getDescription(),
-                            attachments
-                    );
-                })
-                .collect(Collectors.toList());
-
-        List<String> tags = problem.getTags() != null
-                ? problem.getTags()
-                : MatchmakingService.buildTagsForProblem(problem, subtasks);
-
-        return new ProblemResponse(
-                problem.getId(),
-                problem.getTitle(),
-                problem.getBackgroundContext(),
-                problem.getPrimaryStatement(),
-                problem.getObjectives(),
-                problem.getConstraints(),
-                problem.getPreferredProgram(),
-                problem.getSdgFocus(),
-                problem.getStatus().name(),
-                problem.getSeeker().getId(),
-                problem.getSeeker().getOrganizationName(),
-                problem.getCreatedAt(),
-                subtaskResponses,
-                tags,
-                problem.getProblemDocumentUrl(),
-                problem.getMaxConcurrentSolvers()
-        );
-    }
-
     @Transactional(readOnly = true)
     public ActiveAttemptsCountResponse getMyActiveAttemptsCount(UUID solverUserId) {
-        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
-                .orElseThrow(() -> new RuntimeException("Solver profile not found"));
-
-        long count = attemptRepository.countBySolverAndStatus(solver, SolutionAttemptStatus.ACTIVE);
-
-        return new ActiveAttemptsCountResponse(count);
+        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId).orElseThrow(() -> new RuntimeException("Solver profile not found"));
+        return new ActiveAttemptsCountResponse(attemptRepository.countBySolverAndStatus(solver, SolutionAttemptStatus.ACTIVE));
     }
 
     @Transactional(readOnly = true)
     public ClaimDetailResponse getClaimDetails(UUID claimId, UUID solverUserId) {
-        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
-                .orElseThrow(() -> new RuntimeException("Solver not found"));
+        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId).orElseThrow(() -> new RuntimeException("Solver not found"));
+        ClaimRequest claim = claimRequestRepository.findById(claimId).orElseThrow(() -> new RuntimeException("Proposal not found"));
 
-        ClaimRequest claim = claimRequestRepository.findById(claimId)
-                .orElseThrow(() -> new RuntimeException("Proposal not found"));
+        if (!claim.getSolver().getId().equals(solver.getId())) throw new RuntimeException("Unauthorized access to this proposal");
 
-        if (!claim.getSolver().getId().equals(solver.getId())) {
-            throw new RuntimeException("Unauthorized access to this proposal");
-        }
-
-        return new ClaimDetailResponse(
-                claim.getId(),
-                claim.getProblem().getId(),
-                claim.getProblem().getTitle(),
+        return new ClaimDetailResponse(claim.getId(), claim.getProblem().getId(), claim.getProblem().getTitle(),
                 claim.getTargetSubtask() != null ? claim.getTargetSubtask().getTitle() : null,
-                claim.getStatus().name(),
-                claim.getCreatedAt(),
-                claim.getProposedApproach(),
-                claim.getSupportingDocuments()
-        );
+                claim.getStatus().name(), claim.getCreatedAt(), claim.getProposedApproach(), claim.getSupportingDocuments());
     }
 
     @Transactional(readOnly = true)
     public AttemptDetailResponse getAttemptDetails(UUID attemptId, UUID solverUserId) {
-        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
-                .orElseThrow(() -> new RuntimeException("Solver not found"));
+        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId).orElseThrow(() -> new RuntimeException("Solver not found"));
+        SolutionAttempt attempt = attemptRepository.findById(attemptId).orElseThrow(() -> new RuntimeException("Attempt not found"));
 
-        SolutionAttempt attempt = attemptRepository.findById(attemptId)
-                .orElseThrow(() -> new RuntimeException("Attempt not found"));
-
-        if (!attempt.getSolver().getId().equals(solver.getId())) {
-            throw new RuntimeException("Unauthorized access to this attempt");
-        }
+        if (!attempt.getSolver().getId().equals(solver.getId())) throw new RuntimeException("Unauthorized access to this attempt");
 
         String summary = "No submissions recorded.";
-        List<String> attachedFiles = new java.util.ArrayList<>();
+        List<String> attachedFiles = new ArrayList<>();
 
         if (attempt.getSubmissions() != null && !attempt.getSubmissions().isEmpty()) {
             SubtaskSubmission latestSubmission = attempt.getSubmissions().get(attempt.getSubmissions().size() - 1);
@@ -814,181 +464,115 @@ public class SolutionAttemptService {
             attachedFiles = latestSubmission.getFileUrlsAsList();
         }
 
-        return new AttemptDetailResponse(
-                attempt.getId(),
-                attempt.getProblem().getId(),
-                attempt.getProblem().getTitle(),
-                attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : null,
-                attempt.getStatus().name(),
-                attempt.getCompletedAt() != null ? attempt.getCompletedAt() : attempt.getUpdatedAt(),
-                summary,
-                attachedFiles
-        );
+        return new AttemptDetailResponse(attempt.getId(), attempt.getProblem().getId(), attempt.getProblem().getTitle(),
+                attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : null, attempt.getStatus().name(),
+                attempt.getCompletedAt() != null ? attempt.getCompletedAt() : attempt.getUpdatedAt(), summary, attachedFiles);
     }
 
     @Transactional(readOnly = true)
     public List<SolutionAttemptSummaryResponse> getLightweightTree(UUID problemId) {
-        Problem problem = problemRepository.findById(problemId)
-                .orElseThrow(() -> new RuntimeException("Problem not found"));
-
-        return attemptRepository.findByProblemOrderByClaimedAtAsc(problem).stream()
-                .map(attempt -> {
-                    String parentName = null;
-                    UUID parentId = null;
-                    if (attempt.getParentAttempt() != null) {
-                        parentName = attempt.getParentAttempt().getSolver().getFirstName() + " " +
-                                attempt.getParentAttempt().getSolver().getLastName();
-                        parentId = attempt.getParentAttempt().getId();
-                    }
-
-                    // Extract Seeker Info
-                    String seekerOrgName = null;
-                    String seekerProfileUrl = null;
-                    if (attempt.getProblem() != null && attempt.getProblem().getSeeker() != null) {
-                        seekerOrgName = attempt.getProblem().getSeeker().getOrganizationName();
-                        if (attempt.getProblem().getSeeker().getUser() != null) {
-                            seekerProfileUrl = attempt.getProblem().getSeeker().getUser().getProfileUrl();
-                        }
-                    }
-
-                    return new SolutionAttemptSummaryResponse(
-                            attempt.getId(),
-                            attempt.getProblem().getId(),
-                            attempt.getProblem().getTitle(),
-                            attempt.getSolver().getFirstName(),
-                            attempt.getSolver().getLastName(),
-                            attempt.getSolver().getUser().getProfileUrl(),
-                            attempt.getSolver().getInstitution(),
-                            attempt.getSolver().getDegreeProgram(),
-                            attempt.getStatus().name(),
-                            attempt.getSubmissions() != null ? attempt.getSubmissions().size() : 0,
-                            attempt.getClaimedAt(),
-                            attempt.getUpdatedAt(),
-                            attempt.getCompletedAt(),
-                            parentId,
-                            parentName,
-                            attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getId() : null,
-                            attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : null,
-                            seekerOrgName,
-                            seekerProfileUrl
-                    );
-                })
-                .collect(Collectors.toList());
+        Problem problem = problemRepository.findById(problemId).orElseThrow(() -> new RuntimeException("Problem not found"));
+        return attemptRepository.findByProblemOrderByClaimedAtAsc(problem).stream().map(this::mapToSummaryResponse).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public long getActiveAttemptsCountForProblem(UUID problemId) {
-        Problem problem = problemRepository.findById(problemId)
-                .orElseThrow(() -> new RuntimeException("Problem not found"));
+        Problem problem = problemRepository.findById(problemId).orElseThrow(() -> new RuntimeException("Problem not found"));
         return attemptRepository.countByProblemAndStatus(problem, SolutionAttemptStatus.ACTIVE);
     }
 
     @Transactional(readOnly = true)
     public List<SolutionAttemptSummaryResponse> getActiveWorkspaces(UUID problemId) {
-        Problem problem = problemRepository.findById(problemId)
-                .orElseThrow(() -> new RuntimeException("Problem not found"));
-
-        return attemptRepository.findByProblemAndStatus(problem, SolutionAttemptStatus.ACTIVE).stream()
-                .map(attempt -> {
-                    // Extract Seeker Info
-                    String seekerOrgName = null;
-                    String seekerProfileUrl = null;
-                    if (attempt.getProblem() != null && attempt.getProblem().getSeeker() != null) {
-                        seekerOrgName = attempt.getProblem().getSeeker().getOrganizationName();
-                        if (attempt.getProblem().getSeeker().getUser() != null) {
-                            seekerProfileUrl = attempt.getProblem().getSeeker().getUser().getProfileUrl();
-                        }
-                    }
-
-                    return new SolutionAttemptSummaryResponse(
-                            attempt.getId(),
-                            attempt.getProblem().getId(),
-                            attempt.getProblem().getTitle(),
-                            attempt.getSolver().getFirstName(),
-                            attempt.getSolver().getLastName(),
-                            attempt.getSolver().getUser().getProfileUrl(),
-                            attempt.getSolver().getInstitution(),
-                            attempt.getSolver().getDegreeProgram(),
-                            attempt.getStatus().name(),
-                            attempt.getSubmissions() != null ? attempt.getSubmissions().size() : 0,
-                            attempt.getClaimedAt(),
-                            attempt.getUpdatedAt(),
-                            attempt.getCompletedAt(),
-                            attempt.getParentAttempt() != null ? attempt.getParentAttempt().getId() : null,
-                            attempt.getParentAttempt() != null ? attempt.getParentAttempt().getSolver().getFirstName() + " " + attempt.getParentAttempt().getSolver().getLastName() : null,
-                            attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getId() : null,
-                            attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : null,
-                            seekerOrgName,
-                            seekerProfileUrl
-                    );
-                })
-                .collect(Collectors.toList());
+        Problem problem = problemRepository.findById(problemId).orElseThrow(() -> new RuntimeException("Problem not found"));
+        return attemptRepository.findByProblemAndStatus(problem, SolutionAttemptStatus.ACTIVE).stream().map(this::mapToSummaryResponse).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<Map<String, Object>> getSubtaskCapacities(UUID problemId) {
-        Problem problem = problemRepository.findById(problemId)
-                .orElseThrow(() -> new RuntimeException("Problem not found"));
+        Problem problem = problemRepository.findById(problemId).orElseThrow(() -> new RuntimeException("Problem not found"));
 
         List<SolutionAttempt> activeAttempts = attemptRepository.findByProblemAndStatus(problem, SolutionAttemptStatus.ACTIVE);
+        List<SolutionAttempt> pendingAttempts = attemptRepository.findByProblemAndStatus(problem, SolutionAttemptStatus.PENDING_REVIEW);
 
-        Map<UUID, Long> activeCounts = activeAttempts.stream()
-                .filter(a -> a.getTargetSubtask() != null)
-                .collect(Collectors.groupingBy(a -> a.getTargetSubtask().getId(), Collectors.counting()));
+        Map<UUID, Long> activeCounts = activeAttempts.stream().filter(a -> a.getTargetSubtask() != null).collect(Collectors.groupingBy(a -> a.getTargetSubtask().getId(), Collectors.counting()));
+        Map<UUID, Long> pendingCounts = pendingAttempts.stream().filter(a -> a.getTargetSubtask() != null).collect(Collectors.groupingBy(a -> a.getTargetSubtask().getId(), Collectors.counting()));
 
-        List<ProblemSubtask> subtasks = subtaskRepository.findByProblem(problem);
+        return subtaskRepository.findByProblem(problem).stream().map(st -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("subtaskId", st.getId());
+            map.put("title", st.getTitle());
+            map.put("activeCount", activeCounts.getOrDefault(st.getId(), 0L).intValue());
+            map.put("pendingReviewCount", pendingCounts.getOrDefault(st.getId(), 0L).intValue());
+            map.put("maxSolvers", st.getMaxConcurrentSolvers() != null ? st.getMaxConcurrentSolvers() : 3);
+            return map;
+        }).collect(Collectors.toList());
+    }
 
-        return subtasks.stream()
-                .map(st -> {
-                    Map<String, Object> map = new java.util.HashMap<>();
-                    map.put("subtaskId", st.getId());
-                    map.put("title", st.getTitle());
-                    map.put("activeCount", activeCounts.getOrDefault(st.getId(), 0L).intValue());
-                    map.put("maxSolvers", st.getMaxConcurrentSolvers() != null ? st.getMaxConcurrentSolvers() : 3);
-                    return map;
-                })
-                .collect(Collectors.toList());
+    @Transactional(readOnly = true)
+    public PaginatedAttemptsResponse getPendingReviewAttempts(UUID problemId, UUID subtaskId, String search, String sort, int page, int size, UUID currentUserId) {
+        Problem problem = problemRepository.findById(problemId).orElseThrow(() -> new RuntimeException("Problem not found"));
+        ProblemSubtask subtask = subtaskId != null ? subtaskRepository.findById(subtaskId).orElse(null) : null;
+        org.springframework.data.domain.Sort.Direction direction = "oldest-first".equalsIgnoreCase(sort) ? org.springframework.data.domain.Sort.Direction.ASC : org.springframework.data.domain.Sort.Direction.DESC;
+
+        Page<SolutionAttempt> attemptPage = attemptRepository.findPendingReviews(problem, SolutionAttemptStatus.PENDING_REVIEW, subtask, search, PageRequest.of(page, size, org.springframework.data.domain.Sort.by(direction, "updatedAt")));
+
+        List<SolutionAttemptSummaryResponse> summaries = attemptPage.getContent().stream().map(this::mapToSummaryResponse).collect(Collectors.toList());
+        return new PaginatedAttemptsResponse(summaries, attemptPage.getNumber(), attemptPage.getTotalPages(), attemptPage.getTotalElements(), attemptPage.getSize());
+    }
+
+    @Transactional
+    public SolutionAttemptResponse evaluateSolution(UUID seekerUserId, UUID attemptId, boolean isApproved) {
+        SeekerProfile seeker = seekerProfileRepository.findByUserId(seekerUserId).orElseThrow(() -> new RuntimeException("Seeker profile not found"));
+        SolutionAttempt attempt = attemptRepository.findById(attemptId).orElseThrow(() -> new RuntimeException("Attempt not found"));
+
+        if (!attempt.getProblem().getSeeker().getId().equals(seeker.getId())) throw new RuntimeException("You do not own this problem.");
+        if (attempt.getStatus() != SolutionAttemptStatus.PENDING_REVIEW) throw new RuntimeException("This attempt is not pending review.");
+
+        String seekerName = seeker.getOrganizationName();
+        String subtaskTitle = attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : "sub-problem";
+
+        if (isApproved) {
+            attempt.setStatus(SolutionAttemptStatus.COMPLETED);
+            auditService.log(attempt.getProblem().getId(), seekerUserId, seekerName, "SEEKER", AuditEventType.STATUS_CHANGED,
+                    seekerName + " approved the final solution for sub-problem \"" + subtaskTitle + "\" from " + attempt.getSolver().getFirstName() + ".");
+        } else {
+            attempt.setStatus(SolutionAttemptStatus.TERMINATED);
+            attempt.setCompletedAt(null);
+            auditService.log(attempt.getProblem().getId(), seekerUserId, seekerName, "SEEKER", AuditEventType.STATUS_CHANGED,
+                    seekerName + " rejected the final solution for sub-problem \"" + subtaskTitle + "\" from " + attempt.getSolver().getFirstName() + ". Attempt terminated.");
+        }
+
+        SolutionAttempt savedAttempt = attemptRepository.save(attempt);
+        return mapToResponse(savedAttempt, submissionRepository.findByAttempt(savedAttempt), seekerUserId);
     }
 
     @Transactional(readOnly = true)
     public List<Map<String, Object>> getLightweightPendingProposals(UUID problemId) {
-        Problem problem = problemRepository.findById(problemId)
-                .orElseThrow(() -> new RuntimeException("Problem not found"));
+        Problem problem = problemRepository.findById(problemId).orElseThrow(() -> new RuntimeException("Problem not found"));
 
-        return claimRequestRepository.findByProblemAndStatus(problem, ClaimRequestStatus.PENDING)
-                .stream()
-                .map(claim -> {
-                    Map<String, Object> map = new java.util.HashMap<>();
-                    map.put("id", claim.getId());
-                    map.put("targetSubtaskId", claim.getTargetSubtask() != null ? claim.getTargetSubtask().getId() : null);
-                    map.put("parentAttemptId", claim.getParentAttempt() != null ? claim.getParentAttempt().getId() : null);
-                    map.put("status", claim.getStatus().name());
-                    map.put("createdAt", claim.getCreatedAt());
+        return claimRequestRepository.findByProblemAndStatus(problem, ClaimRequestStatus.PENDING).stream().map(claim -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", claim.getId());
+            map.put("targetSubtaskId", claim.getTargetSubtask() != null ? claim.getTargetSubtask().getId() : null);
+            map.put("parentAttemptId", claim.getParentAttempt() != null ? claim.getParentAttempt().getId() : null);
+            map.put("status", claim.getStatus().name());
+            map.put("createdAt", claim.getCreatedAt());
+            map.put("fileCount", claim.getSupportingDocuments() != null && !claim.getSupportingDocuments().isBlank() ? claim.getSupportingDocuments().split(",").length : 0);
 
-                    int fileCount = 0;
-                    if (claim.getSupportingDocuments() != null && !claim.getSupportingDocuments().isBlank()) {
-                        fileCount = claim.getSupportingDocuments().split(",").length;
-                    }
-                    map.put("fileCount", fileCount);
-
-                    Map<String, Object> solver = new java.util.HashMap<>();
-                    solver.put("firstName", claim.getSolver().getFirstName());
-                    solver.put("lastName", claim.getSolver().getLastName());
-                    solver.put("institution", claim.getSolver().getInstitution());
-                    solver.put("profilePictureUrl", claim.getSolver().getUser().getProfileUrl());
-                    map.put("solver", solver);
-
-                    return map;
-                })
-                .collect(Collectors.toList());
+            Map<String, Object> solver = new HashMap<>();
+            solver.put("firstName", claim.getSolver().getFirstName());
+            solver.put("lastName", claim.getSolver().getLastName());
+            solver.put("institution", claim.getSolver().getInstitution());
+            solver.put("profilePictureUrl", claim.getSolver().getUser().getProfileUrl());
+            map.put("solver", solver);
+            return map;
+        }).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public Map<String, Object> getProposalDetailsForSeeker(UUID proposalId) {
-        ClaimRequest claim = claimRequestRepository.findById(proposalId)
-                .orElseThrow(() -> new RuntimeException("Proposal not found"));
-
-        Map<String, Object> map = new java.util.HashMap<>();
+        ClaimRequest claim = claimRequestRepository.findById(proposalId).orElseThrow(() -> new RuntimeException("Proposal not found"));
+        Map<String, Object> map = new HashMap<>();
         map.put("id", claim.getId());
         map.put("proposedApproach", claim.getProposedApproach());
         map.put("supportingDocuments", claim.getSupportingDocuments());
@@ -997,55 +581,18 @@ public class SolutionAttemptService {
         map.put("targetSubtaskId", claim.getTargetSubtask() != null ? claim.getTargetSubtask().getId() : null);
         map.put("parentAttemptId", claim.getParentAttempt() != null ? claim.getParentAttempt().getId() : null);
 
-        Map<String, Object> solver = new java.util.HashMap<>();
+        Map<String, Object> solver = new HashMap<>();
         solver.put("firstName", claim.getSolver().getFirstName());
         solver.put("lastName", claim.getSolver().getLastName());
         solver.put("institution", claim.getSolver().getInstitution());
         solver.put("profilePictureUrl", claim.getSolver().getUser().getProfileUrl());
         map.put("solver", solver);
-
         return map;
     }
 
     @Transactional(readOnly = true)
     public List<SolutionAttemptSummaryResponse> getMyLightweightAttemptsByUserId(UUID solverUserId) {
-        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
-                .orElseThrow(() -> new RuntimeException("Solver not found"));
-
-        return attemptRepository.findBySolver(solver).stream()
-                .map(attempt -> {
-                    // Extract Seeker Info
-                    String seekerOrgName = null;
-                    String seekerProfileUrl = null;
-                    if (attempt.getProblem() != null && attempt.getProblem().getSeeker() != null) {
-                        seekerOrgName = attempt.getProblem().getSeeker().getOrganizationName();
-                        if (attempt.getProblem().getSeeker().getUser() != null) {
-                            seekerProfileUrl = attempt.getProblem().getSeeker().getUser().getProfileUrl();
-                        }
-                    }
-
-                    return new SolutionAttemptSummaryResponse(
-                            attempt.getId(),
-                            attempt.getProblem().getId(),
-                            attempt.getProblem().getTitle(),
-                            attempt.getSolver().getFirstName(),
-                            attempt.getSolver().getLastName(),
-                            attempt.getSolver().getUser().getProfileUrl(),
-                            attempt.getSolver().getInstitution(),
-                            attempt.getSolver().getDegreeProgram(),
-                            attempt.getStatus().name(),
-                            attempt.getSubmissions() != null ? attempt.getSubmissions().size() : 0,
-                            attempt.getClaimedAt(),
-                            attempt.getUpdatedAt(),
-                            attempt.getCompletedAt(),
-                            attempt.getParentAttempt() != null ? attempt.getParentAttempt().getId() : null,
-                            attempt.getParentAttempt() != null ? attempt.getParentAttempt().getSolver().getFirstName() + " " + attempt.getParentAttempt().getSolver().getLastName() : null,
-                            attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getId() : null,
-                            attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : null,
-                            seekerOrgName,
-                            seekerProfileUrl
-                    );
-                })
-                .collect(Collectors.toList());
+        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId).orElseThrow(() -> new RuntimeException("Solver not found"));
+        return attemptRepository.findBySolver(solver).stream().map(this::mapToSummaryResponse).collect(Collectors.toList());
     }
 }
