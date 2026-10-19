@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { Loader2, GitBranch, X, Shield, ShieldHalf, ShieldCheck, Award, Clock, Activity, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Circle, Loader2, GitBranch, X, Shield, ShieldHalf, ShieldCheck, Award, Clock, Activity, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { evaluateProposal, getPendingProposals, getFullProposalDetails, getSubtaskCapacities, getSolverMetrics } from "../api/problem";
 import type { ClaimSummaryResponse } from "@/types/attempt";
 import type { SubtaskCapacity } from "../api/problem";
