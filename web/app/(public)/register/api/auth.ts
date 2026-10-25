@@ -21,6 +21,20 @@ export async function registerSeeker(data: SeekerRegisterPayload) {
   });
   return result;
 }
+export async function verifyEmailCode(token: string) {
+  const result = await apiRequest<string>("/auth/verify", {
+    method: "POST",
+    body: JSON.stringify({ token }),
+  });
+  return result;
+}
+
+export async function resendVerificationCode(email: string) {
+  const result = await apiRequest<string>(`/auth/resend-verification?email=${encodeURIComponent(email)}`, {
+    method: "POST",
+  });
+  return result;
+}
 
 export async function loginUser(data: LoginPayload) {
   const result = await apiRequest<AuthResponse>("/auth/login", {
