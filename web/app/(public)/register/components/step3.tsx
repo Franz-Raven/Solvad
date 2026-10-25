@@ -51,6 +51,10 @@ export default function Step3({
         {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Verify Account"}
       </button>
 
+      <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-center text-[12px] font-medium text-amber-800">
+        Your verification code expires 15 minutes after it is sent. If it expires, request a new code.
+      </p>
+
       <div className="text-center mt-5">
         <p className="text-[11px] font-medium text-slate-400">
           Didn't receive a code?{" "}

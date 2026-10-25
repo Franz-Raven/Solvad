@@ -14,6 +14,7 @@ import com.solvad.backend.email.EmailService;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -22,6 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthService {
+
+    private static final long VERIFICATION_CODE_VALIDITY_MINUTES = 15;
 
     @Autowired
     private UserRepository userRepository;
@@ -46,25 +49,14 @@ public class AuthService {
 
     private String generateSixDigitCode() {
         SecureRandom random = new SecureRandom();
-        int number = random.nextInt(999999);
-        return String.format("%06d", number)
-        ;
+        return String.format("%06d", random.nextInt(1_000_000));
     }
 
     @Transactional
     public AuthResponse registerSolver(SolverRegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email already exists");
-        }
-
-        User user = new User();
-        user.setEmail(request.getEmail());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRole(Role.SOLVER);
-
-        user = userRepository.save(user);
-
-        SolverProfile profile = new SolverProfile();
+        User user = findOrCreateUnverifiedUser(request.getEmail(), request.getPassword(), Role.SOLVER);
+        SolverProfile profile = solverProfileRepository.findByUserId(user.getId())
+                .orElseGet(SolverProfile::new);
         profile.setUser(user);
         profile.setFirstName(request.getFirstName());
         profile.setLastName(request.getLastName());
@@ -80,18 +72,9 @@ public class AuthService {
 
     @Transactional
     public AuthResponse registerSeeker(SeekerRegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email already exists");
-        }
-
-        User user = new User();
-        user.setEmail(request.getEmail());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRole(Role.SEEKER);
-
-        user = userRepository.save(user);
-
-        SeekerProfile profile = new SeekerProfile();
+        User user = findOrCreateUnverifiedUser(request.getEmail(), request.getPassword(), Role.SEEKER);
+        SeekerProfile profile = seekerProfileRepository.findByUserId(user.getId())
+                .orElseGet(SeekerProfile::new);
         profile.setUser(user);
         profile.setOrganizationName(request.getOrganizationName());
         profile.setContactPerson(request.getContactPerson());
@@ -103,6 +86,20 @@ public class AuthService {
         return new AuthResponse(token, user.getId(), user.getEmail(), user.getRole(), user.getProfileUrl());
     }
 
+    private User findOrCreateUnverifiedUser(String email, String password, Role role) {
+        Optional<User> existingUser = userRepository.findByEmail(email);
+        User user = existingUser.orElseGet(User::new);
+        if (user.isVerified()) {
+            throw new RuntimeException("Email already exists");
+        }
+
+        user.setEmail(email);
+        user.setPassword(passwordEncoder.encode(password));
+        user.setRole(role);
+        user.setVerified(false);
+        return userRepository.save(user);
+    }
+
     @Transactional
     public void createAndSendVerificationToken(User user) {
         String code = generateSixDigitCode();
@@ -110,7 +107,7 @@ public class AuthService {
                 .orElseGet(() -> new EmailVerificationToken());
         token.setToken(code);
         token.setUser(user);
-        token.setExpiryDate(LocalDateTime.now().plusMinutes(15));
+        token.setExpiryDate(LocalDateTime.now().plusMinutes(VERIFICATION_CODE_VALIDITY_MINUTES));
 
         tokenRepository.save(token);
         emailService.sendVerificationEmail(user.getEmail(), code);
