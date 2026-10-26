@@ -39,6 +39,7 @@ export interface SolutionAttemptResponse {
   // 🚀 NEW FIELDS
   seekerName?: string;
   seekerProfileUrl?: string;
+  rejectionReason?: string;
 }
 
 export interface TreeAttemptNode extends SolutionAttemptResponse {
@@ -173,6 +174,7 @@ export interface AttemptDetail {
   completedAt: string;
   summary: string;
   attachedFiles?: string[]; // 🚀 ADD THIS LINE
+  rejectionReason?: string;
 }
 
 export interface AttemptNodeSummary {

@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 import { Loader2, X, Shield, ShieldHalf, ShieldCheck, Award, Clock, Activity, Search, ChevronLeft, ChevronRight, CheckCircle, Paperclip } from "lucide-react";
 import Portal from "@/components/portal";
 
@@ -38,6 +37,10 @@ export function ReviewSolutionsTab({ problem }: ReviewSolutionsTabProps) {
   const [solverMetrics, setSolverMetrics] = useState<SolverMetrics | null>(null);
   const [metricsLoading, setMetricsLoading] = useState(false);
 
+  // 🚀 Rejection State for UI
+  const [isRejecting, setIsRejecting] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+
   const fetchCaps = async () => {
     try {
       const caps = await getSubtaskCapacities(problem.id);
@@ -65,22 +68,24 @@ export function ReviewSolutionsTab({ problem }: ReviewSolutionsTabProps) {
 
   useEffect(() => {
     if (selectedSolution) document.body.style.overflow = "hidden";
-    else document.body.style.overflow = "";
+    else {
+      document.body.style.overflow = "";
+      setIsRejecting(false);
+      setRejectionReason("");
+    }
     return () => { document.body.style.overflow = ""; };
   }, [selectedSolution]);
 
-  // 🚀 FIXED: Fetch the full attempt FIRST, then use its solverId to fetch metrics
+  // 🚀 TS FIX: Fetch heavy details FIRST, then safely extract solverId for metrics
   const handleOpenDetails = async (summary: SolutionAttemptSummary) => {
     setFetchingDetailsId(summary.id);
     setSolverMetrics(null);
     setMetricsLoading(true);
     
     try {
-      // 1. Fetch the heavy attempt payload
       const fullAttempt = await getAttemptDetailsById(summary.id);
       setSelectedSolution(fullAttempt);
 
-      // 2. Safely use the solverId from the heavy payload
       if (fullAttempt.solverId) {
         const metrics = await getSolverMetrics(fullAttempt.solverId).catch(() => ({ solutionsCompleted: 0, completionRate: 0, avgTurnaroundDays: null }));
         setSolverMetrics(metrics as SolverMetrics);
@@ -98,14 +103,16 @@ export function ReviewSolutionsTab({ problem }: ReviewSolutionsTabProps) {
   const handleEvaluation = async (attemptId: string, isApproved: boolean) => {
     setActionLoading(attemptId);
     try {
-      await evaluateSolution(attemptId, isApproved);
+      await evaluateSolution(attemptId, isApproved, isApproved ? undefined : rejectionReason);
       await Promise.all([fetchData(), fetchCaps()]); 
       setSelectedSolution(null);
-      setNotification({ type: "success", message: isApproved ? "Solution approved! Merit awarded to solver." : "Solution rejected. Workspace has been terminated." });
+      setNotification({ type: "success", message: isApproved ? "Solution approved! Merit awarded to solver." : "Solution rejected. Workspace has been terminated and feedback sent." });
     } catch (err: any) {
       setNotification({ type: "error", message: `Evaluation failed: ${err.message}` });
     } finally {
       setActionLoading(null);
+      setIsRejecting(false);
+      setRejectionReason("");
     }
   };
 
@@ -303,11 +310,7 @@ export function ReviewSolutionsTab({ problem }: ReviewSolutionsTabProps) {
                     </div>
                     <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Reliability</span>
-                      <span className="text-sm font-black text-emerald-600">{solverMetrics.solutionsCompleted === 0 ? "N/A" : `${Math.round(solverMetrics.completionRate)}%`}</span>
-                    </div>
-                    <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Turnaround</span>
-                      <span className="text-sm font-black text-slate-900">{solverMetrics.avgTurnaroundDays ? `${Math.round(solverMetrics.avgTurnaroundDays)} days` : "N/A"}</span>
+                      <span className="text-sm font-black text-emerald-600">{solverMetrics.solutionsCompleted === 0 ? "N/A" : `${Math.round(solverMetrics.completionRate)}\%`}</span> </div> <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center"> <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Turnaround</span> <span className="text-sm font-black text-slate-900">{solverMetrics.avgTurnaroundDays ? `${Math.round(solverMetrics.avgTurnaroundDays)} days` : "N/A"}</span>
                     </div>
                   </div>
                 )}
@@ -344,14 +347,40 @@ export function ReviewSolutionsTab({ problem }: ReviewSolutionsTabProps) {
                 )}
               </div>
 
-              <div className="p-5 border-t border-slate-200 bg-white flex justify-end gap-3 rounded-b-2xl">
-                <button onClick={() => handleEvaluation(selectedSolution.id, false)} disabled={actionLoading !== null} className="px-6 py-2.5 text-rose-600 bg-white hover:bg-rose-50 border border-rose-200 rounded-xl text-sm font-bold transition-all shadow-sm active:scale-95 cursor-pointer">
-                  {actionLoading === selectedSolution.id ? "Rejecting..." : "Reject Solution"}
-                </button>
-                <button onClick={() => handleEvaluation(selectedSolution.id, true)} disabled={actionLoading !== null} className="px-6 py-2.5 text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl text-sm font-bold transition-all shadow-md active:scale-95 cursor-pointer">
-                  {actionLoading === selectedSolution.id ? "Approving..." : "Approve Solution"}
-                </button>
-              </div>
+              {/* 🚀 REJECTION FLOW UI */}
+              {!isRejecting ? (
+                <div className="p-5 border-t border-slate-200 bg-white flex justify-end gap-3 rounded-b-2xl">
+                  <button onClick={() => setIsRejecting(true)} disabled={actionLoading !== null} className="px-6 py-2.5 text-rose-600 bg-white hover:bg-rose-50 border border-rose-200 rounded-xl text-sm font-bold transition-all shadow-sm active:scale-95 cursor-pointer">
+                    Reject Solution
+                  </button>
+                  <button onClick={() => handleEvaluation(selectedSolution.id, true)} disabled={actionLoading !== null} className="px-6 py-2.5 text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl text-sm font-bold transition-all shadow-md active:scale-95 cursor-pointer">
+                    {actionLoading === selectedSolution.id ? "Approving..." : "Approve Solution"}
+                  </button>
+                </div>
+              ) : (
+                <div className="p-5 border-t border-slate-200 bg-white flex flex-col gap-3 rounded-b-2xl animate-in fade-in">
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-sm font-bold text-slate-700">Reason for Rejection</label>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Required</span>
+                  </div>
+                  <textarea
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    placeholder="Explain what is missing or incorrect to help the solver improve..."
+                    className="w-full p-3 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 outline-none transition-all resize-none shadow-sm"
+                    rows={3}
+                  />
+                  <div className="flex justify-end gap-3 mt-2">
+                    <button onClick={() => { setIsRejecting(false); setRejectionReason(""); }} className="px-6 py-2.5 text-slate-600 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold transition-all cursor-pointer">
+                      Cancel
+                    </button>
+                    <button onClick={() => handleEvaluation(selectedSolution.id, false)} disabled={!rejectionReason.trim() || actionLoading !== null} className="px-6 py-2.5 text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:bg-slate-300 rounded-xl text-sm font-bold transition-all shadow-md cursor-pointer flex items-center gap-2">
+                      {actionLoading === selectedSolution.id ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                      Confirm Reject
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </Portal>

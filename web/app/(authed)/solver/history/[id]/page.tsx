@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ExternalLink, CheckCircle2, Calendar, FileText, Paperclip, Download } from "lucide-react";
+import { ArrowLeft, ExternalLink, CheckCircle2, Calendar, FileText, Paperclip, Download, AlertCircle } from "lucide-react";
 import { getAttemptDetails } from "../../dashboard/api/dashboard";
 import type { AttemptDetail } from "@/types/attempt";
 
@@ -67,7 +67,7 @@ export default function HistoryViewPage() {
                 attempt.status === "COMPLETED" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-rose-50 text-rose-700 border border-rose-200"
               }`}>
                 {attempt.status === "COMPLETED" ? <CheckCircle2 className="w-3.5 h-3.5" /> : <FileText className="w-3.5 h-3.5" />}
-                {attempt.status.replace("_", " ")}
+                {attempt.status === "TERMINATED" ? "REJECTED" : attempt.status.replace("_", " ")}
               </span>
             </div>
             <p className="text-slate-600 font-medium flex flex-wrap items-center gap-4">
@@ -83,6 +83,18 @@ export default function HistoryViewPage() {
             <div className="bg-slate-50 rounded-xl p-5 border border-slate-200 text-slate-700 text-sm leading-relaxed whitespace-pre-wrap">
               {attempt.summary}
             </div>
+
+            {/* 🚀 Render Rejection Reason if it was rejected! */}
+            {attempt.status === "TERMINATED" && attempt.rejectionReason && (
+              <div className="mt-6 p-5 md:p-6 bg-rose-50 border border-rose-200 rounded-xl">
+                <h4 className="text-xs font-bold text-rose-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4" /> Rejection Feedback
+                </h4>
+                <div className="text-sm text-rose-900 font-medium whitespace-pre-wrap leading-relaxed">
+                  {attempt.rejectionReason}
+                </div>
+              </div>
+            )}
 
             {attempt.attachedFiles && attempt.attachedFiles.length > 0 && (
               <div className="mt-6 pt-6 border-t border-slate-100">

@@ -165,6 +165,8 @@ export async function getAttemptDetailsById(attemptId: string): Promise<Solution
   return apiRequest<SolutionAttemptResponse>(`/attempts/${attemptId}`, { method: "GET" });
 }
 
-export async function evaluateSolution(attemptId: string, isApproved: boolean): Promise<SolutionAttemptResponse> {
-  return apiRequest<SolutionAttemptResponse>(`/attempts/${attemptId}/evaluate?isApproved=${isApproved}`, { method: "POST" });
+export async function evaluateSolution(attemptId: string, isApproved: boolean, rejectionReason?: string): Promise<SolutionAttemptResponse> {
+  let url = `/attempts/${attemptId}/evaluate?isApproved=${isApproved}`;
+  if (rejectionReason) url += `&rejectionReason=${encodeURIComponent(rejectionReason)}`;
+  return apiRequest<SolutionAttemptResponse>(url, { method: "POST" });
 }

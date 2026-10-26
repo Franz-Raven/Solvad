@@ -65,46 +65,35 @@ public class SolutionAttemptService {
     private ClaimRequestRepository claimRequestRepository;
 
     private SolutionAttemptResponse mapToResponse(SolutionAttempt attempt, List<SubtaskSubmission> submissions, UUID currentUserId) {
-        List<SubtaskSubmissionResponse> submissionResponses = submissions.stream()
-                .map(sub -> mapSubmissionToResponse(sub, currentUserId))
-                .collect(Collectors.toList());
-
+        List<SubtaskSubmissionResponse> submissionResponses = submissions.stream().map(sub -> mapSubmissionToResponse(sub, currentUserId)).collect(Collectors.toList());
         SolverProfile solver = attempt.getSolver();
         String profilePictureUrl = solver.getUser().getProfileUrl();
-
         UUID parentId = attempt.getParentAttempt() != null ? attempt.getParentAttempt().getId() : null;
         String parentName = attempt.getParentAttempt() != null ? attempt.getParentAttempt().getSolver().getFirstName() + " " + attempt.getParentAttempt().getSolver().getLastName() : null;
         UUID targetSubtaskId = attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getId() : null;
         String targetSubtaskTitle = attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : null;
-
         String parentDesc = null;
         List<String> parentFiles = new ArrayList<>();
-
         if (attempt.getParentAttempt() != null && attempt.getTargetSubtask() != null) {
-            Optional<SubtaskSubmission> parentSub = submissionRepository
-                    .findByAttemptAndSubtask(attempt.getParentAttempt(), attempt.getTargetSubtask());
+            Optional<SubtaskSubmission> parentSub = submissionRepository.findByAttemptAndSubtask(attempt.getParentAttempt(), attempt.getTargetSubtask());
             if (parentSub.isPresent()) {
                 parentDesc = parentSub.get().getDescription();
                 parentFiles = parentSub.get().getFileUrlsAsList();
             }
         }
-
         String seekerName = null;
         String seekerProfileUrl = null;
         if (attempt.getProblem() != null && attempt.getProblem().getSeeker() != null) {
             seekerName = attempt.getProblem().getSeeker().getOrganizationName();
-            if (attempt.getProblem().getSeeker().getUser() != null) {
-                seekerProfileUrl = attempt.getProblem().getSeeker().getUser().getProfileUrl();
-            }
+            if (attempt.getProblem().getSeeker().getUser() != null) seekerProfileUrl = attempt.getProblem().getSeeker().getUser().getProfileUrl();
         }
-
         return new SolutionAttemptResponse(
                 attempt.getId(), attempt.getProblem().getId(), attempt.getProblem().getTitle(),
                 solver.getId(), solver.getFirstName(), solver.getLastName(), profilePictureUrl,
                 solver.getInstitution(), solver.getDegreeProgram(), attempt.getStatus().name(),
                 submissionResponses, attempt.getClaimedAt(), attempt.getUpdatedAt(), attempt.getCompletedAt(),
                 parentId, parentName, targetSubtaskId, targetSubtaskTitle, parentDesc, parentFiles,
-                seekerName, seekerProfileUrl
+                seekerName, seekerProfileUrl, attempt.getRejectionReason() // 🚀 MAP IT HERE
         );
     }
 
@@ -452,21 +441,19 @@ public class SolutionAttemptService {
     public AttemptDetailResponse getAttemptDetails(UUID attemptId, UUID solverUserId) {
         SolverProfile solver = solverProfileRepository.findByUserId(solverUserId).orElseThrow(() -> new RuntimeException("Solver not found"));
         SolutionAttempt attempt = attemptRepository.findById(attemptId).orElseThrow(() -> new RuntimeException("Attempt not found"));
-
         if (!attempt.getSolver().getId().equals(solver.getId())) throw new RuntimeException("Unauthorized access to this attempt");
 
         String summary = "No submissions recorded.";
         List<String> attachedFiles = new ArrayList<>();
-
         if (attempt.getSubmissions() != null && !attempt.getSubmissions().isEmpty()) {
             SubtaskSubmission latestSubmission = attempt.getSubmissions().get(attempt.getSubmissions().size() - 1);
             summary = latestSubmission.getDescription();
             attachedFiles = latestSubmission.getFileUrlsAsList();
         }
-
-        return new AttemptDetailResponse(attempt.getId(), attempt.getProblem().getId(), attempt.getProblem().getTitle(),
+        return new AttemptDetailResponse(
+                attempt.getId(), attempt.getProblem().getId(), attempt.getProblem().getTitle(),
                 attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : null, attempt.getStatus().name(),
-                attempt.getCompletedAt() != null ? attempt.getCompletedAt() : attempt.getUpdatedAt(), summary, attachedFiles);
+                attempt.getCompletedAt() != null ? attempt.getCompletedAt() : attempt.getUpdatedAt(), summary, attachedFiles, attempt.getRejectionReason()); // 🚀 MAP IT HERE
     }
 
     @Transactional(readOnly = true)
@@ -521,7 +508,7 @@ public class SolutionAttemptService {
     }
 
     @Transactional
-    public SolutionAttemptResponse evaluateSolution(UUID seekerUserId, UUID attemptId, boolean isApproved) {
+    public SolutionAttemptResponse evaluateSolution(UUID seekerUserId, UUID attemptId, boolean isApproved, String rejectionReason) {
         SeekerProfile seeker = seekerProfileRepository.findByUserId(seekerUserId).orElseThrow(() -> new RuntimeException("Seeker profile not found"));
         SolutionAttempt attempt = attemptRepository.findById(attemptId).orElseThrow(() -> new RuntimeException("Attempt not found"));
 
@@ -538,8 +525,13 @@ public class SolutionAttemptService {
         } else {
             attempt.setStatus(SolutionAttemptStatus.TERMINATED);
             attempt.setCompletedAt(null);
-            auditService.log(attempt.getProblem().getId(), seekerUserId, seekerName, "SEEKER", AuditEventType.STATUS_CHANGED,
-                    seekerName + " rejected the final solution for sub-problem \"" + subtaskTitle + "\" from " + attempt.getSolver().getFirstName() + ". Attempt terminated.");
+            attempt.setRejectionReason(rejectionReason); // 🚀 SAVE REASON
+
+            String auditMsg = seekerName + " rejected the final solution for sub-problem \"" + subtaskTitle + "\" from " + attempt.getSolver().getFirstName() + ". Attempt terminated.";
+            if (rejectionReason != null && !rejectionReason.isBlank()) {
+                auditMsg += " Reason: " + rejectionReason; // 🚀 ADD TO AUDIT LOG
+            }
+            auditService.log(attempt.getProblem().getId(), seekerUserId, seekerName, "SEEKER", AuditEventType.STATUS_CHANGED, auditMsg);
         }
 
         SolutionAttempt savedAttempt = attemptRepository.save(attempt);
