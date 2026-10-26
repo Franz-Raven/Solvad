@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ExternalLink, CheckCircle2, Calendar, FileText, Paperclip, Download, AlertCircle } from "lucide-react";
+import { ArrowLeft, ExternalLink, CheckCircle2, Calendar, FileText, Paperclip, Download, AlertCircle, Network } from "lucide-react";
 import { getAttemptDetails } from "../../dashboard/api/dashboard";
 import type { AttemptDetail } from "@/types/attempt";
 
@@ -67,7 +67,7 @@ export default function HistoryViewPage() {
                 attempt.status === "COMPLETED" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-rose-50 text-rose-700 border border-rose-200"
               }`}>
                 {attempt.status === "COMPLETED" ? <CheckCircle2 className="w-3.5 h-3.5" /> : <FileText className="w-3.5 h-3.5" />}
-                {attempt.status.replace(/_/g, " ")}
+                {attempt.status === "TERMINATED" ? "REJECTED" : attempt.status.replace(/_/g, " ")}
               </span>
             </div>
             <p className="text-slate-600 font-medium flex flex-wrap items-center gap-4">
@@ -79,7 +79,6 @@ export default function HistoryViewPage() {
           </div>
 
           <div className="p-6 md:p-8">
-            {/* REJECTION FEEDBACK UI */}
             {attempt.status === "REJECTED" && attempt.rejectionReason && (
               <div className="mb-8 p-5 md:p-6 bg-rose-50 border border-rose-200 rounded-xl">
                 <h4 className="text-xs font-bold text-rose-700 uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -88,6 +87,17 @@ export default function HistoryViewPage() {
                 <div className="text-sm text-rose-900 font-medium whitespace-pre-wrap leading-relaxed">
                   {attempt.rejectionReason}
                 </div>
+              </div>
+            )}
+
+            {attempt.deltaDescription && (
+              <div className="mb-8 p-5 md:p-6 bg-emerald-50 border border-emerald-100 rounded-xl">
+                <h4 className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider mb-2">
+                  What changed from the parent solution
+                </h4>
+                <p className="text-sm text-slate-700 italic font-medium leading-relaxed whitespace-pre-wrap">
+                  "{attempt.deltaDescription}"
+                </p>
               </div>
             )}
 
@@ -104,7 +114,10 @@ export default function HistoryViewPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {attempt.attachedFiles.map((url, idx) => (
                     <a 
-                      key={idx} href={url} target="_blank" rel="noopener noreferrer" 
+                      key={idx} 
+                      href={url} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
                       className="flex items-center justify-between p-3.5 bg-white border border-slate-200 rounded-xl hover:border-accent hover:shadow-md active:scale-[0.98] cursor-pointer transition-all group"
                     >
                       <span className="text-sm font-bold text-slate-700 truncate group-hover:text-accent transition-colors">
@@ -117,10 +130,16 @@ export default function HistoryViewPage() {
               </div>
             )}
 
-            <div className="mt-8 pt-6 border-t border-slate-100 flex justify-end">
+            <div className="mt-8 pt-6 border-t border-slate-100 flex flex-wrap justify-end gap-3">
+              <Link 
+                href={`/solver/problem/${attempt.problemId}?tab=tree&highlight=${attempt.id}`} 
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-300 text-slate-700 hover:text-emerald-700 hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-sm rounded-lg text-sm font-bold transition-all active:scale-[0.98] cursor-pointer"
+              >
+                <Network className="w-4 h-4" /> View in Solution Tree
+              </Link>
               <Link 
                 href={`/solver/problem/${attempt.problemId}`} 
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-300 text-slate-700 hover:text-accent hover:border-accent hover:bg-slate-50 hover:shadow-sm rounded-lg text-sm font-bold transition-all active:scale-[0.98] cursor-pointer"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-accent text-white hover:bg-accent/90 shadow-sm rounded-lg text-sm font-bold transition-all active:scale-[0.98] cursor-pointer"
               >
                 View Original Problem <ExternalLink className="w-4 h-4" />
               </Link>

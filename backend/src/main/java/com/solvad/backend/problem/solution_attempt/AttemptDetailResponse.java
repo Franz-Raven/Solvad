@@ -13,9 +13,10 @@ public class AttemptDetailResponse {
     private LocalDateTime completedAt;
     private String summary;
     private List<String> attachedFiles;
-    private String rejectionReason; // 🚀 ADDED
+    private String rejectionReason;
+    private String deltaDescription; // 🚀 ADDED
 
-    public AttemptDetailResponse(UUID id, UUID problemId, String problemTitle, String targetSubtaskTitle, String status, LocalDateTime completedAt, String summary, List<String> attachedFiles, String rejectionReason) {
+    public AttemptDetailResponse(UUID id, UUID problemId, String problemTitle, String targetSubtaskTitle, String status, LocalDateTime completedAt, String summary, List<String> attachedFiles, String rejectionReason, String deltaDescription) {
         this.id = id;
         this.problemId = problemId;
         this.problemTitle = problemTitle;
@@ -25,6 +26,7 @@ public class AttemptDetailResponse {
         this.summary = summary;
         this.attachedFiles = attachedFiles;
         this.rejectionReason = rejectionReason;
+        this.deltaDescription = deltaDescription;
     }
 
     public UUID getId() { return id; }
@@ -36,4 +38,5 @@ public class AttemptDetailResponse {
     public String getSummary() { return summary; }
     public List<String> getAttachedFiles() { return attachedFiles; }
     public String getRejectionReason() { return rejectionReason; }
+    public String getDeltaDescription() { return deltaDescription; }
 }

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { Suspense, useState, useEffect } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { ChevronLeft } from "lucide-react";
@@ -10,8 +10,7 @@ import {
   getMyAttempt, 
   getMyProposalStatus 
 } from "./api/problem";
-// 🚀 ADDED: Import dashboard API for fallback fetching
-import { getMyActiveAttempts } from "../../dashboard/api/dashboard"; 
+import { getMyActiveAttempts } from "../../dashboard/api/dashboard";
 
 import type { ProblemResponse } from "@/types/problem";
 import type { SolutionAttemptResponse } from "@/types/attempt";
@@ -87,15 +86,21 @@ const getBadgeStyle = (status: string) => {
   }
 };
 
-export default function SolverProblemDetailPage() {
+function SolverProblemDetailContent() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const problemId = params.id as string;
+  
+  const tabParam = searchParams.get("tab") as TabType | null;
+  const highlightParam = searchParams.get("highlight");
 
   const [problem, setProblem] = useState<ProblemResponse | null>(null);
   const [myAttempt, setMyAttempt] = useState<SolutionAttemptResponse | null>(null);
   const [myProposalStatus, setMyProposalStatus] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<TabType>("blueprint");
+  const [activeTab, setActiveTab] = useState<TabType>(tabParam || "blueprint");
+  const [highlightedNodeId, setHighlightedNodeId] = useState<string | null>(highlightParam);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -106,6 +111,11 @@ export default function SolverProblemDetailPage() {
   useEffect(() => {
     loadData();
   }, [problemId]);
+
+  useEffect(() => {
+    if (tabParam) setActiveTab(tabParam);
+    if (highlightParam) setHighlightedNodeId(highlightParam);
+  }, [tabParam, highlightParam]);
 
   const loadData = async () => {
     try {
@@ -128,7 +138,6 @@ export default function SolverProblemDetailPage() {
 
       setMyProposalStatus(proposalStatusResult.status === "fulfilled" ? proposalStatusResult.value.status : null);
 
-      // 🚀 ROBUST ATTEMPT FETCHING: Guarantees we find the PENDING_REVIEW attempt
       let attemptData = null;
       try {
         attemptData = await getMyAttempt(problemId);
@@ -208,7 +217,6 @@ export default function SolverProblemDetailPage() {
     );
   }
 
-  // 🚀 STATUS CHECKS
   const isAlreadyClaimed = myAttempt?.status === "ACTIVE";
   const isPendingReview = myAttempt?.status === "PENDING_REVIEW";
   const isCompleted = myAttempt?.status === "COMPLETED";
@@ -220,7 +228,6 @@ export default function SolverProblemDetailPage() {
     !canClaimFresh &&
     problem.status !== "SOLVED_OPEN_FOR_IMPROVEMENT";
 
-  // 🚀 BLOCK PROPOSALS IF SOLUTION IS PENDING REVIEW
   const canPropose =
     !isAlreadyClaimed &&
     !isPendingReview &&
@@ -242,7 +249,6 @@ export default function SolverProblemDetailPage() {
         </Link>
       );
     }
-    // 🚀 SHOW SOLUTION UNDER REVIEW BADGE/LINK
     if (isPendingReview) {
       return (
         <Link href={`/solver/workspace/${problemId}`} className="px-6 py-2.5 bg-blue-50 text-blue-700 border border-blue-200 font-bold rounded-xl shadow-sm transition-all w-full md:w-auto inline-flex items-center justify-center cursor-pointer">
@@ -336,7 +342,10 @@ export default function SolverProblemDetailPage() {
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  if (tab.id !== "tree") setHighlightedNodeId(null);
+                }}
                 className={`px-5 md:px-6 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${
                   activeTab === tab.id
                     ? "bg-white text-accent shadow-sm border border-slate-200"
@@ -389,7 +398,7 @@ export default function SolverProblemDetailPage() {
             <SubtasksTab
               problem={problem}
               canPropose={canPropose}
-              isPendingReview={isPendingReview} // 🚀 Passed down
+              isPendingReview={isPendingReview}
               onPropose={(subtaskId: string) => openProposalModal(subtaskId)}
             />
           )}
@@ -397,8 +406,9 @@ export default function SolverProblemDetailPage() {
           {activeTab === "tree" && (
             <SolutionTreeTab
               problemId={problem.id}
+              highlightedAttemptId={highlightedNodeId}
               isAlreadyClaimed={isAlreadyClaimed}
-              isPendingReview={isPendingReview} // 🚀 Passed down
+              isPendingReview={isPendingReview}
               isCompleted={isCompleted}
               isUnavailable={isUnavailable}
               myProposalStatus={myProposalStatus}
@@ -411,5 +421,13 @@ export default function SolverProblemDetailPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SolverProblemDetailPage() {
+  return (
+    <Suspense fallback={null}>
+      <SolverProblemDetailContent />
+    </Suspense>
   );
 }

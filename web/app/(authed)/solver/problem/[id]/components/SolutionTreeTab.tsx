@@ -12,8 +12,9 @@ interface TreeAttemptNodeSummary extends SolutionAttemptSummary {
 
 interface SolutionTreeTabProps {
   problemId: string;
+  highlightedAttemptId?: string | null;
   isAlreadyClaimed?: boolean;
-  isPendingReview?: boolean; // 🚀 Added
+  isPendingReview?: boolean;
   isCompleted?: boolean;
   isUnavailable?: boolean;
   myProposalStatus?: string | null;
@@ -55,6 +56,7 @@ const TreeSkeleton = () => (
 
 export function SolutionTreeTab({
   problemId,
+  highlightedAttemptId,
   isAlreadyClaimed,
   isPendingReview,
   isCompleted,
@@ -83,6 +85,13 @@ export function SolutionTreeTab({
       .catch(err => console.error(err));
   }, [problemId]);
 
+  useEffect(() => {
+    if (highlightedAttemptId) {
+      setSelectedSubtaskId("ALL");
+      setDisplayedSubtaskId("ALL");
+    }
+  }, [highlightedAttemptId]);
+
   const uniqueSubtasks = useMemo(() => {
     const map = new Map<string, string>();
     attempts.forEach((a) => { if (a.targetSubtaskId && a.targetSubtaskTitle) map.set(a.targetSubtaskId, a.targetSubtaskTitle); });
@@ -96,7 +105,6 @@ export function SolutionTreeTab({
 
   const structuredTreeRoots = buildHierarchyTree(filteredAttempts);
   
-  // 🚀 PERFECTED LOGIC: Single variable that rules interaction
   const hasPendingOrApproved = !isCompleted && (myProposalStatus === "PENDING" || myProposalStatus === "APPROVED");
   const canInteract = !isAlreadyClaimed && !isPendingReview && !isUnavailable && !hasPendingOrApproved && !!onForkRequest;
 
@@ -111,6 +119,16 @@ export function SolutionTreeTab({
     const t = setTimeout(() => setTick((n) => n + 1), 100);
     return () => clearTimeout(t);
   }, [filteredAttempts, isTreeReady]);
+
+  // 🚀 Auto-scroll to highlighted node when the tree is rendered
+  useEffect(() => {
+    if (!highlightedAttemptId || !containerRef.current) return;
+    const t = setTimeout(() => {
+      const el = document.getElementById(`tnode-${highlightedAttemptId}`);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+    }, 100);
+    return () => clearTimeout(t);
+  }, [highlightedAttemptId, structuredTreeRoots]);
 
   const handleOpenDetails = async (node: TreeAttemptNodeSummary) => {
     setFetchingDetailsId(node.id);
@@ -145,10 +163,13 @@ export function SolutionTreeTab({
         {nodes.map((node) => {
           const isFetching = fetchingDetailsId === node.id;
           const isDisabled = isFetching || node.status === "TERMINATED" || node.status === "ABANDONED" || node.status === "REJECTED";
+          const isHighlighted = node.id === highlightedAttemptId;
 
           return (
             <div key={node.id} id={`tnode-${node.id}`} style={{ display: "flex", flexDirection: "column", alignItems: "center", position: "relative", zIndex: 10 }}>
-              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm select-none relative overflow-hidden animate-in fade-in zoom-in-95 duration-500" style={{ minWidth: "256px", maxWidth: "256px" }}>
+              <div className={`bg-white border rounded-2xl p-5 select-none relative overflow-hidden animate-in fade-in zoom-in-95 duration-500 ${
+                  isHighlighted ? "border-emerald-500 ring-4 ring-emerald-500/20 shadow-lg bg-emerald-50/40" : "border-slate-200 shadow-sm"
+                }`} style={{ minWidth: "256px", maxWidth: "256px" }}>
                 
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div className="flex-1 min-w-0">
@@ -184,7 +205,11 @@ export function SolutionTreeTab({
                     onClick={() => handleOpenDetails(node)} 
                     disabled={isDisabled}
                     className={`py-1.5 text-[11px] font-bold border rounded-lg transition-all flex justify-center items-center gap-1 shadow-sm ${
-                      isDisabled ? 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed' : 'text-slate-600 border-slate-200 bg-slate-50 hover:bg-slate-100 hover:text-slate-900 active:scale-[0.98] cursor-pointer'
+                      isDisabled 
+                        ? 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed' 
+                        : isHighlighted 
+                          ? "bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700 active:scale-[0.98] cursor-pointer" 
+                          : 'text-slate-600 border-slate-200 bg-slate-50 hover:bg-slate-100 hover:text-slate-900 active:scale-[0.98] cursor-pointer'
                     } ${node.status === "COMPLETED" && canInteract ? 'px-3' : 'flex-1'}`}
                   >
                     {isFetching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : (isDisabled ? "Unavailable" : "View Details")}
@@ -266,7 +291,7 @@ export function SolutionTreeTab({
       {modalNode && (
         <AttemptDetailModal
           node={modalNode}
-          canInteract={canInteract} // 🚀 Pushing the single truth down
+          canInteract={canInteract}
           onForkRequest={(id, subtaskId) => {
             setModalNode(null);
             if (onForkRequest) onForkRequest(id, subtaskId);

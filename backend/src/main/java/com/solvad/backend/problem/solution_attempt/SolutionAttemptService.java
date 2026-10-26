@@ -446,20 +446,26 @@ public class SolutionAttemptService {
     public AttemptDetailResponse getAttemptDetails(UUID attemptId, UUID solverUserId) {
         SolverProfile solver = solverProfileRepository.findByUserId(solverUserId).orElseThrow(() -> new RuntimeException("Solver not found"));
         SolutionAttempt attempt = attemptRepository.findById(attemptId).orElseThrow(() -> new RuntimeException("Attempt not found"));
+
         if (!attempt.getSolver().getId().equals(solver.getId())) throw new RuntimeException("Unauthorized access to this attempt");
 
         String summary = "No submissions recorded.";
         List<String> attachedFiles = new ArrayList<>();
+        String deltaDescription = null; // 🚀 ADDED
+
         if (attempt.getSubmissions() != null && !attempt.getSubmissions().isEmpty()) {
             SubtaskSubmission latestSubmission = attempt.getSubmissions().get(attempt.getSubmissions().size() - 1);
             summary = latestSubmission.getDescription();
             attachedFiles = latestSubmission.getFileUrlsAsList();
+            deltaDescription = latestSubmission.getDeltaDescription(); // 🚀 EXTRACT DELTA
         }
+
         return new AttemptDetailResponse(
                 attempt.getId(), attempt.getProblem().getId(), attempt.getProblem().getTitle(),
                 attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : null, attempt.getStatus().name(),
-                attempt.getCompletedAt() != null ? attempt.getCompletedAt() : attempt.getUpdatedAt(), summary, attachedFiles, attempt.getRejectionReason()); // 🚀 MAP IT HERE
+                attempt.getCompletedAt() != null ? attempt.getCompletedAt() : attempt.getUpdatedAt(), summary, attachedFiles, attempt.getRejectionReason(), deltaDescription); // 🚀 PASS DELTA
     }
+
 
     @Transactional(readOnly = true)
     public List<SolutionAttemptSummaryResponse> getLightweightTree(UUID problemId) {

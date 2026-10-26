@@ -166,6 +166,7 @@ export interface AttemptDetail {
   summary: string;
   attachedFiles?: string[];
   rejectionReason?: string; // 🚀 ADDED
+  deltaDescription?: string;
 }
 
 export interface AttemptNodeSummary {
