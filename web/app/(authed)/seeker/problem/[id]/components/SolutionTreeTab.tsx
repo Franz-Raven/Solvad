@@ -1,15 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
+import { usePathname } from "next/navigation";
 import {
   Lock, Calendar, GitBranch, Network, ChevronDown, X,
-  Loader2, Columns, FileText, XCircle, GitFork, AlertCircle
+  Loader2, Columns, FileText, XCircle, AlertCircle, GitFork
 } from "lucide-react";
 import Portal from "@/components/portal";
 import { getProblemTree, getFullAttemptDetails } from "../api/problem";
 import type { TreeAttemptNode, SolutionAttemptSummary } from "@/types/attempt";
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const CARD = "bg-white rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.04)] border border-slate-100 p-6 md:p-8 animate-in fade-in duration-500";
 
@@ -150,9 +149,11 @@ function AttemptDetailModal({
 
   const subs = node.submissions || [];
   const activeSub = subs[activeSubIdx] ?? null;
+
   const predecessorSub = activeSub && node.parentAttemptId ? { description: node.parentDescription || "No description provided." } : null;
 
-  const isActivelyDrafting = node.status === "ACTIVE" || node.status === "IN_PROGRESS" || node.status === "CLAIMED";
+  const isTerminalStatus = node.status === "TERMINATED" || node.status === "REJECTED" || node.status === "ABANDONED";
+  const isActivelyDrafting = (node.status === "ACTIVE" || node.status === "IN_PROGRESS" || node.status === "CLAIMED") && activeSub?.status === "DRAFT" && !isTerminalStatus;
   const isDiscontinued = node.status === "ABANDONED" && !activeSub?.description;
 
   const educationInfo = [node.degreeProgram, node.institution].filter(Boolean).join(" · ");
@@ -336,13 +337,30 @@ function AttemptCard({
   onViewClick,
   isFetching,
   isHighlighted,
+  myAttemptId,
+  isSeekerView
 }: {
   node: TreeAttemptNodeSummary;
   onViewClick: () => void;
   isFetching?: boolean;
   isHighlighted?: boolean;
+  myAttemptId?: string | null;
+  isSeekerView?: boolean;
 }) {
-  const isDisabled = isFetching;
+  
+  const isOwner = myAttemptId && node.id === myAttemptId;
+  let canViewDetails = true;
+
+  if (!isOwner) {
+    if (node.status === "ACTIVE" || node.status === "IN_PROGRESS" || node.status === "ABANDONED") {
+      canViewDetails = false;
+    }
+    if (!isSeekerView && node.status !== "COMPLETED" && node.status !== "SOLVED_OPEN_FOR_IMPROVEMENT") {
+      canViewDetails = false;
+    }
+  }
+
+  const isDisabled = isFetching || !canViewDetails;
 
   return (
     <div
@@ -376,17 +394,21 @@ function AttemptCard({
       </div>
 
       <button
-        onClick={(e) => { e.stopPropagation(); onViewClick(); }}
+        onClick={(e) => { 
+          e.stopPropagation(); 
+          if (isDisabled) return; // 🚀 HARD BLOCK HERE to prevent fetching
+          onViewClick(); 
+        }}
         disabled={isDisabled}
         className={`w-full flex justify-center items-center gap-2 py-1.5 text-[11px] font-bold rounded-lg border transition-all shadow-sm ${
           isDisabled
-            ? "bg-slate-50 text-slate-400 border-slate-200 cursor-wait" 
+            ? "bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed" 
             : isHighlighted
               ? "bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700 active:scale-[0.98] cursor-pointer"
               : "text-slate-600 border-slate-200 bg-slate-50 hover:bg-slate-100 hover:text-slate-900 active:scale-[0.98] cursor-pointer"
         }`}
       >
-        {isFetching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "View Details"}
+        {isFetching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : (!canViewDetails ? "Private Workspace" : "View Details")}
       </button>
     </div>
   );
@@ -398,12 +420,16 @@ function SolutionFamilyTree({
   isAnimating,
   fetchingDetailsId,
   highlightedAttemptId,
+  myAttemptId,
+  isSeekerView
 }: {
   roots: TreeAttemptNodeSummary[];
   onViewAttempt: (node: TreeAttemptNodeSummary) => void;
   isAnimating: boolean;
   fetchingDetailsId: string | null;
   highlightedAttemptId?: string | null;
+  myAttemptId?: string | null;
+  isSeekerView?: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [, setTick] = useState(0);
@@ -427,7 +453,14 @@ function SolutionFamilyTree({
       <div style={{ display: "flex", flexDirection: "row", alignItems: "flex-start", gap: "32px", justifyContent: "center" }}>
         {nodes.map((node) => (
           <div key={node.id} id={`tnode-${node.id}`} style={{ display: "flex", flexDirection: "column", alignItems: "center", position: "relative", zIndex: 10 }}>
-            <AttemptCard node={node} onViewClick={() => onViewAttempt(node)} isFetching={fetchingDetailsId === node.id} isHighlighted={node.id === highlightedAttemptId} />
+            <AttemptCard 
+              node={node} 
+              onViewClick={() => onViewAttempt(node)} 
+              isFetching={fetchingDetailsId === node.id} 
+              isHighlighted={node.id === highlightedAttemptId} 
+              myAttemptId={myAttemptId}
+              isSeekerView={isSeekerView}
+            />
             {node.children.length > 0 && (
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                 <div style={{ width: 2, height: 40, background: "#e2e8f0" }} />
@@ -509,12 +542,10 @@ function SolutionFamilyTree({
   );
 }
 
-interface SolutionTreeTabProps {
-  problemId: string;
-  highlightedAttemptId?: string | null;
-}
+export function SolutionTreeTab({ problemId, highlightedAttemptId, myAttemptId }: { problemId: string; highlightedAttemptId?: string | null; myAttemptId?: string | null }) {
+  const pathname = usePathname();
+  const isSeekerView = pathname?.includes("/seeker/");
 
-export function SolutionTreeTab({ problemId, highlightedAttemptId }: SolutionTreeTabProps) {
   const [attempts, setAttempts] = useState<SolutionAttemptSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -522,6 +553,7 @@ export function SolutionTreeTab({ problemId, highlightedAttemptId }: SolutionTre
 
   const [modalNode, setModalNode] = useState<TreeAttemptNode | null>(null);
   const [fetchingDetailsId, setFetchingDetailsId] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<{ title: string; message: string } | null>(null);
 
   const [selectedSubtaskId, setSelectedSubtaskId] = useState<string>("ALL");
   const [isAnimating, setIsAnimating] = useState(false);
@@ -535,8 +567,14 @@ export function SolutionTreeTab({ problemId, highlightedAttemptId }: SolutionTre
     const skeletonTimer = new Promise(resolve => setTimeout(resolve, 1200));
 
     Promise.all([fetchTree, skeletonTimer])
-      .then(([data]) => { setAttempts(data as SolutionAttemptSummary[]); setIsTreeReady(true); })
-      .catch((err: unknown) => { console.error("Failed to load attempts", err); setLoadError(true); })
+      .then(([data]) => {
+        setAttempts(data as SolutionAttemptSummary[]);
+        setIsTreeReady(true);
+      })
+      .catch((err: unknown) => {
+        console.error("Failed to load attempts", err);
+        setLoadError(true);
+      })
       .finally(() => setLoading(false));
   };
 
@@ -568,10 +606,28 @@ export function SolutionTreeTab({ problemId, highlightedAttemptId }: SolutionTre
 
   const handleOpenDetails = async (node: TreeAttemptNodeSummary) => {
     setFetchingDetailsId(node.id);
+    setFetchError(null);
     try {
       const heavyAttempt = await getFullAttemptDetails(node.id);
       setModalNode({ ...heavyAttempt, children: node.children as any });
-    } catch (error) { console.error("Failed to load attempt details", error); } finally { setFetchingDetailsId(null); }
+    } catch (error: any) {
+      console.error("Failed to load attempt details", error);
+      
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      if (errorMsg.includes("Unauthorized") || errorMsg.includes("400")) {
+        setFetchError({
+          title: "Workspace is Private",
+          message: "This solver's workspace is currently active and private. You cannot view their details until they submit it for review."
+        });
+      } else {
+        setFetchError({
+          title: "Access Denied",
+          message: "Could not retrieve details for this workspace. Please refresh and try again."
+        });
+      }
+    } finally {
+      setFetchingDetailsId(null);
+    }
   };
 
   const showTreeCard = loading || (!loadError && attempts.length > 0);
@@ -582,6 +638,23 @@ export function SolutionTreeTab({ problemId, highlightedAttemptId }: SolutionTre
 
       {modalNode && (
         <AttemptDetailModal node={modalNode} onClose={() => setModalNode(null)} />
+      )}
+
+      {fetchError && (
+        <Portal>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setFetchError(null)}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200 p-6 md:p-8 animate-in zoom-in-95 duration-200 text-center" onClick={(e) => e.stopPropagation()}>
+              <div className="w-14 h-14 rounded-full border shadow-sm flex items-center justify-center mx-auto mb-5 bg-rose-50 border-rose-200 text-rose-600">
+                <Lock className="w-7 h-7" />
+              </div>
+              <h2 className="text-xl font-bold text-slate-900 tracking-tight mb-2">{fetchError.title}</h2>
+              <p className="text-sm text-slate-600 font-medium mb-8">{fetchError.message}</p>
+              <button onClick={() => setFetchError(null)} className="w-full px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold rounded-xl shadow-sm transition-all cursor-pointer">
+                Close
+              </button>
+            </div>
+          </div>
+        </Portal>
       )}
 
       <div className="animate-in fade-in duration-500">
@@ -596,7 +669,7 @@ export function SolutionTreeTab({ problemId, highlightedAttemptId }: SolutionTre
 
         {!showTreeCard && !loadError && attempts.length === 0 && (
           <div className={CARD + " p-12 text-center"}>
-            <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm"><Network className="w-8 h-8 text-rose-300" /></div>
+            <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm"><Network className="w-8 h-8 text-slate-300" /></div>
             <h3 className="text-xl font-bold text-slate-900 mb-2">No solutions yet</h3>
             <p className="text-slate-500 font-medium text-sm max-w-sm mx-auto">Once solvers claim this problem and begin submitting their approaches, their progress will appear here.</p>
           </div>
@@ -627,9 +700,7 @@ export function SolutionTreeTab({ problemId, highlightedAttemptId }: SolutionTre
                       className="appearance-none bg-white border border-slate-200 text-slate-700 font-bold text-sm rounded-xl focus:ring-2 focus:ring-accent/20 focus:border-accent block w-full pl-4 pr-10 py-2.5 outline-none transition-all cursor-pointer shadow-sm hover:border-slate-300 truncate"
                     >
                       <option value="ALL">All Sub-problems</option>
-                      {uniqueSubtasks.map((st) => (
-                        <option key={st.id} value={st.id}>{st.title}</option>
-                      ))}
+                      {uniqueSubtasks.map((st) => <option key={st.id} value={st.id}>{st.title}</option>)}
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400"><ChevronDown className="w-4 h-4" /></div>
                   </div>
@@ -660,6 +731,8 @@ export function SolutionTreeTab({ problemId, highlightedAttemptId }: SolutionTre
                   isAnimating={isAnimating}
                   fetchingDetailsId={fetchingDetailsId}
                   highlightedAttemptId={highlightedAttemptId}
+                  myAttemptId={myAttemptId}
+                  isSeekerView={isSeekerView}
                 />
               </div>
             )}

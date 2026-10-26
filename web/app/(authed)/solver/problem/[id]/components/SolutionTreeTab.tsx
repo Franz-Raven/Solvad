@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useMemo } from "react";
+import { usePathname } from "next/navigation";
 import { GitFork, GitBranch, Network, ArrowRight, Calendar, Loader2 } from "lucide-react";
 import { getProblemTree, getFullAttemptDetails } from "../api/problem";
 import type { SolutionAttemptSummary, TreeAttemptNode } from "@/types/attempt";
@@ -13,6 +14,7 @@ interface TreeAttemptNodeSummary extends SolutionAttemptSummary {
 interface SolutionTreeTabProps {
   problemId: string;
   highlightedAttemptId?: string | null;
+  myAttemptId?: string | null;
   isAlreadyClaimed?: boolean;
   isPendingReview?: boolean;
   isCompleted?: boolean;
@@ -73,9 +75,15 @@ const getStatusBadge = (status: string) => {
   }
 };
 
+const formatStatus = (status: string) => {
+  if (status === "PENDING_REVIEW") return "PENDING REVIEW";
+  return status.replace(/_/g, " ");
+};
+
 export function SolutionTreeTab({
   problemId,
   highlightedAttemptId,
+  myAttemptId,
   isAlreadyClaimed,
   isPendingReview,
   isCompleted,
@@ -84,6 +92,9 @@ export function SolutionTreeTab({
   onForkRequest,
   onClaimNew,
 }: SolutionTreeTabProps) {
+  const pathname = usePathname();
+  const isSeekerView = pathname?.includes("/seeker/");
+
   const [attempts, setAttempts] = useState<SolutionAttemptSummary[]>([]);
   const [isTreeReady, setIsTreeReady] = useState(false);
   const [modalNode, setModalNode] = useState<TreeAttemptNode | null>(null);
@@ -118,8 +129,11 @@ export function SolutionTreeTab({
   }, [attempts]);
 
   const filteredAttempts = useMemo(() => {
-    if (displayedSubtaskId === "ALL") return attempts;
-    return attempts.filter((a) => a.targetSubtaskId === displayedSubtaskId);
+    let arr = attempts;
+    if (displayedSubtaskId !== "ALL") {
+      arr = arr.filter((a) => a.targetSubtaskId === displayedSubtaskId);
+    }
+    return arr;
   }, [attempts, displayedSubtaskId]);
 
   const structuredTreeRoots = buildHierarchyTree(filteredAttempts);
@@ -139,7 +153,6 @@ export function SolutionTreeTab({
     return () => clearTimeout(t);
   }, [filteredAttempts, isTreeReady]);
 
-  // Auto-scroll to highlighted node when the tree is rendered
   useEffect(() => {
     if (!highlightedAttemptId || !containerRef.current) return;
     const t = setTimeout(() => {
@@ -162,7 +175,20 @@ export function SolutionTreeTab({
       <div style={{ display: "flex", flexDirection: "row", alignItems: "flex-start", gap: "32px", justifyContent: "center" }}>
         {nodes.map((node) => {
           const isFetching = fetchingDetailsId === node.id;
-          const isDisabled = isFetching || node.status === "TERMINATED" || node.status === "ABANDONED" || node.status === "REJECTED";
+          
+          // 🚀 FRONTEND VALIDATION: Matrix for who can click "View Details"
+          const isOwner = node.id === myAttemptId;
+          let canViewDetails = false;
+
+          if (isOwner) {
+            canViewDetails = true; // Owner can see everything
+          } else if (isSeekerView) {
+            canViewDetails = node.status === "PENDING_REVIEW" || node.status === "COMPLETED"; // Seeker sees submitted work
+          } else {
+            canViewDetails = node.status === "COMPLETED"; // Other solvers ONLY see completed work
+          }
+
+          const isDisabled = isFetching || !canViewDetails;
           const isHighlighted = node.id === highlightedAttemptId;
 
           return (
@@ -178,9 +204,8 @@ export function SolutionTreeTab({
                     <p className="text-[10px] text-slate-400 font-bold truncate mt-1">{node.solverInstitution}</p>
                   </div>
                   
-                  {/* 🚀 FIXED: No more inline ternary override. Uses pure backend status */}
                   <span className={`flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-md border uppercase tracking-wider ${getStatusBadge(node.status)}`}>
-                    {node.status.replace(/_/g, " ")}
+                    {formatStatus(node.status)}
                   </span>
                 </div>
 
@@ -213,7 +238,7 @@ export function SolutionTreeTab({
                           : 'text-slate-600 border-slate-200 bg-slate-50 hover:bg-slate-100 hover:text-slate-900 active:scale-[0.98] cursor-pointer'
                     } ${node.status === "COMPLETED" && canInteract ? 'px-3' : 'flex-1'}`}
                   >
-                    {isFetching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : (isDisabled ? "Unavailable" : "View Details")}
+                    {isFetching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : (isDisabled ? "Private Details" : "View Details")}
                   </button>
                 </div>
               </div>

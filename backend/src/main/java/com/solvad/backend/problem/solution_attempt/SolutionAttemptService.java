@@ -235,10 +235,16 @@ public class SolutionAttemptService {
         List<SolutionAttempt> attempts = attemptRepository.findByProblemIdAndTargetSubtaskIdOrderByClaimedAtAsc(problemId, subtaskId);
         if (attempts.isEmpty()) return Collections.emptyList();
 
-        List<SubtaskSubmission> allSubmissions = submissionRepository.findByAttemptIn(attempts);
+        List<SolutionAttempt> filteredAttempts = attempts.stream()
+                .filter(attempt -> canViewAttemptDetails(attempt, currentUserId))
+                .collect(Collectors.toList());
+
+        if (filteredAttempts.isEmpty()) return Collections.emptyList();
+
+        List<SubtaskSubmission> allSubmissions = submissionRepository.findByAttemptIn(filteredAttempts);
         Map<UUID, List<SubtaskSubmission>> submissionsByAttemptId = allSubmissions.stream().collect(Collectors.groupingBy(sub -> sub.getAttempt().getId()));
 
-        return attempts.stream().map(attempt -> mapToResponse(attempt, submissionsByAttemptId.getOrDefault(attempt.getId(), new ArrayList<>()), currentUserId)).collect(Collectors.toList());
+        return filteredAttempts.stream().map(attempt -> mapToResponse(attempt, submissionsByAttemptId.getOrDefault(attempt.getId(), new ArrayList<>()), currentUserId)).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -247,15 +253,26 @@ public class SolutionAttemptService {
         List<SolutionAttempt> attempts = attemptRepository.findByProblemOrderByClaimedAtDesc(problem);
         if (attempts.isEmpty()) return Collections.emptyList();
 
-        List<SubtaskSubmission> allSubmissions = submissionRepository.findByAttemptIn(attempts);
+        List<SolutionAttempt> filteredAttempts = attempts.stream()
+                .filter(attempt -> canViewAttemptDetails(attempt, currentUserId))
+                .collect(Collectors.toList());
+
+        if (filteredAttempts.isEmpty()) return Collections.emptyList();
+
+        List<SubtaskSubmission> allSubmissions = submissionRepository.findByAttemptIn(filteredAttempts);
         Map<UUID, List<SubtaskSubmission>> submissionsByAttemptId = allSubmissions.stream().collect(Collectors.groupingBy(sub -> sub.getAttempt().getId()));
 
-        return attempts.stream().map(attempt -> mapToResponse(attempt, submissionsByAttemptId.getOrDefault(attempt.getId(), new ArrayList<>()), currentUserId)).collect(Collectors.toList());
+        return filteredAttempts.stream().map(attempt -> mapToResponse(attempt, submissionsByAttemptId.getOrDefault(attempt.getId(), new ArrayList<>()), currentUserId)).collect(Collectors.toList());
     }
-
     @Transactional(readOnly = true)
     public SolutionAttemptResponse getAttemptById(UUID attemptId, UUID currentUserId) {
         SolutionAttempt attempt = attemptRepository.findById(attemptId).orElseThrow(() -> new RuntimeException("Attempt not found"));
+
+        // 🚀 BACKEND VALIDATION: Block direct URL hits to unauthorized private attempts
+        if (!canViewAttemptDetails(attempt, currentUserId)) {
+            throw new RuntimeException("Unauthorized: Attempt details are private.");
+        }
+
         return mapToResponse(attempt, submissionRepository.findByAttempt(attempt), currentUserId);
     }
 
@@ -451,34 +468,40 @@ public class SolutionAttemptService {
     }
 
     @Transactional(readOnly = true)
-    public AttemptDetailResponse getAttemptDetails(UUID attemptId, UUID solverUserId) {
-        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId).orElseThrow(() -> new RuntimeException("Solver not found"));
-        SolutionAttempt attempt = attemptRepository.findById(attemptId).orElseThrow(() -> new RuntimeException("Attempt not found"));
+    public AttemptDetailResponse getAttemptDetails(UUID attemptId, UUID currentUserId) {
+        SolutionAttempt attempt = attemptRepository.findById(attemptId)
+                .orElseThrow(() -> new RuntimeException("Attempt not found"));
 
-        if (!attempt.getSolver().getId().equals(solver.getId())) throw new RuntimeException("Unauthorized access to this attempt");
+        // Use the permission matrix to block unauthorized detail access
+        if (!canViewAttemptDetails(attempt, currentUserId)) {
+            throw new RuntimeException("Unauthorized: Attempt details are private.");
+        }
 
         String summary = "No submissions recorded.";
         List<String> attachedFiles = new ArrayList<>();
-        String deltaDescription = null; // 🚀 ADDED
+        String deltaDescription = null;
 
         if (attempt.getSubmissions() != null && !attempt.getSubmissions().isEmpty()) {
             SubtaskSubmission latestSubmission = attempt.getSubmissions().get(attempt.getSubmissions().size() - 1);
             summary = latestSubmission.getDescription();
             attachedFiles = latestSubmission.getFileUrlsAsList();
-            deltaDescription = latestSubmission.getDeltaDescription(); // 🚀 EXTRACT DELTA
+            deltaDescription = latestSubmission.getDeltaDescription();
         }
 
         return new AttemptDetailResponse(
                 attempt.getId(), attempt.getProblem().getId(), attempt.getProblem().getTitle(),
                 attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : null, attempt.getStatus().name(),
-                attempt.getCompletedAt() != null ? attempt.getCompletedAt() : attempt.getUpdatedAt(), summary, attachedFiles, attempt.getRejectionReason(), deltaDescription); // 🚀 PASS DELTA
+                attempt.getCompletedAt() != null ? attempt.getCompletedAt() : attempt.getUpdatedAt(), summary, attachedFiles, attempt.getRejectionReason(), deltaDescription);
     }
 
 
     @Transactional(readOnly = true)
     public List<SolutionAttemptSummaryResponse> getLightweightTree(UUID problemId) {
         Problem problem = problemRepository.findById(problemId).orElseThrow(() -> new RuntimeException("Problem not found"));
-        return attemptRepository.findByProblemOrderByClaimedAtAsc(problem).stream().map(this::mapToSummaryResponse).collect(Collectors.toList());
+        // NO FILTERING HERE: The tree needs all nodes to render properly.
+        return attemptRepository.findByProblemOrderByClaimedAtAsc(problem).stream()
+                .map(this::mapToSummaryResponse)
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -606,5 +629,23 @@ public class SolutionAttemptService {
     public List<SolutionAttemptSummaryResponse> getMyLightweightAttemptsByUserId(UUID solverUserId) {
         SolverProfile solver = solverProfileRepository.findByUserId(solverUserId).orElseThrow(() -> new RuntimeException("Solver not found"));
         return attemptRepository.findBySolver(solver).stream().map(this::mapToSummaryResponse).collect(Collectors.toList());
+    }
+
+    private boolean canViewAttemptDetails(SolutionAttempt attempt, UUID currentUserId) {
+        boolean isSolverOwner = attempt.getSolver().getUser().getId().equals(currentUserId);
+        if (isSolverOwner) return true;
+
+        SolutionAttemptStatus status = attempt.getStatus();
+        boolean isSeekerOwner = attempt.getProblem().getSeeker().getUser() != null &&
+                attempt.getProblem().getSeeker().getUser().getId().equals(currentUserId);
+
+        if (isSeekerOwner) {
+            // Seekers can view details for submitted, completed, rejected, and terminated work.
+            // They CANNOT view details for Active or Abandoned private drafts.
+            return status != SolutionAttemptStatus.ACTIVE &&
+                    status != SolutionAttemptStatus.ABANDONED;
+        }
+
+        return status == SolutionAttemptStatus.COMPLETED;
     }
 }
