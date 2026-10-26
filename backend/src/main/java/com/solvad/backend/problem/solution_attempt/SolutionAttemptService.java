@@ -133,7 +133,15 @@ public class SolutionAttemptService {
         UUID ownerUserId = submission.getAttempt().getSolver().getUser().getId();
         boolean isOwner = currentUserId != null && currentUserId.equals(ownerUserId);
         boolean isDraft = submission.getStatus() == SubtaskSubmissionStatus.DRAFT;
-        boolean hideDraft = isDraft && !isOwner;
+
+        // 🚀 FIX: Check if the overarching attempt is in a terminal state
+        SolutionAttemptStatus attemptStatus = submission.getAttempt().getStatus();
+        boolean isTerminal = attemptStatus == SolutionAttemptStatus.TERMINATED ||
+                attemptStatus == SolutionAttemptStatus.REJECTED ||
+                attemptStatus == SolutionAttemptStatus.ABANDONED;
+
+        // 🚀 FIX: Only hide the draft if it's NOT terminal
+        boolean hideDraft = isDraft && !isOwner && !isTerminal;
 
         return new SubtaskSubmissionResponse(
                 submission.getId(), submission.getSubtask().getId(), submission.getSubtask().getTitle(),
