@@ -313,10 +313,11 @@ public class SolutionAttemptController {
     public ResponseEntity<?> evaluateSolution(
             @RequestHeader("Authorization") String authHeader,
             @PathVariable UUID attemptId,
-            @RequestParam boolean isApproved) {
+            @RequestParam boolean isApproved,
+            @RequestParam(required = false) String rejectionReason) { // 🚀 ADDED
         try {
             UUID seekerUserId = extractUserId(authHeader);
-            SolutionAttemptResponse response = attemptService.evaluateSolution(seekerUserId, attemptId, isApproved);
+            SolutionAttemptResponse response = attemptService.evaluateSolution(seekerUserId, attemptId, isApproved, rejectionReason);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());

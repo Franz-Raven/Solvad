@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, AlertCircle, Info, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { CheckCircle2, AlertCircle, Info, Loader2, ChevronDown, ChevronUp, ArrowRight } from "lucide-react";
 import { saveSubtaskDraft, submitSubtaskFinal, submitFullAttempt } from "../api/workspace";
 import type { SubtaskResponse } from "@/types/problem";
 import Portal from "@/components/portal";
@@ -16,6 +16,7 @@ interface SubtaskFormProps {
   isForked: boolean;
   parentDescription?: string; 
   onDirtyStateChange?: (isDirty: boolean) => void; 
+  isReadOnly?: boolean;
 }
 
 export function SubtaskForm({
@@ -27,6 +28,7 @@ export function SubtaskForm({
   isForked,
   parentDescription,
   onDirtyStateChange,
+  isReadOnly = false, 
 }: SubtaskFormProps) {
   const router = useRouter();
   const [description, setDescription] = useState(existingDescription);
@@ -41,17 +43,15 @@ export function SubtaskForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-  // 🚀 Added state for the Original Approach toggle
   const [showFullOriginal, setShowFullOriginal] = useState(false);
 
-  // 🚀 Added refs to calculate dynamic textarea heights
   const narrativeRef = useRef<HTMLTextAreaElement>(null);
   const deltaRef = useRef<HTMLTextAreaElement>(null);
 
   const hasUnsavedChanges = description !== lastSavedDesc || deltaDescription !== lastSavedDelta;
 
-  // ─── DYNAMIC TEXTAREA AUTO-RESIZE ───
   const adjustTextareaHeight = (element: HTMLTextAreaElement | null) => {
     if (element) {
       element.style.height = "auto";
@@ -59,35 +59,28 @@ export function SubtaskForm({
     }
   };
 
-  useEffect(() => {
-    adjustTextareaHeight(narrativeRef.current);
-  }, [description]);
+  useEffect(() => { adjustTextareaHeight(narrativeRef.current); }, [description]);
+  useEffect(() => { adjustTextareaHeight(deltaRef.current); }, [deltaDescription]);
 
-  useEffect(() => {
-    adjustTextareaHeight(deltaRef.current);
-  }, [deltaDescription]);
-
-  // ─── NOTIFY PARENT PAGE OF DIRTY STATE ───
   useEffect(() => {
     if (onDirtyStateChange) {
       onDirtyStateChange(hasUnsavedChanges);
     }
   }, [hasUnsavedChanges, onDirtyStateChange]);
 
-  // ─── 1. AUTO-SAVE EVERY 30 SECONDS ───
   useEffect(() => {
     const timer = setInterval(() => {
-      if (hasUnsavedChanges && !isSubmitting && saveStatus !== "SAVING") {
+      // Do not autosave if read-only
+      if (hasUnsavedChanges && !isSubmitting && saveStatus !== "SAVING" && !isReadOnly) {
         handleSaveDraft(true);
       }
     }, 30000);
     return () => clearInterval(timer);
-  }, [description, deltaDescription, lastSavedDesc, lastSavedDelta, isSubmitting, saveStatus]);
+  }, [description, deltaDescription, lastSavedDesc, lastSavedDelta, isSubmitting, saveStatus, isReadOnly]);
 
-  // ─── 2. STRICT WARNING ON TAB CLOSE/REFRESH ───
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (hasUnsavedChanges) {
+      if (hasUnsavedChanges && !isReadOnly) {
         e.preventDefault();
         e.returnValue = "You have unsaved changes in your workspace. Are you sure you want to leave?";
         return e.returnValue; 
@@ -95,23 +88,23 @@ export function SubtaskForm({
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [hasUnsavedChanges]);
+  }, [hasUnsavedChanges, isReadOnly]);
 
-  // ─── 3. CLEAR "SAVED" STATUS ON TYPING ───
   useEffect(() => {
     if (hasUnsavedChanges && saveStatus === "SAVED") {
       setSaveStatus("IDLE");
     }
   }, [hasUnsavedChanges, saveStatus]);
 
+  // Lock body scroll while either modal is open
   useEffect(() => {
-    if (showConfirmModal) document.body.style.overflow = "hidden";
-    else document.body.style.overflow = "";
+    document.body.style.overflow = showConfirmModal || showSuccessModal ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
-  }, [showConfirmModal]);
+  }, [showConfirmModal, showSuccessModal]);
 
   const handleSaveDraft = async (isAuto = false) => {
     if (!hasUnsavedChanges && isAuto) return;
+    if (isReadOnly) return; // Block save if read only
     
     setSaveStatus("SAVING");
     try {
@@ -132,20 +125,27 @@ export function SubtaskForm({
     setIsSubmitting(true);
 
     try {
-      if (onDirtyStateChange) onDirtyStateChange(false); // Clear dirty state before navigation
       await submitSubtaskFinal(attemptId, subtask.id, description, deltaDescription, []);
       await submitFullAttempt(attemptId);
-      router.push("/solver/dashboard");
+
+      // Mark the form as clean so the "unsaved changes" guards don't fire on redirect
+      setLastSavedDesc(description);
+      setLastSavedDelta(deltaDescription);
+
+      setShowSuccessModal(true);
     } catch (err: any) {
       setError(err.message || "Failed to submit project.");
       setIsSubmitting(false);
     }
   };
 
-  const canSubmit = description.trim().length > 0 && (!isForked || deltaDescription.trim().length > 0);
+  const handleGoHome = () => {
+    router.push("/solver/dashboard");
+  };
 
-  // ─── RENDER SUBMITTED (LOCKED) STATE ───────────────────────────────────────
-  if (isSubmitted) {
+  const canSubmit = description.trim().length > 0 && (!isForked || deltaDescription.trim().length > 0) && !isReadOnly;
+
+  if (isSubmitted && !isReadOnly && !showSuccessModal) {
     return (
       <div className="bg-white rounded-[2rem] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-emerald-100 overflow-hidden">
         <div className="bg-emerald-50/80 px-8 py-5 border-b border-emerald-100 flex items-center gap-3">
@@ -176,6 +176,7 @@ export function SubtaskForm({
 
   return (
     <>
+      {/* Confirm submit modal */}
       {showConfirmModal && (
         <Portal>
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
@@ -203,14 +204,45 @@ export function SubtaskForm({
         </Portal> 
       )}
 
+      {/* Success modal: shown after a successful submission */}
+      {showSuccessModal && (
+        <Portal>
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+            <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-100">
+              <div className="p-8">
+                <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-5 border border-emerald-100 shadow-sm">
+                  <CheckCircle2 className="w-7 h-7" />
+                </div>
+                <h2 className="text-2xl font-bold text-slate-900 text-center mb-2">Solution Submitted!</h2>
+                <p className="text-slate-500 font-medium text-center text-sm leading-relaxed">
+                  Your solution has been submitted successfully. It will now be{" "}
+                  <strong className="text-slate-700">reviewed by the Seeker</strong>. You&apos;ll be
+                  notified once they approve or reject it.
+                </p>
+              </div>
+
+              <div className="px-8 py-6 bg-slate-50 border-t border-slate-100">
+                <button
+                  onClick={handleGoHome}
+                  className="w-full px-4 py-3 bg-emerald-600 text-white font-bold rounded-full hover:bg-emerald-700 transition-colors shadow-[0_4px_14px_0_rgba(16,185,129,0.39)] text-sm flex justify-center items-center gap-2 cursor-pointer active:scale-[0.98]"
+                >
+                  Back to Dashboard <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </Portal>
+      )}
+
       <div className="bg-white rounded-[2rem] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-slate-100 overflow-hidden relative">
         <div className="px-8 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <h3 className="font-bold text-slate-900 text-lg">Workspace Editor</h3>
           <div className="flex items-center gap-3">
-            {saveStatus === "SAVING" && <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider animate-pulse">Saving draft...</span>}
-            {saveStatus === "SAVED" && lastSavedTime && <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">Draft saved at {lastSavedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
-            {hasUnsavedChanges && saveStatus === "IDLE" && <span className="text-[11px] font-bold text-rose-600 uppercase tracking-wider">Unsaved changes</span>}
-            {saveStatus === "ERROR" && <span className="text-[11px] font-bold text-rose-600 uppercase tracking-wider">Failed to save</span>}
+            {saveStatus === "SAVING" && !isReadOnly && <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider animate-pulse">Saving draft...</span>}
+            {saveStatus === "SAVED" && lastSavedTime && !isReadOnly && <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">Draft saved at {lastSavedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
+            {hasUnsavedChanges && saveStatus === "IDLE" && !isReadOnly && <span className="text-[11px] font-bold text-rose-600 uppercase tracking-wider">Unsaved changes</span>}
+            {saveStatus === "ERROR" && !isReadOnly && <span className="text-[11px] font-bold text-rose-600 uppercase tracking-wider">Failed to save</span>}
+            {isReadOnly && <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Read Only</span>}
           </div>
         </div>
 
@@ -225,23 +257,26 @@ export function SubtaskForm({
           {/* Solution Narrative */}
           <div>
             <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">
-              Solution Narrative <span className="text-rose-500">*</span>
+              Solution Narrative {isReadOnly ? "" : <span className="text-rose-500">*</span>}
             </label>
             <textarea
               ref={narrativeRef}
-              className="w-full px-5 py-4 bg-slate-50/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-colors text-sm font-medium text-slate-900 placeholder:text-slate-400 overflow-hidden resize-none"
+              disabled={isReadOnly}
+              className={`w-full px-5 py-4 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-colors text-sm font-medium placeholder:text-slate-400 overflow-hidden resize-none ${
+                isReadOnly ? "bg-slate-50 cursor-not-allowed opacity-70 text-slate-700" : "bg-slate-50/50 text-slate-900"
+              }`}
               placeholder="Document your findings, code architecture, or research methodology here..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              style={{ minHeight: "400px" }} // 🚀 Increased initial size
+              style={{ minHeight: "400px" }}
             />
           </div>
 
-          {/* Delta Description (If Forked) */}
+          {/* Delta Description */}
           {isForked && (
             <div>
               <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">
-                Changes from Original Solution <span className="text-rose-500">*</span>
+                Changes from Original Solution {isReadOnly ? "" : <span className="text-rose-500">*</span>}
               </label>
               
               <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-5 mb-4 transition-all duration-300">
@@ -249,8 +284,6 @@ export function SubtaskForm({
                   <p className="text-[10px] font-bold text-blue-800 uppercase tracking-wider flex items-center gap-1.5">
                     <Info className="w-3.5 h-3.5" /> Original Approach
                   </p>
-                  
-                  {/* 🚀 New See More / See Less Toggle Button */}
                   <button
                     type="button"
                     onClick={() => setShowFullOriginal(!showFullOriginal)}
@@ -263,7 +296,6 @@ export function SubtaskForm({
                     )}
                   </button>
                 </div>
-                
                 <p className={`text-sm font-medium text-blue-900/80 leading-relaxed transition-all duration-300 ${showFullOriginal ? "whitespace-pre-wrap" : "line-clamp-3"}`}>
                   {parentDescription || "No description provided in the original solution."}
                 </p>
@@ -271,39 +303,44 @@ export function SubtaskForm({
 
               <textarea
                 ref={deltaRef}
+                disabled={isReadOnly}
                 value={deltaDescription}
                 onChange={(e) => setDeltaDescription(e.target.value)}
-                className="w-full px-5 py-4 bg-slate-50/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-colors text-sm font-medium text-slate-900 placeholder:text-slate-400 overflow-hidden resize-none"
+                className={`w-full px-5 py-4 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-colors text-sm font-medium placeholder:text-slate-400 overflow-hidden resize-none ${
+                  isReadOnly ? "bg-slate-50 cursor-not-allowed opacity-70 text-slate-700" : "bg-slate-50/50 text-slate-900"
+                }`}
                 placeholder="Detail exactly what you improved, fixed, or changed from the original solution..."
-                style={{ minHeight: "250px" }} // 🚀 Increased initial size
+                style={{ minHeight: "250px" }}
               />
             </div>
           )}
         </div>
 
-        {/* Footer Actions */}
-        <div className="px-8 py-6 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
-          <p className="text-sm font-medium text-slate-600">
-            {!canSubmit && <span className="text-rose-500 flex items-center gap-1.5 font-bold"><AlertCircle className="w-4 h-4"/> Please fill out all required fields.</span>}
-          </p>
-          <div className="flex gap-3">
-             <button 
-                onClick={() => handleSaveDraft(false)} 
-                disabled={isSubmitting || saveStatus === "SAVING" || (!hasUnsavedChanges && saveStatus === "SAVED")} 
-                className="px-6 py-3.5 bg-white border border-slate-200 text-slate-700 font-bold rounded-full hover:bg-slate-50 transition-colors disabled:opacity-50 shadow-sm text-sm cursor-pointer active:scale-[0.98]"
+        {/* Only render footer if not read-only */}
+        {!isReadOnly && (
+          <div className="px-8 py-6 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <p className="text-sm font-medium text-slate-600">
+              {!canSubmit && <span className="text-rose-500 flex items-center gap-1.5 font-bold"><AlertCircle className="w-4 h-4"/> Please fill out all required fields.</span>}
+            </p>
+            <div className="flex gap-3">
+              <button 
+                  onClick={() => handleSaveDraft(false)} 
+                  disabled={isSubmitting || saveStatus === "SAVING" || (!hasUnsavedChanges && saveStatus === "SAVED")} 
+                  className="px-6 py-3.5 bg-white border border-slate-200 text-slate-700 font-bold rounded-full hover:bg-slate-50 transition-colors disabled:opacity-50 shadow-sm text-sm cursor-pointer active:scale-[0.98]"
+                >
+                {saveStatus === "SAVING" ? "Saving..." : "Save Draft"}
+              </button>
+              <button 
+                onClick={() => setShowConfirmModal(true)} 
+                disabled={isSubmitting || !canSubmit} 
+                className="px-8 py-3.5 bg-emerald-600 text-white font-bold rounded-full hover:bg-emerald-700 transition-all disabled:opacity-50 shadow-[0_4px_14px_0_rgba(16,185,129,0.39)] hover:shadow-[0_6px_20px_rgba(16,185,129,0.23)] text-sm flex items-center gap-2 cursor-pointer active:scale-[0.98]"
               >
-              {saveStatus === "SAVING" ? "Saving..." : "Save Draft"}
-            </button>
-            <button 
-              onClick={() => setShowConfirmModal(true)} 
-              disabled={isSubmitting || !canSubmit} 
-              className="px-8 py-3.5 bg-emerald-600 text-white font-bold rounded-full hover:bg-emerald-700 transition-all disabled:opacity-50 shadow-[0_4px_14px_0_rgba(16,185,129,0.39)] hover:shadow-[0_6px_20px_rgba(16,185,129,0.23)] text-sm flex items-center gap-2 cursor-pointer active:scale-[0.98]"
-            >
-              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-              {isSubmitting ? "Submitting..." : "Submit Project"}
-            </button>
+                {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                {isSubmitting ? "Submitting..." : "Submit Project"}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </>
   );

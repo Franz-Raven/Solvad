@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { Suspense, useState, useEffect } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { ChevronLeft } from "lucide-react";
@@ -10,11 +10,11 @@ import {
   getMyAttempt, 
   getMyProposalStatus 
 } from "./api/problem";
+import { getMyActiveAttempts } from "../../dashboard/api/dashboard";
 
 import type { ProblemResponse } from "@/types/problem";
 import type { SolutionAttemptResponse } from "@/types/attempt";
 
-// 🚀 PROPER TYPESCRIPT DYNAMIC IMPORTS
 const BlueprintTab = dynamic(() => import("./components/BlueprintTab").then((mod) => mod.BlueprintTab), {
   loading: () => (
     <div className="bg-white rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100 p-6 md:p-8 animate-pulse">
@@ -86,15 +86,21 @@ const getBadgeStyle = (status: string) => {
   }
 };
 
-export default function SolverProblemDetailPage() {
+function SolverProblemDetailContent() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const problemId = params.id as string;
+  
+  const tabParam = searchParams.get("tab") as TabType | null;
+  const highlightParam = searchParams.get("highlight");
 
   const [problem, setProblem] = useState<ProblemResponse | null>(null);
   const [myAttempt, setMyAttempt] = useState<SolutionAttemptResponse | null>(null);
   const [myProposalStatus, setMyProposalStatus] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<TabType>("blueprint");
+  const [activeTab, setActiveTab] = useState<TabType>(tabParam || "blueprint");
+  const [highlightedNodeId, setHighlightedNodeId] = useState<string | null>(highlightParam);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -106,19 +112,21 @@ export default function SolverProblemDetailPage() {
     loadData();
   }, [problemId]);
 
+  useEffect(() => {
+    if (tabParam) setActiveTab(tabParam);
+    if (highlightParam) setHighlightedNodeId(highlightParam);
+  }, [tabParam, highlightParam]);
+
   const loadData = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // 🚀 FIX: Removed the massive getAllAttempts() call
       const [
         problemResult,
-        myAttemptResult,
         proposalStatusResult
       ] = await Promise.allSettled([
         getProblemById(problemId),
-        getMyAttempt(problemId),
         getMyProposalStatus(problemId)
       ]);
 
@@ -128,8 +136,18 @@ export default function SolverProblemDetailPage() {
         throw new Error("Failed to load problem details.");
       }
 
-      setMyAttempt(myAttemptResult.status === "fulfilled" ? myAttemptResult.value : null);
       setMyProposalStatus(proposalStatusResult.status === "fulfilled" ? proposalStatusResult.value.status : null);
+
+      let attemptData = null;
+      try {
+        attemptData = await getMyAttempt(problemId);
+      } catch (e) {
+        try {
+          const allAttempts = await getMyActiveAttempts();
+          attemptData = allAttempts.find(a => a.problemId === problemId) || null;
+        } catch (err) {}
+      }
+      setMyAttempt(attemptData as SolutionAttemptResponse | null);
 
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load problem");
@@ -200,24 +218,26 @@ export default function SolverProblemDetailPage() {
   }
 
   const isAlreadyClaimed = myAttempt?.status === "ACTIVE";
+  const isPendingReview = myAttempt?.status === "PENDING_REVIEW";
   const isCompleted = myAttempt?.status === "COMPLETED";
-  // 🚀 FIX: Simplified capacity logic relying on the robust backend validation
   const canClaimFresh = ["OPEN", "IN_PROGRESS", "CLAIMED"].includes(problem.status);
 
   const isUnavailable =
     !isAlreadyClaimed &&
+    !isPendingReview &&
     !canClaimFresh &&
     problem.status !== "SOLVED_OPEN_FOR_IMPROVEMENT";
 
   const canPropose =
     !isAlreadyClaimed &&
+    !isPendingReview &&
     !isUnavailable &&
     myProposalStatus !== "PENDING";
   
   const tabs: { id: TabType; label: string }[] = [
     { id: "blueprint", label: "Problem Blueprint" },
     { id: "subtasks", label: "Sub-problems" },
-    { id: "tree", label: "Solution Tree" }, // 🚀 FIX: Removed the static array length tracker
+    { id: "tree", label: "Solution Tree" },
     { id: "history", label: "History" },
   ];
 
@@ -226,6 +246,13 @@ export default function SolverProblemDetailPage() {
       return (
         <Link href={`/solver/workspace/${problemId}`} className="px-6 py-2.5 bg-accent hover:bg-accent/90 text-white font-bold rounded-xl shadow-md transition-all w-full md:w-auto inline-flex items-center justify-center cursor-pointer">
             Continue Working →
+        </Link>
+      );
+    }
+    if (isPendingReview) {
+      return (
+        <Link href={`/solver/workspace/${problemId}`} className="px-6 py-2.5 bg-blue-50 text-blue-700 border border-blue-200 font-bold rounded-xl shadow-sm transition-all w-full md:w-auto inline-flex items-center justify-center cursor-pointer">
+          <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse flex-shrink-0 mr-2" /> Solution Under Review
         </Link>
       );
     }
@@ -315,7 +342,10 @@ export default function SolverProblemDetailPage() {
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  if (tab.id !== "tree") setHighlightedNodeId(null);
+                }}
                 className={`px-5 md:px-6 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${
                   activeTab === tab.id
                     ? "bg-white text-accent shadow-sm border border-slate-200"
@@ -342,7 +372,19 @@ export default function SolverProblemDetailPage() {
           </div>
         )}
 
-        {!isAlreadyClaimed && myProposalStatus === "PENDING" && (
+        {isPendingReview && (
+          <div className="bg-white border-l-4 border-blue-500 shadow-sm rounded-r-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in duration-300">
+            <div className="flex items-center gap-3">
+              <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-pulse" />
+              <p className="text-sm font-bold text-slate-800">Your solution is currently under review by the Seeker.</p>
+            </div>
+            <Link href={`/solver/workspace/${problemId}`} className="text-sm font-bold text-blue-700 hover:underline transition-all cursor-pointer">
+              View read-only workspace →
+            </Link>
+          </div>
+        )}
+
+        {!isAlreadyClaimed && !isPendingReview && myProposalStatus === "PENDING" && (
           <div className="bg-white border-l-4 border-amber-500 shadow-sm rounded-r-xl p-5 flex items-center gap-3 animate-in fade-in duration-300">
             <div className="w-2.5 h-2.5 bg-amber-500 rounded-full animate-pulse flex-shrink-0" />
             <p className="text-sm font-bold text-slate-800">Your proposal has been submitted and is awaiting review.</p>
@@ -356,14 +398,17 @@ export default function SolverProblemDetailPage() {
             <SubtasksTab
               problem={problem}
               canPropose={canPropose}
+              isPendingReview={isPendingReview}
               onPropose={(subtaskId: string) => openProposalModal(subtaskId)}
             />
           )}
 
           {activeTab === "tree" && (
-              <SolutionTreeTab
+            <SolutionTreeTab
               problemId={problem.id}
+              highlightedAttemptId={highlightedNodeId}
               isAlreadyClaimed={isAlreadyClaimed}
+              isPendingReview={isPendingReview}
               isCompleted={isCompleted}
               isUnavailable={isUnavailable}
               myProposalStatus={myProposalStatus}
@@ -376,5 +421,13 @@ export default function SolverProblemDetailPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SolverProblemDetailPage() {
+  return (
+    <Suspense fallback={null}>
+      <SolverProblemDetailContent />
+    </Suspense>
   );
 }

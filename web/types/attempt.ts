@@ -30,22 +30,19 @@ export interface SolutionAttemptResponse {
   completedAt?: string;
   parentAttemptId?: string | null;
   parentAttemptName?: string | null;
-  targetSubtaskId?: string | null;      // ADD
-  targetSubtaskTitle?: string | null;   // ADD
+  targetSubtaskId?: string | null;
+  targetSubtaskTitle?: string | null;
   parentSolverName?: string | null;
   parentDescription?: string | null;
   parentFileUrls?: string[];
-
-  // 🚀 NEW FIELDS
   seekerName?: string;
   seekerProfileUrl?: string;
+  rejectionReason?: string; // 🚀 ADDED
 }
 
 export interface TreeAttemptNode extends SolutionAttemptResponse {
   children: TreeAttemptNode[];
 }
-
-// ── Audit log ─────────────────────────────────────────────────────────────────
 
 export type AuditEventType =
   | "PROBLEM_CREATED"
@@ -57,11 +54,11 @@ export type AuditEventType =
   | "ATTEMPT_ABANDONED"
   | "ATTEMPT_COMPLETED"
   | "FILE_UPLOADED"
-  | "PROPOSAL_SUBMITTED" // <-- ADDED
-  | "PROPOSAL_APPROVED"  // <-- ADDED
-  | "PROPOSAL_REJECTED"  // <-- ADDED
-  | "CAPACITY_REACHED"   // <-- ADDED
-  | "PROBLEM_UPDATED";   // <-- ADDED
+  | "PROPOSAL_SUBMITTED"
+  | "PROPOSAL_APPROVED"
+  | "PROPOSAL_REJECTED"
+  | "CAPACITY_REACHED"
+  | "PROBLEM_UPDATED";
 
 export interface AuditLogEntry {
   id: string;
@@ -84,7 +81,7 @@ export interface ClaimRequestResponse {
   id: string;
   problem: { id: string };
   solver: { 
-    id: string; // 🚀 WE MUST HAVE THIS ID HERE
+    id: string;
     firstName: string; 
     lastName: string; 
     institution?: string; 
@@ -100,8 +97,6 @@ export interface ClaimRequestResponse {
   parentAttemptId?: string;
 }
 
-
-// 🚀 New lightweight summary for the workspace
 export interface SolutionAttemptSummary {
   id: string;
   problemId: string;
@@ -112,7 +107,7 @@ export interface SolutionAttemptSummary {
   solverInstitution: string;
   solverDegreeProgram: string;
   status: string;
-  submissionCount: number; // Replaces the array
+  submissionCount: number;
   claimedAt: string;
   updatedAt: string;
   completedAt?: string | null;
@@ -120,13 +115,12 @@ export interface SolutionAttemptSummary {
   parentSolverName?: string | null;
   targetSubtaskId?: string;
   targetSubtaskTitle?: string;
-
   seekerName?: string;
   seekerProfileUrl?: string;
 }
 
 export interface PaginatedAttemptsResponse {
-  attempts: SolutionAttemptSummary[]; // 🚀 Update this array
+  attempts: SolutionAttemptSummary[];
   currentPage: number;
   totalPages: number;
   totalElements: number;
@@ -151,7 +145,6 @@ export interface PaginatedClaimsResponse {
   size: number;
 }
 
-//proposal
 export interface ClaimDetail {
   id: string;
   problemId: string;
@@ -163,7 +156,6 @@ export interface ClaimDetail {
   supportingDocuments?: string | null;
 }
 
-//history
 export interface AttemptDetail {
   id: string;
   problemId: string;
@@ -172,7 +164,9 @@ export interface AttemptDetail {
   status: string;
   completedAt: string;
   summary: string;
-  attachedFiles?: string[]; // 🚀 ADD THIS LINE
+  attachedFiles?: string[];
+  rejectionReason?: string; // 🚀 ADDED
+  deltaDescription?: string;
 }
 
 export interface AttemptNodeSummary {
@@ -186,7 +180,7 @@ export interface AttemptNodeSummary {
 export interface ClaimSummaryResponse {
   id: string;
   solver: { 
-    id: string; // 🚀 Add this ID so we can fetch their specific metrics
+    id: string;
     firstName: string; 
     lastName: string; 
     institution?: string; 

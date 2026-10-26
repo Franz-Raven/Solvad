@@ -51,6 +51,9 @@ public class SolutionAttempt {
     @JoinColumn(name = "target_subtask_id", nullable = true)
     private ProblemSubtask targetSubtask;
 
+    @Column(columnDefinition = "TEXT")
+    private String rejectionReason;
+
     // getter + setter
     public ProblemSubtask getTargetSubtask() { return targetSubtask; }
     public void setTargetSubtask(ProblemSubtask targetSubtask) { this.targetSubtask = targetSubtask; }
@@ -97,4 +100,7 @@ public class SolutionAttempt {
 
     public LocalDateTime getCompletedAt() { return completedAt; }
     public void setCompletedAt(LocalDateTime completedAt) { this.completedAt = completedAt; }
+
+    public String getRejectionReason() { return rejectionReason; }
+    public void setRejectionReason(String rejectionReason) { this.rejectionReason = rejectionReason; }
 }
