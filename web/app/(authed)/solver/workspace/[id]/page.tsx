@@ -186,7 +186,7 @@ export default function SolverWorkspacePage() {
               </div>
               <h2 className="text-2xl font-bold text-slate-900 text-center mb-2">Abandon Workspace?</h2>
               <p className="text-slate-500 font-medium text-center text-sm leading-relaxed">
-                Are you sure you want to abandon this problem? It will become available for other solvers immediately.
+                Are you sure you want to abandon this problem? This action counts as a failed solution and will negatively impact your <strong className="text-slate-700">Completion Rate</strong> and overall <strong className="text-slate-700">Solver Tier</strong>.
               </p>
             </div>
             

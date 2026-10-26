@@ -54,6 +54,25 @@ const TreeSkeleton = () => (
   </div>
 );
 
+const getStatusBadge = (status: string) => {
+  switch (status) {
+    case "COMPLETED":
+    case "SOLVED_OPEN_FOR_IMPROVEMENT":
+      return "text-emerald-700 bg-emerald-50 border-emerald-200";
+    case "ACTIVE":
+    case "IN_PROGRESS":
+      return "text-amber-700 bg-amber-50 border-amber-200";
+    case "PENDING_REVIEW":
+      return "text-blue-700 bg-blue-50 border-blue-200";
+    case "ABANDONED":
+    case "TERMINATED":
+    case "REJECTED":
+      return "text-rose-700 bg-rose-50 border-rose-200";
+    default:
+      return "text-slate-600 bg-slate-50 border-slate-200";
+  }
+};
+
 export function SolutionTreeTab({
   problemId,
   highlightedAttemptId,
@@ -120,7 +139,7 @@ export function SolutionTreeTab({
     return () => clearTimeout(t);
   }, [filteredAttempts, isTreeReady]);
 
-  // 🚀 Auto-scroll to highlighted node when the tree is rendered
+  // Auto-scroll to highlighted node when the tree is rendered
   useEffect(() => {
     if (!highlightedAttemptId || !containerRef.current) return;
     const t = setTimeout(() => {
@@ -136,25 +155,6 @@ export function SolutionTreeTab({
       const heavyAttempt = await getFullAttemptDetails(node.id);
       setModalNode({ ...heavyAttempt, children: node.children as any });
     } catch (error) { console.error("Failed to load details", error); } finally { setFetchingDetailsId(null); }
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "COMPLETED":
-      case "SOLVED_OPEN_FOR_IMPROVEMENT":
-        return "text-emerald-700 bg-emerald-50 border-emerald-200";
-      case "ACTIVE":
-      case "IN_PROGRESS":
-        return "text-amber-700 bg-amber-50 border-amber-200";
-      case "PENDING_REVIEW":
-        return "text-blue-700 bg-blue-50 border-blue-200";
-      case "ABANDONED":
-      case "TERMINATED":
-      case "REJECTED":
-        return "text-rose-700 bg-rose-50 border-rose-200";
-      default:
-        return "text-slate-600 bg-slate-50 border-slate-200";
-    }
   };
 
   function renderLevel(nodes: TreeAttemptNodeSummary[]): React.ReactNode {
@@ -178,8 +178,9 @@ export function SolutionTreeTab({
                     <p className="text-[10px] text-slate-400 font-bold truncate mt-1">{node.solverInstitution}</p>
                   </div>
                   
+                  {/* 🚀 FIXED: No more inline ternary override. Uses pure backend status */}
                   <span className={`flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-md border uppercase tracking-wider ${getStatusBadge(node.status)}`}>
-                    {node.status === "TERMINATED" ? "REJECTED" : node.status.replace(/_/g, " ")}
+                    {node.status.replace(/_/g, " ")}
                   </span>
                 </div>
 
