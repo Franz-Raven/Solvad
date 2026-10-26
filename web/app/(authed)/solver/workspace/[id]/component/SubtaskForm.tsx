@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, AlertCircle, Info, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { CheckCircle2, AlertCircle, Info, Loader2, ChevronDown, ChevronUp, ArrowRight } from "lucide-react";
 import { saveSubtaskDraft, submitSubtaskFinal, submitFullAttempt } from "../api/workspace";
 import type { SubtaskResponse } from "@/types/problem";
 import Portal from "@/components/portal";
@@ -43,6 +43,7 @@ export function SubtaskForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const [showFullOriginal, setShowFullOriginal] = useState(false);
 
@@ -69,7 +70,7 @@ export function SubtaskForm({
 
   useEffect(() => {
     const timer = setInterval(() => {
-      // 🚀 Do not autosave if read-only
+      // Do not autosave if read-only
       if (hasUnsavedChanges && !isSubmitting && saveStatus !== "SAVING" && !isReadOnly) {
         handleSaveDraft(true);
       }
@@ -95,15 +96,15 @@ export function SubtaskForm({
     }
   }, [hasUnsavedChanges, saveStatus]);
 
+  // Lock body scroll while either modal is open
   useEffect(() => {
-    if (showConfirmModal) document.body.style.overflow = "hidden";
-    else document.body.style.overflow = "";
+    document.body.style.overflow = showConfirmModal || showSuccessModal ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
-  }, [showConfirmModal]);
+  }, [showConfirmModal, showSuccessModal]);
 
   const handleSaveDraft = async (isAuto = false) => {
     if (!hasUnsavedChanges && isAuto) return;
-    if (isReadOnly) return; // 🚀 Block save if read only
+    if (isReadOnly) return; // Block save if read only
     
     setSaveStatus("SAVING");
     try {
@@ -124,19 +125,27 @@ export function SubtaskForm({
     setIsSubmitting(true);
 
     try {
-      if (onDirtyStateChange) onDirtyStateChange(false);
       await submitSubtaskFinal(attemptId, subtask.id, description, deltaDescription, []);
       await submitFullAttempt(attemptId);
-      router.push("/solver/dashboard");
+
+      // Mark the form as clean so the "unsaved changes" guards don't fire on redirect
+      setLastSavedDesc(description);
+      setLastSavedDelta(deltaDescription);
+
+      setShowSuccessModal(true);
     } catch (err: any) {
       setError(err.message || "Failed to submit project.");
       setIsSubmitting(false);
     }
   };
 
+  const handleGoHome = () => {
+    router.push("/solver/dashboard");
+  };
+
   const canSubmit = description.trim().length > 0 && (!isForked || deltaDescription.trim().length > 0) && !isReadOnly;
 
-  if (isSubmitted && !isReadOnly) {
+  if (isSubmitted && !isReadOnly && !showSuccessModal) {
     return (
       <div className="bg-white rounded-[2rem] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-emerald-100 overflow-hidden">
         <div className="bg-emerald-50/80 px-8 py-5 border-b border-emerald-100 flex items-center gap-3">
@@ -167,6 +176,7 @@ export function SubtaskForm({
 
   return (
     <>
+      {/* Confirm submit modal */}
       {showConfirmModal && (
         <Portal>
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
@@ -192,6 +202,36 @@ export function SubtaskForm({
             </div>
           </div>
         </Portal> 
+      )}
+
+      {/* Success modal: shown after a successful submission */}
+      {showSuccessModal && (
+        <Portal>
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+            <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-100">
+              <div className="p-8">
+                <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-5 border border-emerald-100 shadow-sm">
+                  <CheckCircle2 className="w-7 h-7" />
+                </div>
+                <h2 className="text-2xl font-bold text-slate-900 text-center mb-2">Solution Submitted!</h2>
+                <p className="text-slate-500 font-medium text-center text-sm leading-relaxed">
+                  Your solution has been submitted successfully. It will now be{" "}
+                  <strong className="text-slate-700">reviewed by the Seeker</strong>. You&apos;ll be
+                  notified once they approve or reject it.
+                </p>
+              </div>
+
+              <div className="px-8 py-6 bg-slate-50 border-t border-slate-100">
+                <button
+                  onClick={handleGoHome}
+                  className="w-full px-4 py-3 bg-emerald-600 text-white font-bold rounded-full hover:bg-emerald-700 transition-colors shadow-[0_4px_14px_0_rgba(16,185,129,0.39)] text-sm flex justify-center items-center gap-2 cursor-pointer active:scale-[0.98]"
+                >
+                  Back to Dashboard <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </Portal>
       )}
 
       <div className="bg-white rounded-[2rem] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-slate-100 overflow-hidden relative">
@@ -276,7 +316,7 @@ export function SubtaskForm({
           )}
         </div>
 
-        {/* 🚀 ONLY RENDER FOOTER IF NOT READ ONLY */}
+        {/* Only render footer if not read-only */}
         {!isReadOnly && (
           <div className="px-8 py-6 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
             <p className="text-sm font-medium text-slate-600">
