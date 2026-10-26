@@ -1,41 +1,73 @@
 package com.solvad.backend.email;
 
-import jakarta.mail.MessagingException;
+import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
+import com.google.api.services.gmail.Gmail;
+import com.google.api.services.gmail.model.Message;
+import com.google.auth.http.HttpCredentialsAdapter;
+import com.google.auth.oauth2.UserCredentials;
+import jakarta.mail.Session;
+import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.MimeBodyPart;
 import jakarta.mail.internet.MimeMessage;
+import jakarta.mail.internet.MimeMultipart;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+
+import java.io.ByteArrayOutputStream;
+import java.util.Base64;
+import java.util.Properties;
 
 @Service
 public class EmailService {
 
-    private final JavaMailSender mailSender;
+    private final String clientId;
+    private final String clientSecret;
+    private final String refreshToken;
     private final String fromEmail;
 
     public EmailService(
-            JavaMailSender mailSender,
-            @Value("${spring.mail.username}") String fromEmail) {
-        this.mailSender = mailSender;
+            @Value("${google.client.id}") String clientId,
+            @Value("${google.client.secret}") String clientSecret,
+            @Value("${google.refresh.token}") String refreshToken,
+            @Value("${google.from.email}") String fromEmail) {
+        this.clientId = clientId;
+        this.clientSecret = clientSecret;
+        this.refreshToken = refreshToken;
         this.fromEmail = fromEmail;
     }
 
     @Async
     public void sendVerificationEmail(String toEmail, String code) {
         try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            UserCredentials credentials = UserCredentials.newBuilder()
+                    .setClientId(clientId)
+                    .setClientSecret(clientSecret)
+                    .setRefreshToken(refreshToken)
+                    .build();
 
-            helper.setFrom("Solvad <" + fromEmail + ">");
-            helper.setTo(toEmail);
-            helper.setSubject("Your Solvad verification code");
+            Gmail gmail = new Gmail.Builder(
+                    GoogleNetHttpTransport.newTrustedTransport(),
+                    GsonFactory.getDefaultInstance(),
+                    new HttpCredentialsAdapter(credentials))
+                    .setApplicationName("Solvad")
+                    .build();
+
+            Properties props = new Properties();
+            Session session = Session.getDefaultInstance(props, null);
+            MimeMessage email = new MimeMessage(session);
+
+            email.setFrom(new InternetAddress(fromEmail, "Solvad"));
+            email.addRecipient(jakarta.mail.Message.RecipientType.TO, new InternetAddress(toEmail));
+            email.setSubject("Your Solvad verification code");
 
             String textContent = "Hi there,\n\n"
                     + "Use this one-time verification code to finish creating your Solvad account:\n\n"
                     + code + "\n\n"
                     + "The code is valid for 15 minutes. If you did not request this code, you can ignore this email.\n\n"
                     + "Thanks,\nThe Solvad team";
+
             String htmlContent = """
                     <!doctype html>
                     <html>
@@ -54,10 +86,31 @@ public class EmailService {
                     </html>
                     """.formatted(code);
 
-            helper.setText(textContent, htmlContent);
-            mailSender.send(message);
-        } catch (MessagingException e) {
-            throw new RuntimeException("Email failure", e);
+            MimeMultipart multipart = new MimeMultipart("alternative");
+
+            MimeBodyPart textPart = new MimeBodyPart();
+            textPart.setText(textContent, "utf-8");
+
+            MimeBodyPart htmlPart = new MimeBodyPart();
+            htmlPart.setContent(htmlContent, "text/html; charset=utf-8");
+
+            multipart.addBodyPart(textPart);
+            multipart.addBodyPart(htmlPart);
+
+            email.setContent(multipart);
+
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            email.writeTo(buffer);
+            byte[] rawMessageBytes = buffer.toByteArray();
+            String encodedEmail = Base64.getUrlEncoder().encodeToString(rawMessageBytes);
+
+            Message message = new Message();
+            message.setRaw(encodedEmail);
+
+            gmail.users().messages().send("me", message).execute();
+
+        } catch (Exception e) {
+            System.out.println("Failed to send HTTP Gmail API request " + e.getMessage());
         }
     }
 }
