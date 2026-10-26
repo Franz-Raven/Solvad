@@ -42,10 +42,16 @@ export default function Footer() {
               Contact Us
             </Link>
             <Link
-              href="/privacy"
+              href="/privacy-policy"
               className="text-gray-600 hover:text-primary-foreground transition-colors text-sm"
             >
               Privacy Policy
+            </Link>
+            <Link
+              href="/terms-of-service"
+              className="text-gray-600 hover:text-primary-foreground transition-colors text-sm"
+            >
+              Terms and Conditions
             </Link>
           </div>
 

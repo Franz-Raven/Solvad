@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 // Public routes accessible without authentication
-const PUBLIC_PATHS = ["/", "/landing", "/login", "/register"];
+const PUBLIC_PATHS = ["/", "/landing", "/login", "/register", "/privacy-policy", "/terms-of-service", "/about", "/contact"];
 
 // Role-based protected routes
 const SOLVER_PATHS = ["/solver"];
