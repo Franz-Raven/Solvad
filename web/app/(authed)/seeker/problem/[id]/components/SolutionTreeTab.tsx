@@ -12,7 +12,8 @@ import {
   Columns,
   FileText,
   XCircle,
-  GitFork
+  GitFork,
+  AlertCircle
 } from "lucide-react";
 import Portal from "@/components/portal";
 import { getProblemTree, getFullAttemptDetails } from "../api/problem";
@@ -44,12 +45,30 @@ function buildHierarchyTree(flatList: SolutionAttemptSummary[]): TreeAttemptNode
   return roots;
 }
 
-const getStatusBadge = (status: string) =>
-  status === "COMPLETED" || status === "SOLVED_OPEN_FOR_IMPROVEMENT"
-    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-    : status === "ABANDONED" || status === "TERMINATED"
-    ? "bg-rose-50 text-rose-700 border-rose-200"
-    : "bg-amber-50 text-amber-700 border-amber-200";
+const getStatusBadge = (status: string) => {
+  switch (status) {
+    case "COMPLETED":
+    case "SOLVED_OPEN_FOR_IMPROVEMENT":
+      return "text-emerald-700 bg-emerald-50 border-emerald-200";
+    case "ACTIVE":
+    case "IN_PROGRESS":
+      return "text-amber-700 bg-amber-50 border-amber-200";
+    case "PENDING_REVIEW":
+      return "text-blue-700 bg-blue-50 border-blue-200";
+    case "ABANDONED":
+    case "TERMINATED":
+    case "REJECTED":
+      return "text-rose-700 bg-rose-50 border-rose-200";
+    default:
+      return "text-slate-600 bg-slate-50 border-slate-200";
+  }
+};
+
+const formatStatus = (status: string) => {
+  if (status === "PENDING_REVIEW") return "PENDING REVIEW";
+  if (status === "TERMINATED") return "REJECTED"; // Normalizes legacy terminated
+  return status.replace(/_/g, " ");
+};
 
 const URL_SPLIT = /((?:https?:\/\/)?(?:www\.)?github\.com\/[^\s]+|https?:\/\/[^\s]+)/g;
 
@@ -232,7 +251,6 @@ function AttemptDetailModal({
     <Portal>
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
         
-        {/* 🚀 DYNAMIC WIDTH: Changes to max-w-7xl smoothly when in compare mode */}
         <div className={`bg-white rounded-2xl shadow-2xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 animate-in zoom-in-95 transition-all duration-300 ease-out ${viewPanel === "compare" ? "max-w-7xl" : "max-w-3xl"}`}>
           
           <div className="flex items-start justify-between p-5 md:p-6 border-b border-slate-100 flex-shrink-0 bg-white z-10 transition-all duration-300">
@@ -251,7 +269,7 @@ function AttemptDetailModal({
                     {node.solverFirstName} {node.solverLastName}
                   </h2>
                   <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-md border uppercase tracking-wider ${getStatusBadge(node.status)}`}>
-                    {node.status.replace(/_/g, " ")}
+                    {formatStatus(node.status)}
                   </span>
                 </div>
                 {educationInfo && <p className="text-xs text-slate-500 font-medium transition-all">{educationInfo}</p>}
@@ -319,6 +337,18 @@ function AttemptDetailModal({
                       </div>
                     ) : (
                       <>
+                        {/* 🚀 Render Rejection Feedback in Seeker Tree */}
+                        {node.status === "REJECTED" && node.rejectionReason && (
+                          <div className="mb-6 bg-rose-50 border border-rose-200 shadow-sm rounded-2xl p-6 animate-in fade-in duration-300">
+                            <h4 className="text-[11px] font-bold text-rose-600 uppercase tracking-wider mb-3 flex items-center gap-2">
+                              <AlertCircle className="w-4 h-4" /> Rejection Feedback
+                            </h4>
+                            <div className="text-sm text-rose-900 whitespace-pre-wrap font-medium leading-relaxed">
+                              {node.rejectionReason}
+                            </div>
+                          </div>
+                        )}
+
                         {activeSub.deltaDescription && (
                           <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-5 shadow-sm w-full">
                             <p className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider mb-2">What changed from the parent solution</p>
@@ -343,7 +373,6 @@ function AttemptDetailModal({
                               </button>
                             </div>
 
-                            {/* 🚀 DYNAMIC CONTENT RENDERING WITH FIXED PADDING/SCROLL ISSUE */}
                             <div className={`transition-all duration-300 items-start ${viewPanel === "compare" ? "grid grid-cols-1 md:grid-cols-2 gap-6" : ""}`}>
                               
                               {(viewPanel === "previous" || viewPanel === "compare") && (
@@ -413,6 +442,10 @@ function AttemptCard({
   isFetching?: boolean;
   isHighlighted?: boolean;
 }) {
+  
+  // 🚀 Lock out rejected, terminated, and abandoned attempts
+  const isDisabled = isFetching || node.status === "TERMINATED" || node.status === "ABANDONED" || node.status === "REJECTED";
+
   return (
     <div
       className={`bg-white border rounded-2xl p-5 select-none relative overflow-hidden animate-in fade-in zoom-in-95 duration-500 ${
@@ -431,7 +464,7 @@ function AttemptCard({
           <p className="text-[10px] text-slate-400 font-bold truncate mt-1">{node.solverInstitution}</p>
         </div>
         <span className={`flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-md border uppercase tracking-wider ${getStatusBadge(node.status)}`}>
-          {node.status.replace(/_/g, " ")}
+          {formatStatus(node.status)}
         </span>
       </div>
 
@@ -456,16 +489,16 @@ function AttemptCard({
           e.stopPropagation();
           onViewClick();
         }}
-        disabled={isFetching}
-        className={`w-full flex justify-center items-center gap-2 py-1.5 text-[11px] font-bold rounded-lg border transition-all cursor-pointer shadow-sm active:scale-[0.98] ${
-          isFetching
-            ? "bg-slate-100 text-slate-400 border-slate-200" 
+        disabled={isDisabled}
+        className={`w-full flex justify-center items-center gap-2 py-1.5 text-[11px] font-bold rounded-lg border transition-all shadow-sm ${
+          isDisabled
+            ? "bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed" 
             : isHighlighted
-              ? "bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700"
-              : "text-slate-600 border-slate-200 bg-slate-50 hover:bg-slate-100 hover:text-slate-900"
+              ? "bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700 active:scale-[0.98] cursor-pointer"
+              : "text-slate-600 border-slate-200 bg-slate-50 hover:bg-slate-100 hover:text-slate-900 active:scale-[0.98] cursor-pointer"
         }`}
       >
-        {isFetching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "View Solution"}
+        {isFetching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : (isDisabled ? "No Solution Available" : "View Solution")}
       </button>
     </div>
   );

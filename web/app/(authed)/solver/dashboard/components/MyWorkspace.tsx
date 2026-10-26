@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { 
-  Inbox, Calendar, ChevronRight, Building2 
+  Inbox, Calendar, ChevronRight, Building2, ShieldHalf, FolderKanban
 } from "lucide-react";
 import { getWorkspaceAttempts, getPendingClaims } from "../api/dashboard";
 import type { PaginatedAttemptsResponse, PaginatedClaimsResponse } from "@/types/attempt";
@@ -14,6 +14,39 @@ import {
 
 type WorkspaceTab = "ACTIVE" | "PENDING" | "HISTORY";
 const ITEMS_PER_PAGE = 5;
+
+const TABS = [
+  { id: "ACTIVE", label: "Active" },
+  { id: "PENDING", label: "Pending Proposals" }, 
+  { id: "HISTORY", label: "History" },
+] as const;
+
+function EmptyState({ tab }: { tab: WorkspaceTab }) {
+  const getMessage = () => {
+    switch (tab) {
+      case "ACTIVE": return { title: "No active workspaces", desc: "You aren't currently working on any problems." };
+      case "PENDING": return { title: "No pending solutions", desc: "Solutions awaiting Seeker approval will appear here." };
+      case "HISTORY": return { title: "No history yet", desc: "Your completed and abandoned attempts will appear here." };
+    }
+  };
+
+  const { title, desc } = getMessage();
+
+  return (
+    <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-slate-50 rounded-xl border-2 border-dashed border-slate-200 mt-4">
+      <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm border border-slate-100 mb-4">
+        {tab === "PENDING" ? <ShieldHalf className="w-6 h-6 text-slate-300" /> : <FolderKanban className="w-6 h-6 text-slate-300" />}
+      </div>
+      <h3 className="text-sm font-bold text-slate-900 mb-1">{title}</h3>
+      <p className="text-sm text-slate-500 font-medium mb-6 max-w-sm">{desc}</p>
+      {tab === "ACTIVE" && (
+        <Link href="/solver/dashboard?tab=home" className="text-sm font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-4 py-2 rounded-lg transition-colors border border-emerald-200 shadow-sm cursor-pointer active:scale-95">
+          Browse Open Problems
+        </Link>
+      )}
+    </div>
+  );
+}
 
 const SkeletonCard = () => (
   <div className="flex flex-col md:flex-row md:items-center gap-5 p-5 bg-slate-50/50 rounded-xl border border-slate-100">
@@ -64,11 +97,11 @@ export function MyWorkspace() {
 
   const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
-  // 🚀 DYNAMIC STATUS COLORS
   const getStatusStyles = (status: string) => {
     switch (status.toUpperCase()) {
       case "ABANDONED":
       case "REJECTED":
+      case "TERMINATED":
         return "bg-rose-50 text-rose-700 border-rose-200";
       case "COMPLETED":
       case "APPROVED":
@@ -83,7 +116,6 @@ export function MyWorkspace() {
     }
   };
 
-  // 🚀 ROBUST SEEKER EXTRACTION
   const extractSeekerInfo = (item: any) => ({
     name: item.seekerName || item.seeker?.organizationName || "Industry Partner",
     url: item.seekerProfileUrl || item.seeker?.profileUrl || item.seeker?.user?.profileUrl || null,
@@ -115,6 +147,7 @@ export function MyWorkspace() {
           subtask: a.targetSubtaskTitle,
           date: activeTab === "HISTORY" ? (a.completedAt || a.updatedAt) : a.claimedAt,
           dateLabel: activeTab === "HISTORY" ? "Concluded" : "Started",
+          // 🚀 FIXED: Restored a.problemId for active workspaces
           href: activeTab === "HISTORY" ? `/solver/history/${a.id}` : `/solver/workspace/${a.problemId}`,
           badgeClass: getStatusStyles(a.status),
           btnText: activeTab === "HISTORY" ? "View Record" : "Enter Workspace",
@@ -137,17 +170,17 @@ export function MyWorkspace() {
         {error && <div className="mb-6 bg-rose-50 border border-rose-200 rounded-lg p-4 text-rose-700 text-sm font-medium">{error}</div>}
 
         <div className="flex space-x-1 bg-slate-50 p-1 rounded-xl mb-6 w-fit overflow-x-auto border border-slate-100">
-          {(["ACTIVE", "PENDING", "HISTORY"] as WorkspaceTab[]).map((tab) => (
+          {TABS.map((tab) => (
             <button
-              key={tab}
-              onClick={() => handleTabChange(tab)}
+              key={tab.id}
+              onClick={() => handleTabChange(tab.id)}
               className={`px-5 md:px-6 py-2.5 rounded-lg text-sm font-bold transition-all capitalize whitespace-nowrap cursor-pointer active:scale-[0.98] outline-none ${
-                activeTab === tab 
+                activeTab === tab.id
                   ? "bg-white text-emerald-700 shadow-sm border border-slate-200" 
                   : "text-slate-500 hover:text-slate-900 hover:bg-slate-100 border border-transparent"
               }`}
             >
-              {tab.toLowerCase()}
+              {tab.label}
             </button>
           ))}
         </div>
@@ -157,17 +190,7 @@ export function MyWorkspace() {
             {[...Array(ITEMS_PER_PAGE)].map((_, i) => <SkeletonCard key={i} />)}
           </div>
         ) : normalizedItems.length === 0 ? (
-          <div className="text-center py-20 bg-slate-50 rounded-2xl border border-dashed border-slate-200 mt-4 animate-in fade-in zoom-in-95 duration-200">
-            <div className="w-16 h-16 bg-white border border-slate-100 shadow-sm rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
-              <Inbox className="w-8 h-8" />
-            </div>
-            <h3 className="text-lg font-bold text-slate-900 mb-2">No {activeTab.toLowerCase()} records</h3>
-            <p className="text-sm text-slate-500 max-w-sm mx-auto mb-6 font-medium">
-              {activeTab === "ACTIVE" && "You don't have any active problems right now. Go find one!"}
-              {activeTab === "PENDING" && "You have no proposals currently awaiting Seeker approval."}
-              {activeTab === "HISTORY" && "You haven't completed or abandoned any problems yet."}
-            </p>
-          </div>
+          <EmptyState tab={activeTab} />
         ) : (
           <div className="animate-in fade-in duration-300">
             <p className="text-[11px] text-slate-500 mb-4 font-bold uppercase tracking-wider">
@@ -183,11 +206,7 @@ export function MyWorkspace() {
                 >
                   <div className="w-12 h-12 bg-white border border-slate-200 rounded-xl flex items-center justify-center shrink-0 shadow-sm overflow-hidden group-hover:border-emerald-500/40 transition-colors">
                     {item.seekerProfileUrl ? (
-                      <img 
-                        src={item.seekerProfileUrl} 
-                        alt={item.seekerName} 
-                        className="w-full h-full object-cover"
-                      />
+                      <img src={item.seekerProfileUrl} alt={item.seekerName} className="w-full h-full object-cover" />
                     ) : (
                       <Building2 className="w-6 h-6 text-slate-400" />
                     )}
@@ -199,7 +218,7 @@ export function MyWorkspace() {
                         {item.title || "Untitled Problem"}
                       </h4>
                       <span className={`text-[10px] px-2.5 py-0.5 rounded-md font-bold border shrink-0 uppercase tracking-wider ${item.badgeClass}`}>
-                        {item.status.replace("_", " ")}
+                        {item.status.replace(/_/g, " ")}
                       </span>
                     </div>
                     

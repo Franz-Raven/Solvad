@@ -266,11 +266,16 @@ public class SolutionAttemptService {
         Page<SolutionAttempt> attemptPage;
 
         if ("HISTORY".equalsIgnoreCase(tab)) {
-            attemptPage = attemptRepository.findBySolverAndStatusInOrderByUpdatedAtDesc(solver, List.of(SolutionAttemptStatus.COMPLETED, SolutionAttemptStatus.ABANDONED, SolutionAttemptStatus.TERMINATED), pageable);
-        } else if ("PENDING".equalsIgnoreCase(tab)) {
-            attemptPage = attemptRepository.findBySolverAndStatusOrderByUpdatedAtDesc(solver, SolutionAttemptStatus.PENDING_REVIEW, pageable);
+            // 🚀 Added SolutionAttemptStatus.REJECTED to the History tab query
+            attemptPage = attemptRepository.findBySolverAndStatusInOrderByUpdatedAtDesc(
+                    solver,
+                    List.of(SolutionAttemptStatus.COMPLETED, SolutionAttemptStatus.ABANDONED, SolutionAttemptStatus.TERMINATED, SolutionAttemptStatus.REJECTED),
+                    pageable
+            );
+        } else if ("ACTIVE".equalsIgnoreCase(tab)) {
+            attemptPage = attemptRepository.findBySolverAndStatusInOrderByUpdatedAtDesc(solver, List.of(SolutionAttemptStatus.ACTIVE, SolutionAttemptStatus.PENDING_REVIEW), pageable);
         } else {
-            attemptPage = attemptRepository.findBySolverAndStatusOrderByUpdatedAtDesc(solver, SolutionAttemptStatus.ACTIVE, pageable);
+            attemptPage = attemptRepository.findBySolverAndStatusOrderByUpdatedAtDesc(solver, SolutionAttemptStatus.PENDING_REVIEW, pageable);
         }
 
         List<SolutionAttemptSummaryResponse> summaries = attemptPage.getContent().stream().map(this::mapToSummaryResponse).collect(Collectors.toList());
@@ -523,13 +528,14 @@ public class SolutionAttemptService {
             auditService.log(attempt.getProblem().getId(), seekerUserId, seekerName, "SEEKER", AuditEventType.STATUS_CHANGED,
                     seekerName + " approved the final solution for sub-problem \"" + subtaskTitle + "\" from " + attempt.getSolver().getFirstName() + ".");
         } else {
-            attempt.setStatus(SolutionAttemptStatus.TERMINATED);
+            // 🚀 Assign true REJECTED status instead of TERMINATED
+            attempt.setStatus(SolutionAttemptStatus.REJECTED);
             attempt.setCompletedAt(null);
-            attempt.setRejectionReason(rejectionReason); // 🚀 SAVE REASON
+            attempt.setRejectionReason(rejectionReason);
 
-            String auditMsg = seekerName + " rejected the final solution for sub-problem \"" + subtaskTitle + "\" from " + attempt.getSolver().getFirstName() + ". Attempt terminated.";
+            String auditMsg = seekerName + " rejected the final solution for sub-problem \"" + subtaskTitle + "\" from " + attempt.getSolver().getFirstName() + ".";
             if (rejectionReason != null && !rejectionReason.isBlank()) {
-                auditMsg += " Reason: " + rejectionReason; // 🚀 ADD TO AUDIT LOG
+                auditMsg += " Reason: " + rejectionReason;
             }
             auditService.log(attempt.getProblem().getId(), seekerUserId, seekerName, "SEEKER", AuditEventType.STATUS_CHANGED, auditMsg);
         }

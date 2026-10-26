@@ -310,7 +310,11 @@ export function ReviewSolutionsTab({ problem }: ReviewSolutionsTabProps) {
                     </div>
                     <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Reliability</span>
-                      <span className="text-sm font-black text-emerald-600">{solverMetrics.solutionsCompleted === 0 ? "N/A" : `${Math.round(solverMetrics.completionRate)}\%`}</span> </div> <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center"> <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Turnaround</span> <span className="text-sm font-black text-slate-900">{solverMetrics.avgTurnaroundDays ? `${Math.round(solverMetrics.avgTurnaroundDays)} days` : "N/A"}</span>
+                      <span className="text-sm font-black text-emerald-600">{solverMetrics.solutionsCompleted === 0 ? "N/A" : `${Math.round(solverMetrics.completionRate)}%`}</span>
+                    </div>
+                    <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Turnaround</span>
+                      <span className="text-sm font-black text-slate-900">{solverMetrics.avgTurnaroundDays ? `${Math.round(solverMetrics.avgTurnaroundDays)} days` : "N/A"}</span>
                     </div>
                   </div>
                 )}

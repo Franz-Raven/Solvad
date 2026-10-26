@@ -67,7 +67,7 @@ export default function HistoryViewPage() {
                 attempt.status === "COMPLETED" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-rose-50 text-rose-700 border border-rose-200"
               }`}>
                 {attempt.status === "COMPLETED" ? <CheckCircle2 className="w-3.5 h-3.5" /> : <FileText className="w-3.5 h-3.5" />}
-                {attempt.status === "TERMINATED" ? "REJECTED" : attempt.status.replace("_", " ")}
+                {attempt.status.replace(/_/g, " ")}
               </span>
             </div>
             <p className="text-slate-600 font-medium flex flex-wrap items-center gap-4">
@@ -79,14 +79,9 @@ export default function HistoryViewPage() {
           </div>
 
           <div className="p-6 md:p-8">
-            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">Resolution Summary</h3>
-            <div className="bg-slate-50 rounded-xl p-5 border border-slate-200 text-slate-700 text-sm leading-relaxed whitespace-pre-wrap">
-              {attempt.summary}
-            </div>
-
-            {/* 🚀 Render Rejection Reason if it was rejected! */}
-            {attempt.status === "TERMINATED" && attempt.rejectionReason && (
-              <div className="mt-6 p-5 md:p-6 bg-rose-50 border border-rose-200 rounded-xl">
+            {/* REJECTION FEEDBACK UI */}
+            {attempt.status === "REJECTED" && attempt.rejectionReason && (
+              <div className="mb-8 p-5 md:p-6 bg-rose-50 border border-rose-200 rounded-xl">
                 <h4 className="text-xs font-bold text-rose-700 uppercase tracking-wider mb-3 flex items-center gap-2">
                   <AlertCircle className="w-4 h-4" /> Rejection Feedback
                 </h4>
@@ -96,6 +91,11 @@ export default function HistoryViewPage() {
               </div>
             )}
 
+            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">Resolution Summary</h3>
+            <div className="bg-slate-50 rounded-xl p-5 border border-slate-200 text-slate-700 text-sm leading-relaxed whitespace-pre-wrap">
+              {attempt.summary}
+            </div>
+
             {attempt.attachedFiles && attempt.attachedFiles.length > 0 && (
               <div className="mt-6 pt-6 border-t border-slate-100">
                 <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
@@ -104,10 +104,7 @@ export default function HistoryViewPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {attempt.attachedFiles.map((url, idx) => (
                     <a 
-                      key={idx} 
-                      href={url} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
+                      key={idx} href={url} target="_blank" rel="noopener noreferrer" 
                       className="flex items-center justify-between p-3.5 bg-white border border-slate-200 rounded-xl hover:border-accent hover:shadow-md active:scale-[0.98] cursor-pointer transition-all group"
                     >
                       <span className="text-sm font-bold text-slate-700 truncate group-hover:text-accent transition-colors">

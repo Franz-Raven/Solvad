@@ -7,23 +7,19 @@ import type { TreeAttemptNode } from "@/types/attempt";
 
 interface AttemptDetailModalProps {
   node: TreeAttemptNode;
-  isAlreadyClaimed: boolean;
-  isUnavailable: boolean;
+  canInteract: boolean; // 🚀 Replaced redundant flags
   onForkRequest: (attemptId: string, subtaskId: string) => void;
   onClose: () => void;
 }
 
 export function AttemptDetailModal({
   node,
-  isAlreadyClaimed,
-  isUnavailable,
+  canInteract,
   onForkRequest,
   onClose,
 }: AttemptDetailModalProps) {
   const attemptDate = new Date(node.claimedAt);
-
   const [activeSubIdx, setActiveSubIdx] = useState(0);
-  
   const [viewPanel, setViewPanel] = useState<"current" | "previous" | "compare">("current");
 
   const activeSub = node.submissions[activeSubIdx] ?? null;
@@ -68,7 +64,6 @@ export function AttemptDetailModal({
           }`}
         >
           
-          {/* ── Header ── */}
           <div className="flex items-start justify-between p-5 md:p-6 border-b border-slate-100 flex-shrink-0 bg-white z-10 transition-all duration-300">
             <div className="flex items-start gap-4 flex-1 min-w-0 pr-4">
               
@@ -93,12 +88,12 @@ export function AttemptDetailModal({
                     className={`text-[11px] font-bold px-2.5 py-0.5 rounded-md border uppercase tracking-wider ${
                       node.status === "COMPLETED" || node.status === "SOLVED_OPEN_FOR_IMPROVEMENT"
                         ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                        : node.status === "ABANDONED" || node.status === "TERMINATED"
+                        : node.status === "ABANDONED" || node.status === "TERMINATED" || node.status === "REJECTED"
                         ? "bg-rose-50 text-rose-700 border-rose-200"
                         : "bg-amber-50 text-amber-700 border-amber-200"
                     }`}
                   >
-                    {node.status.replace(/_/g, " ")}
+                    {node.status === "TERMINATED" ? "REJECTED" : node.status.replace(/_/g, " ")}
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 font-medium transition-all">
@@ -120,13 +115,14 @@ export function AttemptDetailModal({
             </div>
             
             <div className="flex items-center gap-3 flex-shrink-0">
-              {node.status === "COMPLETED" && !isAlreadyClaimed && !isUnavailable && (
+              {/* 🚀 Single source of truth logic applied here */}
+              {node.status === "COMPLETED" && canInteract && (
                 <button
                   onClick={() => {
                     onForkRequest(node.id, node.targetSubtaskId!);
                     onClose();
                   }}
-                  className="hidden md:inline-flex px-4 py-2 bg-accent hover:bg-accent/90 text-white text-sm font-bold rounded-xl transition-all shadow-sm items-center gap-2"
+                  className="hidden md:inline-flex px-4 py-2 bg-accent hover:bg-accent/90 text-white text-sm font-bold rounded-xl transition-all shadow-sm items-center gap-2 cursor-pointer active:scale-[0.98]"
                 >
                   Build Upon Solution ➔
                 </button>
@@ -140,7 +136,6 @@ export function AttemptDetailModal({
             </div>
           </div>
 
-          {/* ── Content Area ── */}
           {node.status === "ACTIVE" || node.status === "IN_PROGRESS" || node.status === "CLAIMED" ? (
             <div className="flex-1 flex flex-col items-center justify-center p-12 bg-slate-50/50">
               <div className="w-16 h-16 bg-white rounded-full border border-slate-100 shadow-sm flex items-center justify-center mb-4">
@@ -149,7 +144,7 @@ export function AttemptDetailModal({
               <h4 className="font-bold text-slate-900 text-lg mb-1">Confidential Workspace</h4>
               <p className="text-sm text-slate-500 font-medium">The solver is actively drafting a solution.</p>
             </div>
-          ) : node.status === "ABANDONED" || node.status === "TERMINATED" ? (
+          ) : node.status === "ABANDONED" || node.status === "TERMINATED" || node.status === "REJECTED" ? (
             <div className="flex-1 flex flex-col items-center justify-center p-12 bg-slate-50/50">
               <div className="w-16 h-16 bg-white rounded-full border border-slate-100 shadow-sm flex items-center justify-center mb-4">
                 <XCircle className="w-8 h-8 text-rose-400" />
@@ -166,14 +161,13 @@ export function AttemptDetailModal({
             </div>
           ) : (
             <>
-              {/* Subtask Tabs */}
               {node.submissions.length > 1 && (
                 <div className="flex gap-2 px-5 md:px-6 pt-4 pb-3 border-b border-slate-100 flex-shrink-0 flex-wrap bg-slate-50/30">
                   {node.submissions.map((sub, idx) => (
                     <button
                       key={sub.id}
                       onClick={() => setActiveSubIdx(idx)}
-                      className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                      className={`px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer ${
                         activeSubIdx === idx
                           ? "bg-slate-900 text-white shadow-sm"
                           : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100 hover:text-slate-900"
@@ -185,7 +179,6 @@ export function AttemptDetailModal({
                 </div>
               )}
 
-              {/* Detail Panel */}
               <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 p-5 md:p-6 space-y-6 bg-slate-50/30">
                 {activeSub && (
                   <>
@@ -245,14 +238,10 @@ export function AttemptDetailModal({
                           </button>
                         </div>
 
-                        {/* 🚀 FIXED LAYOUT: Headers isolated from the scrolling content area */}
                         <div className={`transition-all duration-300 items-start ${viewPanel === "compare" ? "grid grid-cols-1 md:grid-cols-2 gap-6" : ""}`}>
                           
-                          {/* PREVIOUS/LEFT PANEL */}
                           {(viewPanel === "previous" || viewPanel === "compare") && (
                             <div className={`flex flex-col bg-slate-100 border border-slate-200 rounded-2xl overflow-hidden animate-in fade-in duration-300 ${viewPanel === "compare" ? "opacity-90" : ""}`}>
-                              
-                              {/* 🚀 Header permanently fixed to top of card */}
                               <div className="p-5 md:p-6 pb-4 border-b border-slate-200/60 bg-slate-100 shrink-0">
                                 <div className="flex items-center gap-2">
                                   {viewPanel === "compare" && <span className="px-2 py-0.5 bg-slate-200 text-slate-600 text-[10px] font-bold rounded uppercase shadow-sm">Before</span>}
@@ -261,8 +250,6 @@ export function AttemptDetailModal({
                                   </p>
                                 </div>
                               </div>
-                              
-                              {/* 🚀 Only the text container scrolls */}
                               <div className={`p-5 md:p-6 pt-4 ${viewPanel === "compare" ? "max-h-[60vh] overflow-y-auto overscroll-contain" : ""}`}>
                                 <p className="text-sm text-slate-600 whitespace-pre-wrap break-words font-medium leading-relaxed">
                                   {predecessorSub.description || "No description provided."}
@@ -271,11 +258,8 @@ export function AttemptDetailModal({
                             </div>
                           )}
 
-                          {/* CURRENT/RIGHT PANEL */}
                           {(viewPanel === "current" || viewPanel === "compare") && (
                             <div className="flex flex-col bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden animate-in fade-in duration-300">
-                              
-                              {/* 🚀 Header permanently fixed to top of card */}
                               <div className="p-5 md:p-6 pb-4 border-b border-slate-100 bg-white shrink-0">
                                 <div className="flex items-center gap-2">
                                   {viewPanel === "compare" && <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold rounded uppercase shadow-sm">After</span>}
@@ -284,8 +268,6 @@ export function AttemptDetailModal({
                                   </p>
                                 </div>
                               </div>
-
-                              {/* 🚀 Only the text container scrolls */}
                               <div className={`p-5 md:p-6 pt-4 ${viewPanel === "compare" ? "max-h-[60vh] overflow-y-auto overscroll-contain" : ""}`}>
                                 <p className="text-sm text-slate-800 whitespace-pre-wrap break-words font-medium leading-relaxed">
                                   {activeSub.description || "No description provided."}
@@ -313,14 +295,14 @@ export function AttemptDetailModal({
           )}
 
           {/* ── Mobile Action Footer ── */}
-          {node.status === "COMPLETED" && !isAlreadyClaimed && !isUnavailable && (
+          {node.status === "COMPLETED" && canInteract && (
             <div className="md:hidden border-t border-slate-100 p-4 bg-white">
               <button
                 onClick={() => {
                   onForkRequest(node.id, node.targetSubtaskId!);
                   onClose();
                 }}
-                className="w-full px-4 py-3 bg-accent hover:bg-accent/90 text-white text-sm font-bold rounded-xl transition-all shadow-sm items-center justify-center gap-2 flex cursor-pointer"
+                className="w-full px-4 py-3 bg-accent hover:bg-accent/90 text-white text-sm font-bold rounded-xl transition-all shadow-sm items-center justify-center gap-2 flex cursor-pointer active:scale-[0.98]"
               >
                 Build Upon Solution ➔
               </button>

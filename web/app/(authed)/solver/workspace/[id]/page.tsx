@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, AlertCircle, Building2, ExternalLink, AlertTriangle } from "lucide-react";
+import { ArrowLeft, AlertCircle, Building2, ExternalLink, AlertTriangle, Loader2 } from "lucide-react";
 import { getProblemById } from "../../problem/[id]/api/problem";
 import { getMyAttempt, abandonClaim } from "./api/workspace";
 import { getMyActiveAttempts } from "../../dashboard/api/dashboard";
@@ -41,7 +41,7 @@ export default function SolverWorkspacePage() {
         const allAttempts = await getMyActiveAttempts();
         attemptData = allAttempts.find(a => 
           a.problemId === problemId && 
-          (a.status === "ACTIVE" || a.status === "PENDING_REVIEW" || a.status === "PENDING")
+          (a.status === "ACTIVE" || a.status === "PENDING_REVIEW" || a.status === "REJECTED")
         );
         
         if (!attemptData) {
@@ -67,7 +67,6 @@ export default function SolverWorkspacePage() {
     return () => { document.body.style.overflow = ""; };
   }, [showAbandonModal, showUnsavedModal]);
 
-  // 🚀 INTERCEPTS INTERNAL LINKS TO SHOW CUSTOM MODAL
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (!hasUnsavedChanges) return;
@@ -76,12 +75,11 @@ export default function SolverWorkspacePage() {
       const anchor = target.closest("a");
       
       if (anchor && anchor.href && anchor.target !== "_blank") {
-        if (anchor.href === window.location.href) return; // Ignore if clicking exact same URL
+        if (anchor.href === window.location.href) return; 
 
         e.preventDefault();
         e.stopPropagation();
         
-        // Trigger custom UI modal instead of window.confirm
         setPendingUrl(anchor.href);
         setShowUnsavedModal(true);
       }
@@ -106,11 +104,11 @@ export default function SolverWorkspacePage() {
 
   const handleGoBack = () => {
     if (hasUnsavedChanges) {
-      setPendingUrl(`/solver/problem/${problemId}`);
+      setPendingUrl(`/solver/dashboard?tab=workspace`);
       setShowUnsavedModal(true);
       return;
     }
-    router.push(`/solver/problem/${problemId}`);
+    router.push(`/solver/dashboard?tab=workspace`);
   };
 
   const confirmLeave = () => {
@@ -157,7 +155,7 @@ export default function SolverWorkspacePage() {
           </div>
           <h2 className="text-xl font-bold text-slate-900 mb-2">Workspace Unavailable</h2>
           <p className="text-slate-600 mb-6 text-sm font-medium">{error || "Make sure you have an active claim."}</p>
-          <Link href="/solver/dashboard" className="w-full inline-block px-6 py-3.5 bg-emerald-600 text-white rounded-full hover:bg-emerald-700 transition-colors font-bold shadow-sm active:scale-[0.98]">
+          <Link href="/solver/dashboard?tab=workspace" className="w-full inline-block px-6 py-3.5 bg-emerald-600 text-white rounded-full hover:bg-emerald-700 transition-colors font-bold shadow-sm active:scale-[0.98]">
             Return to Dashboard
           </Link>
         </div>
@@ -174,11 +172,11 @@ export default function SolverWorkspacePage() {
   
   const seekerName = attempt.seekerName || "Industry Partner";
   const seekerProfileUrl = attempt.seekerProfileUrl || null;
+  const isReadOnly = attempt.status === "PENDING_REVIEW" || attempt.status === "REJECTED";
 
   return (
     <div className="min-h-screen bg-slate-50/50 flex flex-col font-sans animate-in fade-in duration-500">
       
-      {/* ── 🚀 Abandon Modal ── */}
       {showAbandonModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-100">
@@ -193,18 +191,10 @@ export default function SolverWorkspacePage() {
             </div>
             
             <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex gap-3">
-              <button
-                onClick={() => setShowAbandonModal(false)}
-                disabled={isAbandoning}
-                className="flex-1 px-4 py-3 bg-white border border-slate-200 text-slate-700 font-bold rounded-full hover:bg-slate-50 transition-colors shadow-sm text-sm disabled:opacity-50 cursor-pointer"
-              >
+              <button onClick={() => setShowAbandonModal(false)} disabled={isAbandoning} className="flex-1 px-4 py-3 bg-white border border-slate-200 text-slate-700 font-bold rounded-full hover:bg-slate-50 transition-colors shadow-sm text-sm disabled:opacity-50 cursor-pointer">
                 Cancel
               </button>
-              <button
-                onClick={executeAbandon}
-                disabled={isAbandoning}
-                className="flex-1 px-4 py-3 text-white font-bold rounded-full transition-colors shadow-sm text-sm disabled:opacity-50 flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 cursor-pointer"
-              >
+              <button onClick={executeAbandon} disabled={isAbandoning} className="flex-1 px-4 py-3 text-white font-bold rounded-full transition-colors shadow-sm text-sm disabled:opacity-50 flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 cursor-pointer">
                 {isAbandoning && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
                 {isAbandoning ? 'Abandoning...' : 'Yes, Abandon'}
               </button>
@@ -213,7 +203,6 @@ export default function SolverWorkspacePage() {
         </div>
       )}
 
-      {/* ── 🚀 Custom Unsaved Changes Modal (Rose Theme) ── */}
       {showUnsavedModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-100">
@@ -228,16 +217,10 @@ export default function SolverWorkspacePage() {
             </div>
             
             <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex gap-3">
-              <button
-                onClick={() => { setShowUnsavedModal(false); setPendingUrl(null); }}
-                className="flex-1 px-4 py-3 bg-white border border-slate-200 text-slate-700 font-bold rounded-full hover:bg-slate-50 transition-colors shadow-sm text-sm cursor-pointer"
-              >
+              <button onClick={() => { setShowUnsavedModal(false); setPendingUrl(null); }} className="flex-1 px-4 py-3 bg-white border border-slate-200 text-slate-700 font-bold rounded-full hover:bg-slate-50 transition-colors shadow-sm text-sm cursor-pointer">
                 Keep Editing
               </button>
-              <button
-                onClick={confirmLeave}
-                className="flex-1 px-4 py-3 text-white font-bold rounded-full transition-colors shadow-sm text-sm flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 cursor-pointer"
-              >
+              <button onClick={confirmLeave} className="flex-1 px-4 py-3 text-white font-bold rounded-full transition-colors shadow-sm text-sm flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 cursor-pointer">
                 Leave Anyway
               </button>
             </div>
@@ -245,7 +228,6 @@ export default function SolverWorkspacePage() {
         </div>
       )}
 
-      {/* ── Workspace Sub-Header ── */}
       <header className="bg-white/95 backdrop-blur border-b border-slate-200 relative z-10 shadow-sm">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4 min-w-0">
@@ -259,25 +241,22 @@ export default function SolverWorkspacePage() {
           </div>
 
           <div className="flex items-center gap-4 flex-shrink-0">
-            {/* 🚀 Changed to solid red theme so the destructive action is obvious */}
-            <button
-              onClick={() => setShowAbandonModal(true)}
-              disabled={isAbandoning}
-              className="px-4 py-2 text-sm font-bold text-rose-600 bg-rose-50 border border-rose-100 hover:bg-rose-100 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
-            >
-              Abandon Project
-            </button>
+            {!isReadOnly && (
+              <button
+                onClick={() => setShowAbandonModal(true)}
+                disabled={isAbandoning}
+                className="px-4 py-2 text-sm font-bold text-rose-600 bg-rose-50 border border-rose-100 hover:bg-rose-100 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                Abandon Project
+              </button>
+            )}
           </div>
         </div>
       </header>
 
-      {/* ── Main Layout ── */}
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 py-8 flex flex-col gap-6">
-        
-        {/* Overview Card with Seeker Profile & Problem Link */}
         <div className="bg-white rounded-[2rem] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-slate-100 p-6 md:p-8 flex flex-col md:flex-row gap-8">
           
-          {/* Left Side: Subtask Info */}
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-4">
               <span className="px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wider rounded-md border border-emerald-100">
@@ -289,7 +268,6 @@ export default function SolverWorkspacePage() {
             <p className="text-slate-600 font-medium leading-relaxed">{activeSubtask.description}</p>
           </div>
 
-          {/* Right Side: Seeker Context & Navigation */}
           <div className="w-full md:w-80 bg-slate-50/50 rounded-2xl p-6 border border-slate-100 h-fit flex flex-col gap-6 shrink-0">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-full bg-white border border-slate-200 shadow-sm overflow-hidden flex items-center justify-center shrink-0">
@@ -315,10 +293,36 @@ export default function SolverWorkspacePage() {
               View Full Details <ExternalLink className="w-3.5 h-3.5" />
             </Link>
           </div>
-
         </div>
 
-        {/* Editor Form */}
+        {/* 🚀 READ-ONLY BANNERS */}
+        {attempt.status === "PENDING_REVIEW" && (
+          <div className="bg-blue-50 border-l-4 border-blue-500 p-5 mt-2 rounded-r-xl shadow-sm flex items-start gap-4 animate-in fade-in">
+            <Loader2 className="w-5 h-5 text-blue-500 animate-spin shrink-0 mt-0.5" />
+            <div>
+              <h3 className="text-sm font-bold text-blue-900">Solution Under Review</h3>
+              <p className="text-sm text-blue-700 mt-1 font-medium">
+                You have submitted this workspace to the Seeker. It is currently locked and read-only until they approve or reject it.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {attempt.status === "REJECTED" && (
+          <div className="bg-rose-50 border-l-4 border-rose-500 p-5 mt-2 rounded-r-xl shadow-sm flex items-start gap-4 animate-in fade-in">
+            <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+            <div>
+              <h3 className="text-sm font-bold text-rose-900">Solution Rejected</h3>
+              <p className="text-sm text-rose-700 mt-1 font-medium">
+                This workspace was rejected by the Seeker and is permanently locked. You can view their feedback in your History tab.
+              </p>
+              <Link href={`/solver/history/${attempt.id}`} className="inline-block mt-3 px-4 py-2 bg-rose-600 text-white text-xs font-bold rounded-lg shadow-sm hover:bg-rose-700 transition-colors">
+                View Rejection Feedback
+              </Link>
+            </div>
+          </div>
+        )}
+
         <SubtaskForm
           attemptId={attempt.id}
           subtask={activeSubtask}
@@ -328,8 +332,8 @@ export default function SolverWorkspacePage() {
           isForked={isForked}
           parentDescription={attempt.parentDescription ?? undefined}
           onDirtyStateChange={setHasUnsavedChanges} 
+          isReadOnly={isReadOnly}
         />
-
       </main>
     </div>
   );

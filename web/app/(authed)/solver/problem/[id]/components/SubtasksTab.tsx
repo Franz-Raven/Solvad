@@ -1,15 +1,16 @@
 "use client";
 
-import { ClipboardList, Lock, ArrowRight } from "lucide-react";
+import { ClipboardList, Lock, ArrowRight, Loader2 } from "lucide-react";
 import type { ProblemResponse } from "@/types/problem";
 
 interface SubtasksTabProps {
   problem: ProblemResponse;
   canPropose: boolean;
+  isPendingReview?: boolean; // 🚀 Added
   onPropose: (subtaskId: string) => void;
 }
 
-export function SubtasksTab({ problem, canPropose, onPropose }: SubtasksTabProps) {
+export function SubtasksTab({ problem, canPropose, isPendingReview, onPropose }: SubtasksTabProps) {
   return (
     <div className="bg-white rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100 p-6 md:p-8 animate-in fade-in duration-500">
       <div className="flex items-start justify-between gap-4 mb-8">
@@ -23,6 +24,11 @@ export function SubtasksTab({ problem, canPropose, onPropose }: SubtasksTabProps
           {canPropose ? (
             <p className="text-sm text-slate-500 mt-3 font-medium">
               Pick a sub-problem you want to solve and submit a proposal.
+            </p>
+          ) : isPendingReview ? (
+            <p className="text-sm text-blue-600 mt-3 font-bold flex items-center gap-1.5 bg-blue-50 border border-blue-200 px-3 py-2 rounded-lg w-fit">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Your solution is currently under review.
             </p>
           ) : (
             <p className="text-sm text-amber-600 mt-3 font-bold flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg w-fit">

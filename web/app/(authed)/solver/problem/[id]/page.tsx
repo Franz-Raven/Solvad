@@ -10,11 +10,12 @@ import {
   getMyAttempt, 
   getMyProposalStatus 
 } from "./api/problem";
+// 🚀 ADDED: Import dashboard API for fallback fetching
+import { getMyActiveAttempts } from "../../dashboard/api/dashboard"; 
 
 import type { ProblemResponse } from "@/types/problem";
 import type { SolutionAttemptResponse } from "@/types/attempt";
 
-// 🚀 PROPER TYPESCRIPT DYNAMIC IMPORTS
 const BlueprintTab = dynamic(() => import("./components/BlueprintTab").then((mod) => mod.BlueprintTab), {
   loading: () => (
     <div className="bg-white rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100 p-6 md:p-8 animate-pulse">
@@ -111,14 +112,11 @@ export default function SolverProblemDetailPage() {
       setLoading(true);
       setError(null);
 
-      // 🚀 FIX: Removed the massive getAllAttempts() call
       const [
         problemResult,
-        myAttemptResult,
         proposalStatusResult
       ] = await Promise.allSettled([
         getProblemById(problemId),
-        getMyAttempt(problemId),
         getMyProposalStatus(problemId)
       ]);
 
@@ -128,8 +126,19 @@ export default function SolverProblemDetailPage() {
         throw new Error("Failed to load problem details.");
       }
 
-      setMyAttempt(myAttemptResult.status === "fulfilled" ? myAttemptResult.value : null);
       setMyProposalStatus(proposalStatusResult.status === "fulfilled" ? proposalStatusResult.value.status : null);
+
+      // 🚀 ROBUST ATTEMPT FETCHING: Guarantees we find the PENDING_REVIEW attempt
+      let attemptData = null;
+      try {
+        attemptData = await getMyAttempt(problemId);
+      } catch (e) {
+        try {
+          const allAttempts = await getMyActiveAttempts();
+          attemptData = allAttempts.find(a => a.problemId === problemId) || null;
+        } catch (err) {}
+      }
+      setMyAttempt(attemptData as SolutionAttemptResponse | null);
 
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load problem");
@@ -199,25 +208,29 @@ export default function SolverProblemDetailPage() {
     );
   }
 
+  // 🚀 STATUS CHECKS
   const isAlreadyClaimed = myAttempt?.status === "ACTIVE";
+  const isPendingReview = myAttempt?.status === "PENDING_REVIEW";
   const isCompleted = myAttempt?.status === "COMPLETED";
-  // 🚀 FIX: Simplified capacity logic relying on the robust backend validation
   const canClaimFresh = ["OPEN", "IN_PROGRESS", "CLAIMED"].includes(problem.status);
 
   const isUnavailable =
     !isAlreadyClaimed &&
+    !isPendingReview &&
     !canClaimFresh &&
     problem.status !== "SOLVED_OPEN_FOR_IMPROVEMENT";
 
+  // 🚀 BLOCK PROPOSALS IF SOLUTION IS PENDING REVIEW
   const canPropose =
     !isAlreadyClaimed &&
+    !isPendingReview &&
     !isUnavailable &&
     myProposalStatus !== "PENDING";
   
   const tabs: { id: TabType; label: string }[] = [
     { id: "blueprint", label: "Problem Blueprint" },
     { id: "subtasks", label: "Sub-problems" },
-    { id: "tree", label: "Solution Tree" }, // 🚀 FIX: Removed the static array length tracker
+    { id: "tree", label: "Solution Tree" },
     { id: "history", label: "History" },
   ];
 
@@ -226,6 +239,14 @@ export default function SolverProblemDetailPage() {
       return (
         <Link href={`/solver/workspace/${problemId}`} className="px-6 py-2.5 bg-accent hover:bg-accent/90 text-white font-bold rounded-xl shadow-md transition-all w-full md:w-auto inline-flex items-center justify-center cursor-pointer">
             Continue Working →
+        </Link>
+      );
+    }
+    // 🚀 SHOW SOLUTION UNDER REVIEW BADGE/LINK
+    if (isPendingReview) {
+      return (
+        <Link href={`/solver/workspace/${problemId}`} className="px-6 py-2.5 bg-blue-50 text-blue-700 border border-blue-200 font-bold rounded-xl shadow-sm transition-all w-full md:w-auto inline-flex items-center justify-center cursor-pointer">
+          <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse flex-shrink-0 mr-2" /> Solution Under Review
         </Link>
       );
     }
@@ -342,7 +363,19 @@ export default function SolverProblemDetailPage() {
           </div>
         )}
 
-        {!isAlreadyClaimed && myProposalStatus === "PENDING" && (
+        {isPendingReview && (
+          <div className="bg-white border-l-4 border-blue-500 shadow-sm rounded-r-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in duration-300">
+            <div className="flex items-center gap-3">
+              <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-pulse" />
+              <p className="text-sm font-bold text-slate-800">Your solution is currently under review by the Seeker.</p>
+            </div>
+            <Link href={`/solver/workspace/${problemId}`} className="text-sm font-bold text-blue-700 hover:underline transition-all cursor-pointer">
+              View read-only workspace →
+            </Link>
+          </div>
+        )}
+
+        {!isAlreadyClaimed && !isPendingReview && myProposalStatus === "PENDING" && (
           <div className="bg-white border-l-4 border-amber-500 shadow-sm rounded-r-xl p-5 flex items-center gap-3 animate-in fade-in duration-300">
             <div className="w-2.5 h-2.5 bg-amber-500 rounded-full animate-pulse flex-shrink-0" />
             <p className="text-sm font-bold text-slate-800">Your proposal has been submitted and is awaiting review.</p>
@@ -356,14 +389,16 @@ export default function SolverProblemDetailPage() {
             <SubtasksTab
               problem={problem}
               canPropose={canPropose}
+              isPendingReview={isPendingReview} // 🚀 Passed down
               onPropose={(subtaskId: string) => openProposalModal(subtaskId)}
             />
           )}
 
           {activeTab === "tree" && (
-              <SolutionTreeTab
+            <SolutionTreeTab
               problemId={problem.id}
               isAlreadyClaimed={isAlreadyClaimed}
+              isPendingReview={isPendingReview} // 🚀 Passed down
               isCompleted={isCompleted}
               isUnavailable={isUnavailable}
               myProposalStatus={myProposalStatus}
