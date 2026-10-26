@@ -22,7 +22,12 @@ import com.solvad.backend.problem.solution_attempt.SolutionAttemptRepository;
 import com.solvad.backend.problem.attachment.ProblemAttachmentRepository;
 import com.solvad.backend.problem.solution_attempt.SolutionAttempt;
 import com.solvad.backend.problem.solution_attempt.SolutionAttemptStatus;
+import com.solvad.backend.profile.solver.SolverProfile;
+import com.solvad.backend.profile.solver.SolverProfileRepository;
 import com.solvad.backend.storage.CloudinaryService;
+import com.solvad.backend.user.Role;
+import com.solvad.backend.user.User;
+import com.solvad.backend.user.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -73,6 +78,14 @@ public class ProblemService {
 
     @Autowired
     private CloudinaryService cloudinaryService;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private SolverProfileRepository solverProfileRepository;
+
+
 
     private ProblemResponse mapToResponse(Problem problem, List<ProblemSubtask> subtasks, SeekerProfile seeker) {
         List<SubtaskResponse> subtaskResponses = subtasks.stream()
@@ -246,12 +259,36 @@ public class ProblemService {
                 .collect(Collectors.toList());
     }
 
-    public ProblemResponse getProblemById(UUID problemId) {
+    @Transactional(readOnly = true)
+    public ProblemResponse getProblemById(UUID problemId, UUID currentUserId) {
         Problem problem = problemRepository.findById(problemId)
                 .orElseThrow(() -> new RuntimeException("Problem not found"));
 
-        List<ProblemSubtask> subtasks = subtaskRepository.findByProblem(problem);
+        // 🚀 STRICT FRONT-DOOR VALIDATION
+        // If the problem is finished (CLOSED or COMPLETED), restrict access
+        // Note: We DO NOT restrict OPEN problems, otherwise solvers could never view them to claim them!
+        if (problem.getStatus() == ProblemStatus.CLOSED || problem.getStatus() == ProblemStatus.COMPLETED) {
 
+            User currentUser = userRepository.findById(currentUserId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            // Only apply this restriction to Solvers (Seekers can always view their own problems)
+            if (currentUser.getRole() == Role.SOLVER) {
+                SolverProfile solver = solverProfileRepository.findByUserId(currentUserId)
+                        .orElseThrow(() -> new RuntimeException("Solver not found"));
+
+                // Check if this solver has any attempts connected to this specific problem
+                boolean hasAttempt = attemptRepository.findBySolver(solver).stream()
+                        .anyMatch(attempt -> attempt.getProblem().getId().equals(problemId));
+
+                if (!hasAttempt) {
+                    // Throwing this exception triggers the 404 on the frontend, rendering the "Problem not found" UI
+                    throw new RuntimeException("Problem not found");
+                }
+            }
+        }
+
+        List<ProblemSubtask> subtasks = subtaskRepository.findByProblem(problem);
         return mapToResponse(problem, subtasks, problem.getSeeker());
     }
 

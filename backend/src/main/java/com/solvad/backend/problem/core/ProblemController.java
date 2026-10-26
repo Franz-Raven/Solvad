@@ -125,12 +125,20 @@ public class ProblemController {
 
     @GetMapping("/{problemId}")
     @PreAuthorize("hasAnyRole('SEEKER', 'SOLVER', 'ADMIN')")
-    public ResponseEntity<?> getProblemById(@PathVariable UUID problemId) {
+    public ResponseEntity<?> getProblemById(
+            @PathVariable("problemId") UUID problemId, // <-- Explicitly mapped to prevent 403/500 errors
+            @RequestHeader("Authorization") String authHeader) {
         try {
-            ProblemResponse response = problemService.getProblemById(problemId);
+            // Extract the user ID from the token
+            String token = authHeader.substring(7);
+            UUID currentUserId = jwtService.extractUserId(token);
+
+            // Pass it to the service
+            ProblemResponse response = problemService.getProblemById(problemId, currentUserId);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            // Mask the problem by returning a 404 Not Found
+            return ResponseEntity.status(404).body(e.getMessage());
         }
     }
 
