@@ -9,7 +9,7 @@ interface Step2Props {
   data: { firstName: string; lastName: string; university: string; course: string; skills: string };
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
   onSubmit: (e: React.FormEvent) => void;
-  onBack: () => void;
+  onBack?: () => void;
   isLoading: boolean;
   onUniversityChange: (value: string) => void;
   onCourseChange: (value: string) => void;
@@ -85,12 +85,15 @@ export default function Step2({ data, onChange, onSubmit, onBack, isLoading, onU
       </div>
 
       <div className="flex gap-3 pt-4">
-        <button
-          type="button" onClick={onBack}
-          className="px-6 py-4 bg-white border border-slate-200 text-slate-700 font-bold rounded-full transition-all hover:bg-slate-50 active:scale-[0.98] cursor-pointer shadow-sm"
-        >
-          Back
-        </button>
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="cursor-pointer rounded-full border border-slate-200 bg-white px-6 py-4 font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50 active:scale-[0.98]"
+          >
+            Back
+          </button>
+        )}
         <button
           type="submit" disabled={isLoading || !data.firstName || !data.lastName || !data.university || !data.course}
           className="flex-1 px-6 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-full transition-all shadow-[0_4px_14px_0_rgba(16,185,129,0.39)] hover:shadow-[0_6px_20px_rgba(16,185,129,0.23)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center cursor-pointer"

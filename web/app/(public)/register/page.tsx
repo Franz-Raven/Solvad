@@ -1,14 +1,81 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Target, Puzzle, GitBranch, Network, Sparkles, Search, ArrowLeft } from "lucide-react";
 import Step1 from "@/app/(public)/register/components/step1";
 import Step2 from "@/app/(public)/register/components/step2";
 import Step3 from "@/app/(public)/register/components/step3";
-import { registerSolver, verifyEmailCode, resendVerificationCode } from "@/app/(public)/register/api/auth";
+import {
+  completeGoogleRegistration,
+  completeSolverProfile,
+  resendVerificationCode,
+  startSolverRegistration,
+  verifyEmailCode,
+} from "@/app/(public)/register/api/auth";
+import { GoogleSignInButton } from "@/components/google-button";
+import { authenticateWithGoogle } from "@/lib/auth-api";
 import { setAuthCookies, setAuthStorage, getDashboardPath } from "@/lib/auth-utils";
+import type { AuthResponse, SolverProfilePayload } from "@/types/auth";
+
+const GOOGLE_PROFILE_HANDOFF_KEY = "googleProfileSetup";
+const PENDING_SOLVER_PROFILE_KEY = "pendingSolverProfile";
+
+type RegistrationHandoff =
+  | {
+      kind: "google";
+      credential: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+    }
+  | { kind: "local"; authResponse: AuthResponse };
+
+function getRegistrationHandoffSnapshot(): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const googleHandoff = window.sessionStorage.getItem(GOOGLE_PROFILE_HANDOFF_KEY);
+  if (googleHandoff) {
+    return `google:${googleHandoff}`;
+  }
+
+  const localHandoff = window.sessionStorage.getItem(PENDING_SOLVER_PROFILE_KEY);
+  return localHandoff ? `local:${localHandoff}` : null;
+}
+
+function subscribeToRegistrationHandoff(onChange: () => void) {
+  window.addEventListener("storage", onChange);
+  return () => window.removeEventListener("storage", onChange);
+}
+
+function parseRegistrationHandoff(snapshot: string | null): RegistrationHandoff | null {
+  if (!snapshot) {
+    return null;
+  }
+
+  try {
+    if (snapshot.startsWith("google:")) {
+      const value = JSON.parse(snapshot.slice("google:".length)) as Omit<
+        Extract<RegistrationHandoff, { kind: "google" }>,
+        "kind"
+      >;
+      return value.credential && value.email ? { kind: "google", ...value } : null;
+    }
+
+    const authResponse = JSON.parse(snapshot.slice("local:".length)) as AuthResponse;
+    return authResponse.token &&
+      authResponse.userId &&
+      authResponse.email &&
+      authResponse.role === "SOLVER"
+      ? { kind: "local", authResponse }
+      : null;
+  } catch {
+    return null;
+  }
+}
 
 const carouselSlides = [
   {
@@ -47,13 +114,30 @@ export default function RegisterPage() {
   
   const [isResending, setIsResending] = useState(false);
   const [resendMessage, setResendMessage] = useState<string | null>(null);
-  const [authResponse, setAuthResponse] = useState<any>(null);
+  const [authResponse, setAuthResponse] = useState<AuthResponse | null>(null);
+  const [googleCredential, setGoogleCredential] = useState<string | null>(null);
 
   const [step1Data, setStep1Data] = useState({ email: "", password: "", confirmPassword: "" });
   const [step2Data, setStep2Data] = useState({ firstName: "", lastName: "", university: "", course: "", skills: "" });
   const [step3Data, setStep3Data] = useState({ token: "" });
 
   const [currentSlide, setCurrentSlide] = useState(0);
+  const handoffSnapshot = useSyncExternalStore(
+    subscribeToRegistrationHandoff,
+    getRegistrationHandoffSnapshot,
+    () => null,
+  );
+  const handoff = parseRegistrationHandoff(handoffSnapshot);
+  const activeStep = handoff ? 3 : currentStep;
+  const activeGoogleCredential =
+    handoff?.kind === "google" ? handoff.credential : googleCredential;
+  const activeAuthResponse =
+    handoff?.kind === "local" ? handoff.authResponse : authResponse;
+  const profileData = {
+    ...step2Data,
+    firstName: step2Data.firstName || (handoff?.kind === "google" ? handoff.firstName : ""),
+    lastName: step2Data.lastName || (handoff?.kind === "google" ? handoff.lastName : ""),
+  };
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -79,30 +163,33 @@ export default function RegisterPage() {
       setError("Passwords do not match");
       return;
     }
+    setIsLoading(true);
     setError(null);
-    setCurrentStep(2);
+    try {
+      await startSolverRegistration({
+        email: step1Data.email,
+        password: step1Data.password,
+      });
+      setCurrentStep(2);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Registration failed. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleStep2Submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
-    
-    try {
-      const response = await registerSolver({
-        email: step1Data.email,
-        password: step1Data.password,
-        firstName: step2Data.firstName,
-        lastName: step2Data.lastName,
-        institution: step2Data.university,
-        degreeProgram: step2Data.course,
-        skills: step2Data.skills.trim() || undefined,
-      });
+    setResendMessage(null);
 
+    try {
+      const response = await verifyEmailCode(step3Data.token);
       setAuthResponse(response);
       setCurrentStep(3);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Registration failed. Please try again.");
+      setError(err instanceof Error ? err.message : "Invalid verification code.");
     } finally {
       setIsLoading(false);
     }
@@ -112,15 +199,64 @@ export default function RegisterPage() {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
-    setResendMessage(null);
+
+    const profile: SolverProfilePayload = {
+        firstName: profileData.firstName,
+        lastName: profileData.lastName,
+        institution: profileData.university,
+        degreeProgram: profileData.course,
+        skills: profileData.skills.trim() || undefined,
+    };
 
     try {
-      await verifyEmailCode(step3Data.token);
-      setAuthStorage(authResponse);
-      setAuthCookies(authResponse.token, authResponse.role);
-      router.push(getDashboardPath(authResponse.role));
+      const response = activeGoogleCredential
+        ? await completeGoogleRegistration(activeGoogleCredential, profile)
+        : activeAuthResponse
+          ? await completeSolverProfile(activeAuthResponse.token, profile)
+          : null;
+
+      if (!response) {
+        throw new Error("Your registration session expired. Please start again.");
+      }
+
+      setAuthStorage(response);
+      setAuthCookies(response.token, response.role);
+      sessionStorage.removeItem(GOOGLE_PROFILE_HANDOFF_KEY);
+      sessionStorage.removeItem(PENDING_SOLVER_PROFILE_KEY);
+      router.push(getDashboardPath(response.role));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Invalid verification code.");
+      setError(err instanceof Error ? err.message : "Profile setup failed. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleCredential = async (credential: string) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const result = await authenticateWithGoogle(credential);
+      if (result.profileComplete) {
+        if (!result.authResponse) {
+          throw new Error("Google sign-in returned no authentication session.");
+        }
+        setAuthStorage(result.authResponse);
+        setAuthCookies(result.authResponse.token, result.authResponse.role);
+        router.push(getDashboardPath(result.authResponse.role));
+        return;
+      }
+
+      setGoogleCredential(credential);
+      setStep1Data((current) => ({ ...current, email: result.email }));
+      setStep2Data((current) => ({
+        ...current,
+        firstName: result.firstName,
+        lastName: result.lastName,
+      }));
+      setCurrentStep(3);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Google sign-in failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -133,7 +269,7 @@ export default function RegisterPage() {
     try {
       await resendVerificationCode(step1Data.email);
       setResendMessage("Verification code sent to your email.");
-    } catch (err) {
+    } catch {
       setResendMessage("Failed to resend code. Please try again.");
     } finally {
       setIsResending(false);
@@ -144,15 +280,15 @@ export default function RegisterPage() {
   const SlideIcon2 = carouselSlides[currentSlide].icon2;
 
   const getStepTitle = () => {
-    if (currentStep === 1) return "Create Account";
-    if (currentStep === 2) return "Complete Profile";
-    return "Verify Email";
+    if (activeStep === 1) return "Create Account";
+    if (activeStep === 2) return "Verify Email";
+    return "Complete Profile";
   };
 
   const getStepSubtitle = () => {
-    if (currentStep === 1) return "Step 1 of 3: Setup your credentials";
-    if (currentStep === 2) return "Step 2 of 3: Tell us about your background";
-    return "Step 3 of 3: Verify your email address";
+    if (activeStep === 1) return "Step 1 of 3: Setup your credentials";
+    if (activeStep === 2) return "Step 2 of 3: Verify your email address";
+    return "Step 3 of 3: Tell us about your background";
   };
 
   return (
@@ -216,7 +352,7 @@ export default function RegisterPage() {
               
               <Link 
                 href="/" 
-                className={`inline-flex items-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider hover:text-emerald-600 transition-colors mb-4 group self-start ${currentStep === 3 ? "pointer-events-none opacity-0" : ""}`}
+                className={`inline-flex items-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider hover:text-emerald-600 transition-colors mb-4 group self-start ${activeStep === 3 ? "pointer-events-none opacity-0" : ""}`}
               >
                 <ArrowLeft className="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" /> Back to Home
               </Link>
@@ -230,9 +366,9 @@ export default function RegisterPage() {
                 </p>
                 
                 <div className="flex items-center gap-2 mt-3">
-                  <div className={`h-1 flex-1 rounded-full transition-all duration-300 ${currentStep >= 1 ? 'bg-emerald-500' : 'bg-slate-100'}`} />
-                  <div className={`h-1 flex-1 rounded-full transition-all duration-300 ${currentStep >= 2 ? 'bg-emerald-500' : 'bg-slate-100'}`} />
-                  <div className={`h-1 flex-1 rounded-full transition-all duration-300 ${currentStep >= 3 ? 'bg-emerald-500' : 'bg-slate-100'}`} />
+                  <div className={`h-1 flex-1 rounded-full transition-all duration-300 ${activeStep >= 1 ? 'bg-emerald-500' : 'bg-slate-100'}`} />
+                  <div className={`h-1 flex-1 rounded-full transition-all duration-300 ${activeStep >= 2 ? 'bg-emerald-500' : 'bg-slate-100'}`} />
+                  <div className={`h-1 flex-1 rounded-full transition-all duration-300 ${activeStep >= 3 ? 'bg-emerald-500' : 'bg-slate-100'}`} />
                 </div>
               </div>
 
@@ -242,29 +378,60 @@ export default function RegisterPage() {
                 </div>
               )}
               
-              <div key={currentStep} className={`flex-1 animate-in fade-in duration-300 slide-in-from-right-8`}>
-                {currentStep === 1 && (
-                  <Step1
-                    data={step1Data} onChange={handleStep1Change} onSubmit={handleStep1Submit} isLoading={isLoading}
-                    showPassword={showPassword} setShowPassword={setShowPassword}
-                    showConfirmPassword={showConfirmPassword} setShowConfirmPassword={setShowConfirmPassword}            
-                  />
+              <div key={activeStep} className="flex-1 animate-in fade-in duration-300 slide-in-from-right-8">
+                {activeStep === 1 && (
+                  <>
+                    <Step1
+                      data={step1Data}
+                      onChange={handleStep1Change}
+                      onSubmit={handleStep1Submit}
+                      isLoading={isLoading}
+                      showPassword={showPassword}
+                      setShowPassword={setShowPassword}
+                      showConfirmPassword={showConfirmPassword}
+                      setShowConfirmPassword={setShowConfirmPassword}
+                    />
+                    <div className="my-5 flex items-center gap-3">
+                      <div className="h-px flex-1 bg-slate-100" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        Or sign up with
+                      </span>
+                      <div className="h-px flex-1 bg-slate-100" />
+                    </div>
+                    <GoogleSignInButton
+                      onCredential={handleGoogleCredential}
+                      text="signup_with"
+                    />
+                  </>
                 )}
-                {currentStep === 2 && (
-                  <Step2
-                    data={step2Data} onChange={handleStep2Change} onSubmit={handleStep2Submit} onBack={() => setCurrentStep(1)}
-                    isLoading={isLoading} onUniversityChange={handleUniversityChange} onCourseChange={handleCourseChange}
-                  />
-                )}
-                {currentStep === 3 && (
+                {activeStep === 2 && (
                   <Step3
-                    email={step1Data.email} token={step3Data.token} onChange={handleStep3Change} onSubmit={handleStep3Submit}
-                    onResend={handleResendCode} isLoading={isLoading} isResending={isResending} resendMessage={resendMessage}
+                    email={step1Data.email}
+                    token={step3Data.token}
+                    onChange={handleStep3Change}
+                    onSubmit={handleStep2Submit}
+                    onResend={handleResendCode}
+                    isLoading={isLoading}
+                    isResending={isResending}
+                    resendMessage={resendMessage}
+                    isVerified={activeAuthResponse !== null}
+                    onContinue={() => setCurrentStep(3)}
+                  />
+                )}
+                {activeStep === 3 && (
+                  <Step2
+                    data={profileData}
+                    onChange={handleStep2Change}
+                    onSubmit={handleStep3Submit}
+                    onBack={activeAuthResponse ? () => setCurrentStep(2) : undefined}
+                    isLoading={isLoading}
+                    onUniversityChange={handleUniversityChange}
+                    onCourseChange={handleCourseChange}
                   />
                 )}
               </div>
 
-              {currentStep !== 3 && (
+              {activeStep !== 3 && (
                 <p className="text-center text-xs font-medium text-slate-500 mt-5">
                   Already have an account?{" "}
                   <Link

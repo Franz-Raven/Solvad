@@ -10,6 +10,7 @@ public class AuthResponse {
     private String email;
     private Role role;
     private String profileUrl;
+    private boolean profileComplete = true;
 
     public AuthResponse() {
     }
@@ -67,5 +68,13 @@ public class AuthResponse {
 
     public void setProfileUrl(String profileUrl) {
         this.profileUrl = profileUrl;
+    }
+
+    public boolean isProfileComplete() {
+        return profileComplete;
+    }
+
+    public void setProfileComplete(boolean profileComplete) {
+        this.profileComplete = profileComplete;
     }
 }

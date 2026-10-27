@@ -34,7 +34,13 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
                         // 🚀 FIX: Add /api/health to the public endpoints
-                        .requestMatchers("/api/auth/login", "/api/auth/register/solver", "/api/health").permitAll()
+                        .requestMatchers(
+                                "/api/auth/login",
+                                "/api/auth/register/start",
+                                "/api/auth/google",
+                                "/api/auth/google/complete",
+                                "/api/health")
+                        .permitAll()
                         .requestMatchers("/api/auth/verify", "/api/auth/resend-verification").permitAll()
                         .requestMatchers("/api/auth/register/seeker").hasAuthority("ADMIN")
                         .anyRequest().authenticated()

@@ -6,6 +6,7 @@ export interface AuthResponse {
   email: string;
   role: UserRole;
   profileUrl?: string;
+  profileComplete?: boolean;
 }
 
 export interface User {
@@ -33,6 +34,22 @@ export interface SolverRegisterPayload extends BaseRegisterPayload {
   institution: string;
   degreeProgram: string;
   skills?: string;
+}
+
+export interface SolverProfilePayload {
+  firstName: string;
+  lastName: string;
+  institution: string;
+  degreeProgram: string;
+  skills?: string;
+}
+
+export interface GoogleAuthResult {
+  profileComplete: boolean;
+  email: string;
+  firstName: string;
+  lastName: string;
+  authResponse: AuthResponse | null;
 }
 
 // Seeker-specific registration

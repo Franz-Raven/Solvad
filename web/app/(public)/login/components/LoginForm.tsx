@@ -22,7 +22,16 @@ export function LoginForm() {
 
     try {
       const response = await loginUser({ email, password });
-      
+
+      if (!response.profileComplete) {
+        if (response.role !== "SOLVER") {
+          throw new Error("Please contact support to finish setting up this account.");
+        }
+        sessionStorage.setItem("pendingSolverProfile", JSON.stringify(response));
+        router.push("/register");
+        return;
+      }
+
       setAuthStorage(response);
       setAuthCookies(response.token, response.role);
 

@@ -20,6 +20,14 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Google sign-in configuration
+
+Set `NEXT_PUBLIC_GOOGLE_CLIENT_ID` to the web OAuth client ID configured in
+Google Cloud Console. Add the local and production web origins to that
+credential's authorized JavaScript origins. The backend must use the same
+client ID as `GOOGLE_CLIENT_ID` and verify ID tokens before creating or signing
+in users.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

@@ -11,16 +11,44 @@ interface Step3Props {
   isLoading: boolean;
   isResending: boolean;
   resendMessage: string | null;
+  isVerified: boolean;
+  onContinue: () => void;
 }
 
 export default function Step3({
-  email, token, onChange, onSubmit, onResend, isLoading, isResending, resendMessage
+  email,
+  token,
+  onChange,
+  onSubmit,
+  onResend,
+  isLoading,
+  isResending,
+  resendMessage,
+  isVerified,
+  onContinue,
 }: Step3Props) {
+  if (isVerified) {
+    return (
+      <div className="space-y-5 text-center">
+        <p className="text-sm font-medium text-emerald-700">
+          Your email is verified. Continue to complete your profile.
+        </p>
+        <button
+          type="button"
+          onClick={onContinue}
+          className="w-full rounded-full bg-emerald-600 px-6 py-4 font-bold text-white transition-all hover:bg-emerald-700"
+        >
+          Continue to Profile
+        </button>
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={onSubmit} className="space-y-5">
       <div className="text-center mb-6">
         <p className="text-[13px] font-medium text-slate-500">
-          We've sent a 6-digit verification code to
+          We&apos;ve sent a 6-digit verification code to
         </p>
         <p className="text-[14px] font-bold text-slate-800 mt-1">{email}</p>
       </div>
@@ -57,7 +85,7 @@ export default function Step3({
 
       <div className="text-center mt-5">
         <p className="text-[11px] font-medium text-slate-400">
-          Didn't receive a code?{" "}
+          Didn&apos;t receive a code?{" "}
           <button
             type="button"
             onClick={onResend}
