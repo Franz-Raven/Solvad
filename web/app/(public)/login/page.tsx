@@ -1,10 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Target, Puzzle, GitBranch, Network, Sparkles, Search, ArrowLeft } from "lucide-react";
 import { LoginForm } from "./components/LoginForm";
 import { SocialLogin } from "./components/SocialLogin";
+import { authenticateWithGoogle } from "@/lib/auth-api";
+import { setAuthCookies, setAuthStorage, getDashboardPath } from "@/lib/auth-utils";
+
+const GOOGLE_PROFILE_HANDOFF_KEY = "googleProfileSetup";
 
 const carouselSlides = [
   {
@@ -34,7 +39,10 @@ const carouselSlides = [
 ];
 
 export default function LoginPage() {
+  const router = useRouter();
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [googleError, setGoogleError] = useState<string | null>(null);
 
   // Auto-advance carousel
   useEffect(() => {
@@ -46,6 +54,42 @@ export default function LoginPage() {
 
   const handleNextSlide = () => {
     setCurrentSlide((prev) => (prev + 1) % carouselSlides.length);
+  };
+
+  const handleGoogleCredential = async (credential: string) => {
+    setIsGoogleLoading(true);
+    setGoogleError(null);
+
+    try {
+      const result = await authenticateWithGoogle(credential);
+
+      if (result.profileComplete) {
+        if (!result.authResponse) {
+          throw new Error("Google sign-in returned no authentication session.");
+        }
+        setAuthStorage(result.authResponse);
+        setAuthCookies(result.authResponse.token, result.authResponse.role);
+        router.push(getDashboardPath(result.authResponse.role));
+        return;
+      }
+
+      sessionStorage.setItem(
+        GOOGLE_PROFILE_HANDOFF_KEY,
+        JSON.stringify({
+          credential,
+          email: result.email,
+          firstName: result.firstName,
+          lastName: result.lastName,
+        }),
+      );
+      router.push("/register");
+    } catch (err) {
+      setGoogleError(
+        err instanceof Error ? err.message : "Google sign-in failed. Please try again.",
+      );
+    } finally {
+      setIsGoogleLoading(false);
+    }
   };
 
   const SlideIcon1 = carouselSlides[currentSlide].icon1;
@@ -132,7 +176,11 @@ export default function LoginPage() {
               </div>
 
               <LoginForm />
-              <SocialLogin />
+              <SocialLogin
+                onCredential={handleGoogleCredential}
+                isLoading={isGoogleLoading}
+                error={googleError}
+              />
 
               <p className="text-center text-xs font-medium text-slate-500 mt-6">
                 New to Solvad?{" "}
