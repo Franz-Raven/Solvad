@@ -199,6 +199,7 @@ export default function RegisterPage() {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+    let isNavigating = false;
 
     const profile: SolverProfilePayload = {
         firstName: profileData.firstName,
@@ -221,13 +222,17 @@ export default function RegisterPage() {
 
       setAuthStorage(response);
       setAuthCookies(response.token, response.role);
+      setCurrentStep(3);
+      isNavigating = true;
       sessionStorage.removeItem(GOOGLE_PROFILE_HANDOFF_KEY);
       sessionStorage.removeItem(PENDING_SOLVER_PROFILE_KEY);
       router.push(getDashboardPath(response.role));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Profile setup failed. Please try again.");
     } finally {
-      setIsLoading(false);
+      if (!isNavigating) {
+        setIsLoading(false);
+      }
     }
   };
 
