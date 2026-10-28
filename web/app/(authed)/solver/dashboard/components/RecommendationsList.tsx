@@ -10,6 +10,16 @@ interface RecommendationsListProps {
 }
 
 export function RecommendationsList({ isLoading, recommendations }: RecommendationsListProps) {
+  const top = recommendations.slice(0, 3);
+  const scores = top.map((p) => (p.matchScore != null ? p.matchScore : 0));
+  const sum = scores.reduce((a, b) => a + b, 0);
+  const raw = sum > 0 ? scores.map((s) => (s / sum) * 100) : top.map(() => 100 / (top.length || 1));
+  const floors = raw.map((v) => Math.floor(v));
+  let remainder = 100 - floors.reduce((a, b) => a + b, 0);
+  const order = raw.map((v, i) => ({ i, frac: v - floors[i] })).sort((a, b) => b.frac - a.frac);
+  const percents = [...floors];
+  for (let k = 0; k < remainder && k < order.length; k++) percents[order[k].i] += 1;
+
   return (
     <div className="bg-white rounded-2xl shadow-xl border border-secondary/30 p-8 mb-8">
       <div className="flex items-center justify-between mb-6">
@@ -38,7 +48,7 @@ export function RecommendationsList({ isLoading, recommendations }: Recommendati
         </div>
       ) : recommendations.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {recommendations.slice(0, 3).map((problem, rank) => (
+          {top.map((problem, rank) => (
             <Link
               key={problem.id}
               href={`/solver/problem/${problem.id}`}
@@ -54,7 +64,7 @@ export function RecommendationsList({ isLoading, recommendations }: Recommendati
                 </h4>
                 {problem.matchScore != null && (
                   <span className="text-xs font-bold text-secondary whitespace-nowrap bg-white px-2 py-0.5 rounded-md border border-secondary/20 shadow-sm">
-                    {Math.round(problem.matchScore * 100)}% match
+                    {percents[rank]}% match
                   </span>
                 )}
               </div>
