@@ -8,10 +8,13 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class MeritService {
 
     private final MeritRepository meritRepository;
+
+    public MeritService(MeritRepository meritRepository) {
+        this.meritRepository = meritRepository;
+    }
 
     public Map<UUID, SolverMeritDTO> getMetricsForSolvers(Set<UUID> solverIds) {
         if (solverIds == null || solverIds.isEmpty()) {
