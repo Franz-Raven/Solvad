@@ -33,6 +33,10 @@ import com.solvad.backend.profile.solver.SolverProfile;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import com.solvad.backend.notification.ProposalStatusChangedEvent;
+import com.solvad.backend.notification.ProposalSubmittedEvent;
+import org.springframework.context.ApplicationEventPublisher;
+
 
 @Service
 public class ClaimRequestService {
@@ -63,6 +67,9 @@ public class ClaimRequestService {
 
     @Autowired
     private CloudinaryService cloudinaryService;
+
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
 
 
     @Transactional
@@ -173,6 +180,15 @@ public class ClaimRequestService {
                         + targetSubtask.getTitle() + "\"."
         );
 
+        eventPublisher.publishEvent(new ProposalSubmittedEvent(
+                savedRequest.getId(),
+                problem.getId(),
+                problem.getTitle(),
+                problem.getSeeker().getUser().getId(),
+                solverUserId,
+                solverFullName
+        ));
+
         return savedRequest;
     }
 
@@ -216,6 +232,9 @@ public class ClaimRequestService {
                             + request.getSolver().getFirstName()
                             + " for sub-problem \"" + targetSubtask.getTitle() + "\"."
             );
+
+            publishProposalDecision(request, problem, "REJECTED");
+
             return;
         }
 
@@ -290,6 +309,8 @@ public class ClaimRequestService {
                 );
             }
         }
+
+        publishProposalDecision(request, problem, "APPROVED");
     }
 
     @Transactional(readOnly = true)
@@ -387,5 +408,18 @@ public class ClaimRequestService {
                 claim.getProposedApproach(),
                 claim.getSupportingDocuments()
         );
+    }
+
+    private void publishProposalDecision(ClaimRequest request, Problem problem, String newStatus) {
+        SolverProfile solver = request.getSolver();
+        eventPublisher.publishEvent(new ProposalStatusChangedEvent(
+                request.getId(),
+                problem.getId(),
+                problem.getTitle(),
+                solver.getUser().getId(),
+                solver.getFirstName() + " " + solver.getLastName(),
+                solver.getUser().getEmail(),
+                newStatus
+        ));
     }
 }
