@@ -354,9 +354,8 @@ public class SolutionAttemptController {
         return ResponseEntity.ok(summary);
     }
 
-    // Change hasRole to hasAuthority to match your JWT claims without the mandatory 'ROLE_' prefix
     @GetMapping("/api/attempts/me/overview-stats")
-    @PreAuthorize("hasAuthority('SOLVER')")
+    @PreAuthorize("hasRole('SOLVER')")
     public ResponseEntity<SolverOverviewStatsResponse> getSolverOverviewStats(@RequestHeader("Authorization") String authHeader) {
         UUID userId = extractUserId(authHeader);
         return ResponseEntity.ok(attemptService.getSolverOverviewStats(userId));

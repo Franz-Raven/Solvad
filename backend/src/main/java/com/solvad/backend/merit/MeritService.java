@@ -10,13 +10,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class MeritService {
-
     private final MeritRepository meritRepository;
     @Autowired
-    public MeritService(MeritRepository meritRepository) {
-        this.meritRepository = meritRepository;
-    }
-
 
     public MeritService(MeritRepository meritRepository) {
         this.meritRepository = meritRepository;
