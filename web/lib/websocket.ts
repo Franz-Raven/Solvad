@@ -1,8 +1,10 @@
 import { Client, type StompSubscription } from '@stomp/stompjs';
 import type { Notification } from '@/types/notification';
 
-// Fallback to localhost if env var is missing
-const RAW_WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080/ws';
+// Fallback
+const isDev = process.env.NODE_ENV === 'development';
+const RAW_WS_URL = process.env.NEXT_PUBLIC_WS_URL || 
+  (isDev ? 'ws://localhost:8080/ws' : 'wss://solvad.onrender.com/ws');
 
 // Helper to use ws:// for localhost and wss:// for production
 function getBrokerURL(): string {
