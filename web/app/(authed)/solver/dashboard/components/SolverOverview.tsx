@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import type { SolverOverviewStats } from "@/types/attempt";
+import Portal from "@/components/portal"; // 🚀 Imported Portal to fix the fixed positioning bug
 
 interface SolverOverviewProps {
   stats: SolverOverviewStats | null; 
@@ -143,7 +144,7 @@ function EmptyChart({ message }: { message: string }) {
 export function SolverOverview({ stats, loading = false }: SolverOverviewProps) {
   const [isRankModalOpen, setIsRankModalOpen] = useState(false);
 
-  // 🚀 If loading or if stats failed to load, show skeleton
+  // If loading or if stats failed to load, show skeleton
   if (loading || !stats) {
     return (
       <div className="space-y-6">
@@ -158,77 +159,80 @@ export function SolverOverview({ stats, loading = false }: SolverOverviewProps) 
     );
   }
 
-  // 🚀 Read directly from the backend DTO
+  // Read directly from the backend DTO
   const tier = getBannerTierDetails(stats.completedSolutions);
   const nextRank = getNextRank(stats.completedSolutions);
   const totalRecentAttempts = stats.timelineData.reduce((s, w) => s + w.count, 0);
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-16">
+    // 🚀 FIXED: Removed pb-16 to prevent double-padding which exacerbates layout gaps
+    <div className="space-y-6 animate-in fade-in duration-500">
       
       {/* --- Rank Modal --- */}
       {isRankModalOpen && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsRankModalOpen(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-100 animate-in zoom-in-95 duration-200 overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50/50">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">Solver Tiers & Ranking</h3>
-                <p className="text-sm font-medium text-slate-500 mt-1">Learn how to level up your profile.</p>
+        <Portal>
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsRankModalOpen(false)}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-100 animate-in zoom-in-95 duration-200 overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50/50">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">Solver Tiers & Ranking</h3>
+                  <p className="text-sm font-medium text-slate-500 mt-1">Learn how to level up your profile.</p>
+                </div>
+                <button onClick={() => setIsRankModalOpen(false)} className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <button onClick={() => setIsRankModalOpen(false)} className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
-               
-               <div className="flex items-start gap-4">
-                 <div className="w-12 h-12 rounded-[14px] bg-emerald-600 shrink-0 flex items-center justify-center shadow-sm">
-                   <Shield className="w-6 h-6 text-white" fill="currentColor" />
+              <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
+                 
+                 <div className="flex items-start gap-4">
+                   <div className="w-12 h-12 rounded-[14px] bg-emerald-600 shrink-0 flex items-center justify-center shadow-sm">
+                     <Shield className="w-6 h-6 text-white" fill="currentColor" />
+                   </div>
+                   <div>
+                     <h4 className="font-bold text-slate-900 flex items-center gap-2">Elite Solver <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md border border-slate-200">10+ Solutions</span></h4>
+                     <p className="text-xs text-slate-500 font-medium mt-1.5 leading-relaxed">The highest tier. Represents deep expertise, proven reliability, and consistent delivery of top-tier industry solutions.</p>
+                   </div>
                  </div>
-                 <div>
-                   <h4 className="font-bold text-slate-900 flex items-center gap-2">Elite Solver <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md border border-slate-200">10+ Solutions</span></h4>
-                   <p className="text-xs text-slate-500 font-medium mt-1.5 leading-relaxed">The highest tier. Represents deep expertise, proven reliability, and consistent delivery of top-tier industry solutions.</p>
+                 
+                 <div className="flex items-start gap-4">
+                   <div className="w-12 h-12 rounded-[14px] bg-emerald-100 shrink-0 flex items-center justify-center border border-emerald-200/50">
+                     <ShieldCheck className="w-6 h-6 text-emerald-700" />
+                   </div>
+                   <div>
+                     <h4 className="font-bold text-slate-900 flex items-center gap-2">Proven Solver <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md border border-slate-200">5+ Solutions</span></h4>
+                     <p className="text-xs text-slate-500 font-medium mt-1.5 leading-relaxed">Demonstrated reliability across multiple successful project completions. A trusted problem solver.</p>
+                   </div>
                  </div>
-               </div>
-               
-               <div className="flex items-start gap-4">
-                 <div className="w-12 h-12 rounded-[14px] bg-emerald-100 shrink-0 flex items-center justify-center border border-emerald-200/50">
-                   <ShieldCheck className="w-6 h-6 text-emerald-700" />
+                 
+                 <div className="flex items-start gap-4">
+                   <div className="w-12 h-12 rounded-[14px] bg-emerald-50 shrink-0 flex items-center justify-center border border-emerald-200/50">
+                     <Shield className="w-6 h-6 text-emerald-600" />
+                   </div>
+                   <div>
+                     <h4 className="font-bold text-slate-900 flex items-center gap-2">Contributor <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md border border-slate-200">1+ Solutions</span></h4>
+                     <p className="text-xs text-slate-500 font-medium mt-1.5 leading-relaxed">Successfully finalized at least one industry problem and started building a track record.</p>
+                   </div>
                  </div>
-                 <div>
-                   <h4 className="font-bold text-slate-900 flex items-center gap-2">Proven Solver <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md border border-slate-200">5+ Solutions</span></h4>
-                   <p className="text-xs text-slate-500 font-medium mt-1.5 leading-relaxed">Demonstrated reliability across multiple successful project completions. A trusted problem solver.</p>
+                 
+                 <div className="flex items-start gap-4">
+                   <div className="w-12 h-12 rounded-[14px] bg-slate-50 shrink-0 flex items-center justify-center border border-slate-200">
+                     <Circle className="w-6 h-6 text-slate-400" />
+                   </div>
+                   <div>
+                     <h4 className="font-bold text-slate-900 flex items-center gap-2">Initiate <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md border border-slate-200">0 Solutions</span></h4>
+                     <p className="text-xs text-slate-500 font-medium mt-1.5 leading-relaxed">New to the platform. Ready to claim a problem and make an impact.</p>
+                   </div>
                  </div>
-               </div>
-               
-               <div className="flex items-start gap-4">
-                 <div className="w-12 h-12 rounded-[14px] bg-emerald-50 shrink-0 flex items-center justify-center border border-emerald-200/50">
-                   <Shield className="w-6 h-6 text-emerald-600" />
-                 </div>
-                 <div>
-                   <h4 className="font-bold text-slate-900 flex items-center gap-2">Contributor <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md border border-slate-200">1+ Solutions</span></h4>
-                   <p className="text-xs text-slate-500 font-medium mt-1.5 leading-relaxed">Successfully finalized at least one industry problem and started building a track record.</p>
-                 </div>
-               </div>
-               
-               <div className="flex items-start gap-4">
-                 <div className="w-12 h-12 rounded-[14px] bg-slate-50 shrink-0 flex items-center justify-center border border-slate-200">
-                   <Circle className="w-6 h-6 text-slate-400" />
-                 </div>
-                 <div>
-                   <h4 className="font-bold text-slate-900 flex items-center gap-2">Initiate <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md border border-slate-200">0 Solutions</span></h4>
-                   <p className="text-xs text-slate-500 font-medium mt-1.5 leading-relaxed">New to the platform. Ready to claim a problem and make an impact.</p>
-                 </div>
-               </div>
 
-            </div>
-            <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex justify-end">
-              <button onClick={() => setIsRankModalOpen(false)} className="px-5 py-2.5 font-bold text-sm bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-100 transition-colors shadow-sm active:scale-95 cursor-pointer">
-                Close
-              </button>
+              </div>
+              <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex justify-end">
+                <button onClick={() => setIsRankModalOpen(false)} className="px-5 py-2.5 font-bold text-sm bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-100 transition-colors shadow-sm active:scale-95 cursor-pointer">
+                  Close
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </Portal>
       )}
 
       {/* --- Rank & Reliability Banner --- */}

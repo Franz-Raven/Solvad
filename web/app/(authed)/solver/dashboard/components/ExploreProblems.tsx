@@ -4,9 +4,12 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Search, ChevronRight, Hash, Calendar, Building2, GraduationCap, FolderOpen } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
-import { getDiscoverableProblems } from "../api/dashboard";
-// 🚀 Use the new lightweight ProblemSummary type
-import type { ProblemSummary } from "@/types/problem";
+// 🚀 ADDED: Import the active count fetcher
+import { getDiscoverableProblems, getMyActiveAttemptsCount } from "../api/dashboard"; 
+import type { ProblemSummary, ProblemResponse } from "@/types/problem";
+import { RecommendationsList } from "./RecommendationsList"; 
+// 🚀 ADDED: Import the WorkspaceBanner
+import { WorkspaceBanner } from "./WorkspaceBanner"; 
 import {
   Pagination,
   PaginationContent,
@@ -24,7 +27,6 @@ const STATUS_LABELS: Record<string, string> = {
   SOLVED_OPEN_FOR_IMPROVEMENT: "Open for Improvement",
 };
 
-// 🚀 Smooth Skeleton loader matching the exact layout of the list items
 const SkeletonCard = () => (
   <div className="flex flex-col md:flex-row md:items-center gap-5 p-5 bg-slate-50/50 rounded-xl border border-slate-100">
     <div className="w-12 h-12 bg-slate-200 rounded-xl animate-pulse shrink-0" />
@@ -44,8 +46,13 @@ const SkeletonCard = () => (
 );
 
 export function ExploreProblems() {
-  // 🚀 Updated state to use the lightweight ProblemSummary
   const [paginatedProblems, setPaginatedProblems] = useState<ProblemSummary[]>([]);
+  const [recommendations, setRecommendations] = useState<ProblemResponse[]>([]);
+  
+  // 🚀 ADDED: State for the workspace banner
+  const [activeCount, setActiveCount] = useState(0);
+  const [loadingCount, setLoadingCount] = useState(true);
+  
   const [explorePage, setExplorePage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
@@ -54,10 +61,23 @@ export function ExploreProblems() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 500);
 
-  // Reset page when search changes
   useEffect(() => {
     setExplorePage(0);
   }, [debouncedSearch]);
+
+  // 🚀 ADDED: Fetch the active workspace count once on mount
+  useEffect(() => {
+    let isMounted = true;
+    getMyActiveAttemptsCount()
+      .then((count) => {
+        if (isMounted) setActiveCount(count);
+      })
+      .catch((err) => console.error("Failed to load active count", err))
+      .finally(() => {
+        if (isMounted) setLoadingCount(false);
+      });
+    return () => { isMounted = false; };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -68,9 +88,15 @@ export function ExploreProblems() {
         const paginatedData = await getDiscoverableProblems(explorePage, EXPLORE_PAGE_SIZE);
         
         if (isMounted) {
-          setPaginatedProblems(paginatedData.problems);
-          setTotalPages(paginatedData.totalPages);
-          setTotalElements(paginatedData.totalElements);
+          const fetchedProblems = paginatedData.problems || []; 
+          setPaginatedProblems(fetchedProblems); 
+          setTotalPages(paginatedData.totalPages || 1);
+          setTotalElements(paginatedData.totalElements || fetchedProblems.length);
+          
+          if (explorePage === 0) {
+            const topRecs = fetchedProblems.slice(0, 3) as unknown as ProblemResponse[];
+            setRecommendations(topRecs);
+          }
         }
       } catch (err) {
         if (isMounted) console.error("Failed to load paginated problems", err);
@@ -94,155 +120,164 @@ export function ExploreProblems() {
   const exploreRangeEnd = Math.min((explorePage + 1) * EXPLORE_PAGE_SIZE, totalElements);
 
   return (
-    <div className="bg-white rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.04)] border border-slate-100 p-6 md:p-8 animate-in fade-in duration-300">
-      <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-6">Explore Open Problems</h2>
+    <div>
+      {/* 🚀 ADDED: Mount the Workspace Banner */}
+      <WorkspaceBanner isLoading={loadingCount} activeCount={activeCount} />
 
-      <div className="relative mb-4">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <Search className="h-5 w-5 text-slate-400" />
-        </div>
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Live search by title, organization, or course..."
-          className="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all shadow-sm bg-white"
-        />
-      </div>
+      <RecommendationsList 
+        isLoading={loading && recommendations.length === 0} 
+        recommendations={recommendations} 
+      />
 
-      <p className="text-xs text-slate-500 mb-6 font-medium">
-        Problems matching your course are listed first.
-      </p>
+      <div className="bg-white rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.04)] border border-slate-100 p-6 md:p-8 animate-in fade-in duration-300">
+        <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-6">Explore Open Problems</h2>
 
-      {loading && paginatedProblems.length === 0 ? (
-        <div className="space-y-4">
-          {[...Array(5)].map((_, i) => <SkeletonCard key={i} />)}
-        </div>
-      ) : paginatedProblems.length === 0 ? (
-        <div className="text-center py-20 bg-slate-50 rounded-2xl border border-dashed border-slate-200 animate-in fade-in zoom-in-95 duration-200">
-          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-100">
-            <FolderOpen className="w-8 h-8 text-slate-400" />
+        <div className="relative mb-4">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search className="h-5 w-5 text-slate-400" />
           </div>
-          <h3 className="text-lg font-bold text-slate-900 mb-2">No matches found</h3>
-          <p className="text-slate-500 max-w-sm mx-auto text-sm font-medium">
-            Try adjusting your search query to find what you're looking for.
-          </p>
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Live search by title, organization, or course..."
+            className="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all shadow-sm bg-white"
+          />
         </div>
-      ) : (
-        <div className={`transition-opacity duration-200 ${loading ? "opacity-50 pointer-events-none" : "opacity-100"}`}>
-          <p className="text-xs text-slate-500 mb-4 font-bold uppercase tracking-wider">
-            Showing {exploreRangeStart}–{exploreRangeEnd} of {totalElements} problem{totalElements === 1 ? "" : "s"}
-          </p>
-          
+
+        <p className="text-xs text-slate-500 mb-6 font-medium">
+          Problems matching your course are listed first.
+        </p>
+
+        {loading && paginatedProblems.length === 0 ? (
           <div className="space-y-4">
-            {paginatedProblems.map((problem, index) => (
-              <Link 
-                href={`/solver/problem/${problem.id}`}
-                key={problem.id} 
-                className="group flex flex-col md:flex-row items-start md:items-center gap-5 p-5 bg-white rounded-xl border border-slate-200 hover:border-accent/40 hover:shadow-md transition-all cursor-pointer block"
-              >
-                <div className="shrink-0 relative group">
-                  {problem.seekerProfileUrl ? (
-                    <img
-                      src={problem.seekerProfileUrl}
-                      alt={problem.organizationName}
-                      className="w-12 h-12 rounded-2xl object-cover shadow-sm border border-slate-200 group-hover:border-accent/40 transition-colors"
-                    />
-                  ) : (
-                    <div className="flex w-12 h-12 items-center justify-center rounded-2xl bg-white border border-slate-200 shadow-sm group-hover:border-accent/40 transition-colors">
-                      <Building2 className="w-5 h-5 text-slate-400 group-hover:text-accent transition-colors" />
-                    </div>
-                  )}
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-3 mb-2">
-                    <h4 className="font-bold text-slate-900 text-base group-hover:text-accent transition-colors">
-                      {problem.title}
-                    </h4>
-                    
-                    <span className={`text-[11px] px-2.5 py-0.5 rounded-md font-bold border shrink-0 uppercase tracking-wide ${
-                      problem.status === "OPEN" ? "bg-accent/10 text-accent border-accent/20" : "bg-emerald-50 text-emerald-700 border-emerald-200"
-                    }`}>
-                      {STATUS_LABELS[problem.status] ?? problem.status}
-                    </span>
-                    
-                    {problem.courseMatch && (
-                      <span className="text-[11px] px-2.5 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 font-bold uppercase tracking-wide">
-                        Course Match
-                      </span>
+            {[...Array(5)].map((_, i) => <SkeletonCard key={i} />)}
+          </div>
+        ) : paginatedProblems.length === 0 ? (
+          <div className="text-center py-20 bg-slate-50 rounded-2xl border border-dashed border-slate-200 animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-100">
+              <FolderOpen className="w-8 h-8 text-slate-400" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 mb-2">No matches found</h3>
+            <p className="text-slate-500 max-w-sm mx-auto text-sm font-medium">
+              Try adjusting your search query to find what you're looking for.
+            </p>
+          </div>
+        ) : (
+          <div className={`transition-opacity duration-200 ${loading ? "opacity-50 pointer-events-none" : "opacity-100"}`}>
+            <p className="text-xs text-slate-500 mb-4 font-bold uppercase tracking-wider">
+              Showing {exploreRangeStart}–{exploreRangeEnd} of {totalElements} problem{totalElements === 1 ? "" : "s"}
+            </p>
+            
+            <div className="space-y-4">
+              {paginatedProblems.map((problem, index) => (
+                <Link 
+                  href={`/solver/problem/${problem.id}`}
+                  key={problem.id} 
+                  className="group flex flex-col md:flex-row items-start md:items-center gap-5 p-5 bg-white rounded-xl border border-slate-200 hover:border-accent/40 hover:shadow-md transition-all cursor-pointer block"
+                >
+                  <div className="shrink-0 relative group">
+                    {problem.seekerProfileUrl ? (
+                      <img
+                        src={problem.seekerProfileUrl}
+                        alt={problem.organizationName}
+                        className="w-12 h-12 rounded-2xl object-cover shadow-sm border border-slate-200 group-hover:border-accent/40 transition-colors"
+                      />
+                    ) : (
+                      <div className="flex w-12 h-12 items-center justify-center rounded-2xl bg-white border border-slate-200 shadow-sm group-hover:border-accent/40 transition-colors">
+                        <Building2 className="w-5 h-5 text-slate-400 group-hover:text-accent transition-colors" />
+                      </div>
                     )}
                   </div>
                   
-                  <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-slate-500">
-                    <span className="flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5 text-slate-400" /> {problem.organizationName}</span>
-                    <span className="flex items-center gap-1.5"><GraduationCap className="w-3.5 h-3.5 text-slate-400" /> {problem.preferredProgram}</span>
-                    {/* 🚀 FIX: Used problem.subtaskCount instead of problem.subtasks.length */}
-                    <span className="flex items-center gap-1.5"><Hash className="w-3.5 h-3.5 text-slate-400" /> {problem.subtaskCount} sub-tasks</span>
-                    {problem.createdAt && (
-                      <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-slate-400" /> {formatDate(problem.createdAt)}</span>
-                    )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-3 mb-2">
+                      <h4 className="font-bold text-slate-900 text-base group-hover:text-accent transition-colors">
+                        {problem.title}
+                      </h4>
+                      
+                      <span className={`text-[11px] px-2.5 py-0.5 rounded-md font-bold border shrink-0 uppercase tracking-wide ${
+                        problem.status === "OPEN" ? "bg-accent/10 text-accent border-accent/20" : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      }`}>
+                        {STATUS_LABELS[problem.status] ?? problem.status}
+                      </span>
+                      
+                      {problem.courseMatch && (
+                        <span className="text-[11px] px-2.5 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 font-bold uppercase tracking-wide">
+                          Course Match
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-slate-500">
+                      <span className="flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5 text-slate-400" /> {problem.organizationName}</span>
+                      <span className="flex items-center gap-1.5"><GraduationCap className="w-3.5 h-3.5 text-slate-400" /> {problem.preferredProgram}</span>
+                      <span className="flex items-center gap-1.5"><Hash className="w-3.5 h-3.5 text-slate-400" /> {problem.subtaskCount} sub-tasks</span>
+                      {problem.createdAt && (
+                        <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-slate-400" /> {formatDate(problem.createdAt)}</span>
+                      )}
+                    </div>
                   </div>
-                </div>
-                
-                <div className="w-full md:w-auto shrink-0 flex justify-end mt-4 md:mt-0">
-                  <span
-                    className="w-full md:w-auto px-5 py-2.5 bg-white border border-slate-300 group-hover:border-accent group-hover:bg-slate-50 group-hover:text-accent text-slate-700 text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm"
-                  >
-                    View Details
-                    <ChevronRight className="w-4 h-4" />
-                  </span>
-                </div>
-              </Link>
-            ))}
-          </div>
-
-          {totalPages > 1 && (
-            <div className="mt-8 pt-6 border-t border-slate-100">
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      href="#"
-                      onClick={(e) => { e.preventDefault(); if (explorePage > 0) setExplorePage(explorePage - 1); }}
-                      className={explorePage === 0 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                    />
-                  </PaginationItem>
-
-                  {Array.from({ length: totalPages }, (_, i) => i).map((page) => {
-                    if (page === 0 || page === totalPages - 1 || (page >= explorePage - 1 && page <= explorePage + 1)) {
-                      return (
-                        <PaginationItem key={page}>
-                          <PaginationLink 
-                            href="#" 
-                            onClick={(e) => { e.preventDefault(); setExplorePage(page); }} 
-                            isActive={explorePage === page}
-                            className="cursor-pointer"
-                          >
-                            {page + 1}
-                          </PaginationLink>
-                        </PaginationItem>
-                      );
-                    }
-                    if (page === explorePage - 2 || page === explorePage + 2) {
-                      return <PaginationItem key={page}><PaginationEllipsis /></PaginationItem>;
-                    }
-                    return null;
-                  })}
-
-                  <PaginationItem>
-                    <PaginationNext
-                      href="#"
-                      onClick={(e) => { e.preventDefault(); if (explorePage < totalPages - 1) setExplorePage(explorePage + 1); }}
-                      className={explorePage === totalPages - 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
+                  
+                  <div className="w-full md:w-auto shrink-0 flex justify-end mt-4 md:mt-0">
+                    <span
+                      className="w-full md:w-auto px-5 py-2.5 bg-white border border-slate-300 group-hover:border-accent group-hover:bg-slate-50 group-hover:text-accent text-slate-700 text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm"
+                    >
+                      View Details
+                      <ChevronRight className="w-4 h-4" />
+                    </span>
+                  </div>
+                </Link>
+              ))}
             </div>
-          )}
-        </div>
-      )}
+
+            {totalPages > 1 && (
+              <div className="mt-8 pt-6 border-t border-slate-100">
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href="#"
+                        onClick={(e) => { e.preventDefault(); if (explorePage > 0) setExplorePage(explorePage - 1); }}
+                        className={explorePage === 0 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      />
+                    </PaginationItem>
+
+                    {Array.from({ length: totalPages }, (_, i) => i).map((page) => {
+                      if (page === 0 || page === totalPages - 1 || (page >= explorePage - 1 && page <= explorePage + 1)) {
+                        return (
+                          <PaginationItem key={page}>
+                            <PaginationLink 
+                              href="#" 
+                              onClick={(e) => { e.preventDefault(); setExplorePage(page); }} 
+                              isActive={explorePage === page}
+                              className="cursor-pointer"
+                            >
+                              {page + 1}
+                            </PaginationLink>
+                          </PaginationItem>
+                        );
+                      }
+                      if (page === explorePage - 2 || page === explorePage + 2) {
+                        return <PaginationItem key={page}><PaginationEllipsis /></PaginationItem>;
+                      }
+                      return null;
+                    })}
+
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        onClick={(e) => { e.preventDefault(); if (explorePage < totalPages - 1) setExplorePage(explorePage + 1); }}
+                        className={explorePage === totalPages - 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

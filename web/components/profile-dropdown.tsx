@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import { User, Settings, LogOut, ChevronDown } from "lucide-react";
+import { getSolverOverviewStats } from "@/app/(authed)/solver/dashboard/api/dashboard"; // 🚀 Added API import
 
 interface ProfileDropdownProps {
   onLogout: () => void;
@@ -13,6 +14,35 @@ export default function ProfileDropdown({ onLogout }: ProfileDropdownProps) {
   const { user } = useAuth();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
+
+  // 🚀 --- DYNAMIC RANK LOGIC ---
+  const [displayRole, setDisplayRole] = useState(user?.role || "USER");
+  const [isRankLoading, setIsRankLoading] = useState(false);
+
+  useEffect(() => {
+    if (user?.role === "SOLVER") {
+      setIsRankLoading(true);
+      getSolverOverviewStats()
+        .then((stats) => {
+          // Safely check completedSolutions (defaults to 0 if undefined)
+          const completed = stats?.completedSolutions || 0;
+          
+          if (completed >= 10) setDisplayRole("Elite Solver");
+          else if (completed >= 5) setDisplayRole("Proven Solver");
+          else if (completed >= 1) setDisplayRole("Contributor");
+          else setDisplayRole("Initiate");
+        })
+        .catch((err) => {
+          console.error("Failed to load rank:", err);
+          setDisplayRole("Initiate"); // 🚀 FIXED: Fallback to Initiate instead of raw SOLVER
+        })
+        .finally(() => setIsRankLoading(false));
+    } else {
+      setDisplayRole(user?.role || "USER");
+      setIsRankLoading(false);
+    }
+  }, [user]);
+  // ---------------------------
 
   const getInitials = () => {
     if (!user) return "U";
@@ -64,9 +94,15 @@ export default function ProfileDropdown({ onLogout }: ProfileDropdownProps) {
           <span className="text-sm font-bold text-slate-700 group-hover:text-emerald-600 transition-colors">
             {getDisplayName()}
           </span>
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-            {user.role}
-          </span>
+          
+          {/* 🚀 FIXED: Dynamic rank display with skeleton loading animation */}
+          {isRankLoading ? (
+            <div className="h-3 w-16 bg-slate-200 rounded animate-pulse mt-0.5" />
+          ) : (
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              {displayRole}
+            </span>
+          )}
         </div>
         
         <div className="flex items-center gap-2">

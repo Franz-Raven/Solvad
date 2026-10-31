@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useMemo } from "react";
 import { usePathname } from "next/navigation";
-import { GitFork, GitBranch, Network, ArrowRight, Calendar, Loader2 } from "lucide-react";
+import { GitBranch, Network, ArrowRight, Calendar, Loader2 } from "lucide-react";
 import { getProblemTree, getFullAttemptDetails } from "../api/problem";
 import type { SolutionAttemptSummary, TreeAttemptNode } from "@/types/attempt";
 import { AttemptDetailModal } from "./AttemptDetailModal";
@@ -138,8 +138,26 @@ export function SolutionTreeTab({
 
   const structuredTreeRoots = buildHierarchyTree(filteredAttempts);
   
+  // 🚀 FIXED: Isolated `canSubmitOriginal` so it DOES NOT fail if `onForkRequest` is missing.
   const hasPendingOrApproved = !isCompleted && (myProposalStatus === "PENDING" || myProposalStatus === "APPROVED");
-  const canInteract = !isAlreadyClaimed && !isPendingReview && !isUnavailable && !hasPendingOrApproved && !!onForkRequest;
+  const canInteract = !isSeekerView && !isAlreadyClaimed && !isPendingReview && !isUnavailable && !hasPendingOrApproved;
+  const canFork = canInteract && !!onForkRequest;
+
+  // 🚀 ADDED: Smart fallback to click the "Sub-problems" tab if the parent page didn't pass the prop
+  const handleClaimNew = () => {
+    if (onClaimNew) {
+      onClaimNew();
+      return;
+    }
+    const tabTriggers = document.querySelectorAll('[role="tab"], button');
+    for (const btn of Array.from(tabTriggers)) {
+      if (btn.textContent?.includes('Sub-problems')) {
+        (btn as HTMLElement).click();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        break;
+      }
+    }
+  };
 
   function handleFilterChange(id: string) {
     if (id === selectedSubtaskId) return;
@@ -175,17 +193,15 @@ export function SolutionTreeTab({
       <div style={{ display: "flex", flexDirection: "row", alignItems: "flex-start", gap: "32px", justifyContent: "center" }}>
         {nodes.map((node) => {
           const isFetching = fetchingDetailsId === node.id;
-          
-          // 🚀 FRONTEND VALIDATION: Matrix for who can click "View Details"
           const isOwner = node.id === myAttemptId;
           let canViewDetails = false;
 
           if (isOwner) {
-            canViewDetails = true; // Owner can see everything
+            canViewDetails = true; 
           } else if (isSeekerView) {
-            canViewDetails = node.status === "PENDING_REVIEW" || node.status === "COMPLETED"; // Seeker sees submitted work
+            canViewDetails = node.status === "PENDING_REVIEW" || node.status === "COMPLETED"; 
           } else {
-            canViewDetails = node.status === "COMPLETED"; // Other solvers ONLY see completed work
+            canViewDetails = node.status === "COMPLETED"; 
           }
 
           const isDisabled = isFetching || !canViewDetails;
@@ -222,7 +238,7 @@ export function SolutionTreeTab({
                 </div>
 
                 <div className="flex items-center gap-2 mt-auto">
-                  {node.status === "COMPLETED" && canInteract && onForkRequest && (
+                  {node.status === "COMPLETED" && canFork && onForkRequest && (
                     <button onClick={() => onForkRequest(node.id, node.targetSubtaskId!)} className="flex-1 py-1.5 bg-accent/10 hover:bg-accent text-accent hover:text-white text-[11px] font-bold rounded-lg transition-all border border-accent/20 cursor-pointer shadow-sm active:scale-[0.98]">
                       Build Upon ➔
                     </button>
@@ -236,7 +252,7 @@ export function SolutionTreeTab({
                         : isHighlighted 
                           ? "bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700 active:scale-[0.98] cursor-pointer" 
                           : 'text-slate-600 border-slate-200 bg-slate-50 hover:bg-slate-100 hover:text-slate-900 active:scale-[0.98] cursor-pointer'
-                    } ${node.status === "COMPLETED" && canInteract ? 'px-3' : 'flex-1'}`}
+                    } ${node.status === "COMPLETED" && canFork ? 'px-3' : 'flex-1'}`}
                   >
                     {isFetching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : (isDisabled ? "Private Details" : "View Details")}
                   </button>
@@ -317,7 +333,7 @@ export function SolutionTreeTab({
       {modalNode && (
         <AttemptDetailModal
           node={modalNode}
-          canInteract={canInteract}
+          canInteract={canInteract} // Passed generalized interact boolean
           onForkRequest={(id, subtaskId) => {
             setModalNode(null);
             if (onForkRequest) onForkRequest(id, subtaskId);
@@ -327,14 +343,15 @@ export function SolutionTreeTab({
       )}
 
       <div className="animate-in fade-in duration-500 max-w-7xl mx-auto w-full">
-        {canInteract && attempts.length > 0 && onClaimNew && (
+        {/* 🚀 FIXED: Banner relies ONLY on `canInteract`. */}
+        {canInteract && (
           <div className="bg-white rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.04)] border border-slate-100 p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 transition-all hover:shadow-md">
             <div>
-              <h3 className="font-bold text-slate-900 text-lg">Want to start from scratch?</h3>
-              <p className="text-sm font-medium text-slate-500 mt-1">Submit a fresh proposal instead of branching off an existing solution.</p>
+              <h3 className="font-bold text-slate-900 text-lg">Submit an Original Solution</h3>
+              <p className="text-sm font-medium text-slate-500 mt-1">Want to start from scratch? You can submit a fresh proposal instead of branching off an existing solution.</p>
             </div>
-            <button onClick={onClaimNew} className="w-full md:w-auto px-8 py-3 bg-accent hover:bg-accent/90 text-white font-bold rounded-xl transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer">
-              Submit New Proposal <ArrowRight className="w-4 h-4" />
+            <button onClick={handleClaimNew} className="w-full md:w-auto px-8 py-3 bg-accent hover:bg-accent/90 text-white font-bold rounded-xl transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer">
+              Submit Original Proposal <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         )}
@@ -345,9 +362,10 @@ export function SolutionTreeTab({
               <Network className="w-8 h-8 text-slate-300" />
             </div>
             <h3 className="text-xl font-bold text-slate-900 mb-2">No attempts yet</h3>
-            <p className="text-slate-500 font-medium text-sm mb-6 max-w-sm mx-auto">Be the first to claim and solve this problem. Your solution will become the root of this tree.</p>
-            {canInteract && onClaimNew && (
-              <button onClick={onClaimNew} className="px-6 py-2.5 bg-accent hover:bg-accent/90 text-white font-bold rounded-xl transition-all shadow-md cursor-pointer inline-flex items-center gap-2 active:scale-[0.98]">
+            <p className="text-slate-500 font-medium text-sm mb-6 max-w-sm mx-auto">Be the first to claim and solve this problem. Your original solution will become the root of this tree.</p>
+            {/* 🚀 FIXED: Fallback button also relies ONLY on `canInteract`. */}
+            {canInteract && (
+              <button onClick={handleClaimNew} className="px-6 py-2.5 bg-accent hover:bg-accent/90 text-white font-bold rounded-xl transition-all shadow-md cursor-pointer inline-flex items-center gap-2 active:scale-[0.98]">
                 Submit a Proposal <ArrowRight className="w-4 h-4" />
               </button>
             )}
