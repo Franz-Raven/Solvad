@@ -5,6 +5,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import { getDashboardPath } from "@/lib/auth-utils";
 import ProfileDropdown from "@/components/profile-dropdown";
+import { NotificationBell } from '@/components/notification-bell';
 
 const baseLink =
   "px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer " +
@@ -88,6 +89,7 @@ export default function AuthedNavigation() {
 
           {/* ── Right Side ── */}
           <div className="flex items-center gap-4">
+             <NotificationBell /> 
             <ProfileDropdown onLogout={handleLogout} />
           </div>
         </div>
