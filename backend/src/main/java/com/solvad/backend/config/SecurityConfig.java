@@ -39,7 +39,9 @@ public class SecurityConfig {
                                 "/api/auth/register/start",
                                 "/api/auth/google",
                                 "/api/auth/google/complete",
-                                "/api/health")
+                                "/api/health",
+                                "/ws/**", "/ws",
+                                "/error")
                         .permitAll()
                         .requestMatchers("/api/auth/verify", "/api/auth/resend-verification").permitAll()
                         .requestMatchers("/api/auth/register/seeker").hasAuthority("ADMIN")
