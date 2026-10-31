@@ -19,7 +19,6 @@ export async function getProblemById(
 export async function getAuditLog(
   problemId: string
 ): Promise<AuditLogEntry[]> {
-  // ✅ Correct path matching ProblemController.java
   return apiRequest<AuditLogEntry[]>(`/problems/${problemId}/audit-log`, {
     method: "GET",
   });
@@ -73,7 +72,6 @@ export async function deleteProblem(problemId: string): Promise<void> {
   });
 }
 
-
 export async function getAllAttempts(
   problemId: string
 ): Promise<SolutionAttemptResponse[]> {
@@ -81,7 +79,6 @@ export async function getAllAttempts(
     method: "GET",
   });
 }
-
 
 export async function getProblemTree(problemId: string): Promise<SolutionAttemptSummary[]> {
   return apiRequest<SolutionAttemptSummary[]>(`/problems/${problemId}/attempts/tree`, { method: "GET" });
@@ -93,7 +90,7 @@ export async function getFullAttemptDetails(attemptId: string): Promise<Solution
 
 export async function getProblemActiveAttemptsCount(problemId: string): Promise<number> {
   const res = await apiRequest<any>(`/problems/${problemId}/attempts/active-count`, { method: "GET" });
-  return res.activeCount ?? res.count ?? 0; // Safely handles the Java record JSON mapping
+  return res.activeCount ?? res.count ?? 0;
 }
 
 export async function getActiveWorkspaces(problemId: string): Promise<SolutionAttemptSummary[]> {
@@ -104,7 +101,7 @@ export interface SubtaskCapacity {
   subtaskId: string;
   title: string;
   activeCount: number;
-  pendingReviewCount: number; // 🚀 Added
+  pendingReviewCount: number;
   maxSolvers: number;
 }
 
@@ -114,7 +111,6 @@ export async function getSubtaskCapacities(problemId: string): Promise<SubtaskCa
 
 import type { ClaimRequestResponse } from "@/types/attempt";
 
-
 export async function getPendingProposalsSummary(problemId: string): Promise<ClaimSummaryResponse[]> {
   return apiRequest<ClaimSummaryResponse[]>(`/problems/${problemId}/proposals/pending/summary`, { method: "GET" });
 }
@@ -122,7 +118,6 @@ export async function getPendingProposalsSummary(problemId: string): Promise<Cla
 export async function getFullProposalDetails(proposalId: string): Promise<ClaimRequestResponse> {
   return apiRequest<ClaimRequestResponse>(`/proposals/${proposalId}/details`, { method: "GET" });
 }
-
 
 export async function getAuditSummaries(problemId: string): Promise<AuditDateSummary[]> {
   return apiRequest<AuditDateSummary[]>(`/audit/problem/${problemId}/summary`, { method: "GET" });
@@ -160,7 +155,6 @@ export async function getPendingSolutions(
   );
 }
 
-// 🚀 Only query this heavy endpoint when the Seeker clicks "Review"
 export async function getAttemptDetailsById(attemptId: string): Promise<SolutionAttemptResponse> {
   return apiRequest<SolutionAttemptResponse>(`/attempts/${attemptId}`, { method: "GET" });
 }
@@ -169,4 +163,12 @@ export async function evaluateSolution(attemptId: string, isApproved: boolean, r
   let url = `/attempts/${attemptId}/evaluate?isApproved=${isApproved}`;
   if (rejectionReason) url += `&rejectionReason=${encodeURIComponent(rejectionReason)}`;
   return apiRequest<SolutionAttemptResponse>(url, { method: "POST" });
+}
+
+// 🚀 ADDED TERMINATION CALL
+export async function terminateSolverAttempt(attemptId: string, reason: string): Promise<SolutionAttemptResponse> {
+  return apiRequest<SolutionAttemptResponse>(
+    `/attempts/${attemptId}/terminate?reason=${encodeURIComponent(reason)}`, 
+    { method: "POST" }
+  );
 }

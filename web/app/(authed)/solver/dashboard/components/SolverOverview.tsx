@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useState } from "react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid } from "recharts";
 import { 
   Target, 
@@ -10,13 +10,15 @@ import {
   BarChart2,
   Shield, 
   ShieldCheck, 
-  Circle
+  Circle,
+  Info,
+  X
 } from "lucide-react";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
-import type { SolutionAttemptSummary } from "@/types/attempt";
+import type { SolverOverviewStats } from "@/types/attempt";
 
 interface SolverOverviewProps {
-  attempts: SolutionAttemptSummary[]; 
+  stats: SolverOverviewStats | null; 
   loading?: boolean;
 }
 
@@ -61,23 +63,6 @@ const getNextRank = (completed: number) => {
   }
   return null;
 };
-
-// Last 6 weeks (weekly attempts)
-function buildWeeklyAttempts(attempts: SolutionAttemptSummary[]) {
-  const weeks = Array.from({ length: 6 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (5 - i) * 7);
-    const label = `${d.toLocaleDateString("en-US", { month: "short" })} ${d.getDate()}`;
-    return { week: label, count: 0 };
-  });
-  
-  attempts.forEach((a) => {
-    const date = new Date(a.claimedAt);
-    const weekIndex = Math.floor((Date.now() - date.getTime()) / (7 * 86400000));
-    if (weekIndex >= 0 && weekIndex < 6) weeks[5 - weekIndex].count++;
-  });
-  return weeks;
-}
 
 const timelineConfig: ChartConfig = { attempts: { label: "Attempts", color: "#10b981" } };
 
@@ -155,22 +140,11 @@ function EmptyChart({ message }: { message: string }) {
 }
 
 // --- Main Component ---
-export function SolverOverview({ attempts, loading = false }: SolverOverviewProps) {
-  const stats = useMemo(() => {
-    const total = attempts.length;
-    const active = attempts.filter((a) => a.status === "ACTIVE" || a.status === "IN_PROGRESS").length;
-    const completed = attempts.filter((a) => a.status === "COMPLETED" || a.status === "SOLVED_OPEN_FOR_IMPROVEMENT").length;
-    const successRate = total > 0 ? Math.round((completed / total) * 100) : 0;
-    return { total, active, completed, successRate };
-  }, [attempts]);
+export function SolverOverview({ stats, loading = false }: SolverOverviewProps) {
+  const [isRankModalOpen, setIsRankModalOpen] = useState(false);
 
-  const timelineData = useMemo(() => buildWeeklyAttempts(attempts), [attempts]);
-  const totalAttempts = timelineData.reduce((s, w) => s + w.count, 0);
-
-  const tier = getBannerTierDetails(stats.completed);
-  const nextRank = getNextRank(stats.completed);
-
-  if (loading) {
+  // 🚀 If loading or if stats failed to load, show skeleton
+  if (loading || !stats) {
     return (
       <div className="space-y-6">
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm h-32 animate-pulse" />
@@ -184,9 +158,79 @@ export function SolverOverview({ attempts, loading = false }: SolverOverviewProp
     );
   }
 
+  // 🚀 Read directly from the backend DTO
+  const tier = getBannerTierDetails(stats.completedSolutions);
+  const nextRank = getNextRank(stats.completedSolutions);
+  const totalRecentAttempts = stats.timelineData.reduce((s, w) => s + w.count, 0);
+
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-6 animate-in fade-in duration-500 pb-16">
       
+      {/* --- Rank Modal --- */}
+      {isRankModalOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsRankModalOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-100 animate-in zoom-in-95 duration-200 overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50/50">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Solver Tiers & Ranking</h3>
+                <p className="text-sm font-medium text-slate-500 mt-1">Learn how to level up your profile.</p>
+              </div>
+              <button onClick={() => setIsRankModalOpen(false)} className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
+               
+               <div className="flex items-start gap-4">
+                 <div className="w-12 h-12 rounded-[14px] bg-emerald-600 shrink-0 flex items-center justify-center shadow-sm">
+                   <Shield className="w-6 h-6 text-white" fill="currentColor" />
+                 </div>
+                 <div>
+                   <h4 className="font-bold text-slate-900 flex items-center gap-2">Elite Solver <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md border border-slate-200">10+ Solutions</span></h4>
+                   <p className="text-xs text-slate-500 font-medium mt-1.5 leading-relaxed">The highest tier. Represents deep expertise, proven reliability, and consistent delivery of top-tier industry solutions.</p>
+                 </div>
+               </div>
+               
+               <div className="flex items-start gap-4">
+                 <div className="w-12 h-12 rounded-[14px] bg-emerald-100 shrink-0 flex items-center justify-center border border-emerald-200/50">
+                   <ShieldCheck className="w-6 h-6 text-emerald-700" />
+                 </div>
+                 <div>
+                   <h4 className="font-bold text-slate-900 flex items-center gap-2">Proven Solver <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md border border-slate-200">5+ Solutions</span></h4>
+                   <p className="text-xs text-slate-500 font-medium mt-1.5 leading-relaxed">Demonstrated reliability across multiple successful project completions. A trusted problem solver.</p>
+                 </div>
+               </div>
+               
+               <div className="flex items-start gap-4">
+                 <div className="w-12 h-12 rounded-[14px] bg-emerald-50 shrink-0 flex items-center justify-center border border-emerald-200/50">
+                   <Shield className="w-6 h-6 text-emerald-600" />
+                 </div>
+                 <div>
+                   <h4 className="font-bold text-slate-900 flex items-center gap-2">Contributor <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md border border-slate-200">1+ Solutions</span></h4>
+                   <p className="text-xs text-slate-500 font-medium mt-1.5 leading-relaxed">Successfully finalized at least one industry problem and started building a track record.</p>
+                 </div>
+               </div>
+               
+               <div className="flex items-start gap-4">
+                 <div className="w-12 h-12 rounded-[14px] bg-slate-50 shrink-0 flex items-center justify-center border border-slate-200">
+                   <Circle className="w-6 h-6 text-slate-400" />
+                 </div>
+                 <div>
+                   <h4 className="font-bold text-slate-900 flex items-center gap-2">Initiate <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md border border-slate-200">0 Solutions</span></h4>
+                   <p className="text-xs text-slate-500 font-medium mt-1.5 leading-relaxed">New to the platform. Ready to claim a problem and make an impact.</p>
+                 </div>
+               </div>
+
+            </div>
+            <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex justify-end">
+              <button onClick={() => setIsRankModalOpen(false)} className="px-5 py-2.5 font-bold text-sm bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-100 transition-colors shadow-sm active:scale-95 cursor-pointer">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* --- Rank & Reliability Banner --- */}
       <div className="bg-white rounded-2xl p-8 border border-slate-100 shadow-sm flex flex-col md:flex-row items-center gap-6 justify-between transition-colors">
         
@@ -195,31 +239,39 @@ export function SolverOverview({ attempts, loading = false }: SolverOverviewProp
              {tier.icon}
            </div>
            <div>
-             <h2 className="text-2xl font-bold text-slate-900 mb-2">{tier.name}</h2>
+             <div className="flex items-center gap-3 mb-2">
+               <h2 className="text-2xl font-bold text-slate-900">{tier.name}</h2>
+               <button 
+                 onClick={() => setIsRankModalOpen(true)}
+                 className="p-1.5 rounded-full text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer"
+                 title="View Rank Details"
+               >
+                 <Info className="w-5 h-5" />
+               </button>
+             </div>
              <div className="flex items-center gap-3">
-               <span className="text-sm font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
-                 {stats.completed} Solutions Completed
+               <span className="text-sm font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200/50">
+                 {stats.completedSolutions} Solutions Completed
                </span>
-               
              </div>
            </div>
         </div>
 
         {nextRank ? (
-          <div className="w-full md:w-80 bg-slate-50 p-5 rounded-2xl">
+          <div className="w-full md:w-80 bg-slate-50 p-5 rounded-2xl border border-slate-100">
             <div className="flex items-center justify-between text-sm mb-3">
               <span className="font-bold text-slate-700">Next Tier: {nextRank.name}</span>
-              <span className="font-bold text-emerald-600">{stats.completed} / {nextRank.min}</span>
+              <span className="font-bold text-emerald-600">{stats.completedSolutions} / {nextRank.min}</span>
             </div>
             <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
               <div 
                 className="h-full bg-emerald-500 rounded-full transition-all duration-1000 ease-out" 
-                style={{ width: `${Math.min(100, (stats.completed / nextRank.min) * 100)}%` }} 
+                style={{ width: `${Math.min(100, (stats.completedSolutions / nextRank.min) * 100)}%` }} 
               />
             </div>
           </div>
         ) : (
-          <div className="w-full md:w-80 bg-emerald-50/50 px-8 py-5 rounded-2xl flex flex-col items-center md:items-start justify-center">
+          <div className="w-full md:w-80 bg-emerald-50/50 px-8 py-5 rounded-2xl flex flex-col items-center md:items-start justify-center border border-emerald-100/50">
             <span className="font-bold text-emerald-700 text-lg tracking-tight mb-1">Top Tier Achieved!</span>
             <span className="text-sm font-medium text-emerald-600/80">You are an Elite Solver.</span>
           </div>
@@ -229,19 +281,19 @@ export function SolverOverview({ attempts, loading = false }: SolverOverviewProp
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard 
           title="Total Attempts" 
-          value={stats.total} 
+          value={stats.totalAttempts} 
           icon={<Target className="w-4 h-4" />} 
           description="All problems you've claimed" 
         />
         <StatCard 
           title="Active Workspaces" 
-          value={stats.active} 
+          value={stats.activeWorkspaces} 
           icon={<Activity className="w-4 h-4" />} 
           description="Currently in progress" 
         />
         <StatCard 
           title="Completed" 
-          value={stats.completed} 
+          value={stats.completedSolutions} 
           icon={<CheckCircle2 className="w-4 h-4" />} 
           description="Successfully solved" 
         />
@@ -258,14 +310,14 @@ export function SolverOverview({ attempts, loading = false }: SolverOverviewProp
         subtitle="Weekly breakdown • Last 6 weeks"
         badge={
           <span className="text-[11px] font-bold bg-emerald-50 text-emerald-700 px-3 py-1 rounded-md uppercase tracking-wider border border-emerald-100/50 shadow-sm">
-            {totalAttempts} Total
+            {totalRecentAttempts} Total
           </span>
         }
       >
-        {totalAttempts > 0 ? (
+        {totalRecentAttempts > 0 ? (
           <div className="h-64 w-full mt-4">
             <ChartContainer config={timelineConfig} className="h-full w-full">
-              <AreaChart data={timelineData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={stats.timelineData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gradAttempts" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />

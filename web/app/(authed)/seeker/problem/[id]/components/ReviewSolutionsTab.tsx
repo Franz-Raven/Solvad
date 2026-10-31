@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Loader2, X, Shield, ShieldHalf, ShieldCheck, Award, Clock, Activity, Search, ChevronLeft, ChevronRight, CheckCircle, Paperclip } from "lucide-react";
+import { Loader2, X, Shield, ShieldHalf, ShieldCheck, Award, Clock, Activity, Search, ChevronLeft, ChevronRight, CheckCircle, Paperclip, Circle, Info } from "lucide-react";
 import Portal from "@/components/portal";
 
 import { getPendingSolutions, evaluateSolution, getAttemptDetailsById, getSubtaskCapacities, getSolverMetrics } from "../api/problem";
@@ -36,6 +36,9 @@ export function ReviewSolutionsTab({ problem }: ReviewSolutionsTabProps) {
 
   const [solverMetrics, setSolverMetrics] = useState<SolverMetrics | null>(null);
   const [metricsLoading, setMetricsLoading] = useState(false);
+  
+  // 🚀 Metrics Guide Modal State
+  const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
 
   // 🚀 Rejection State for UI
   const [isRejecting, setIsRejecting] = useState(false);
@@ -67,16 +70,15 @@ export function ReviewSolutionsTab({ problem }: ReviewSolutionsTabProps) {
   useEffect(() => { fetchData(); }, [problem.id, selectedSubtaskId, debouncedSearch, sortOrder, page]);
 
   useEffect(() => {
-    if (selectedSolution) document.body.style.overflow = "hidden";
+    if (selectedSolution || isGuideModalOpen) document.body.style.overflow = "hidden";
     else {
       document.body.style.overflow = "";
       setIsRejecting(false);
       setRejectionReason("");
     }
     return () => { document.body.style.overflow = ""; };
-  }, [selectedSolution]);
+  }, [selectedSolution, isGuideModalOpen]);
 
-  // 🚀 TS FIX: Fetch heavy details FIRST, then safely extract solverId for metrics
   const handleOpenDetails = async (summary: SolutionAttemptSummary) => {
     setFetchingDetailsId(summary.id);
     setSolverMetrics(null);
@@ -117,10 +119,10 @@ export function ReviewSolutionsTab({ problem }: ReviewSolutionsTabProps) {
   };
 
   const getTierDetails = (completed: number) => {
-    if (completed >= 10) return { name: "Elite Solver", icon: <Award className="w-4 h-4" fill="currentColor" />, color: "bg-amber-50 text-amber-600 border-amber-200" };
-    if (completed >= 5) return { name: "Proven Solver", icon: <ShieldCheck className="w-4 h-4" />, color: "bg-emerald-50 text-emerald-800 border-emerald-300" };
-    if (completed >= 1) return { name: "Contributor", icon: <Shield className="w-4 h-4" />, color: "bg-emerald-50 text-emerald-700 border-emerald-200" };
-    return { name: "Initiate", icon: <ShieldHalf className="w-4 h-4" />, color: "bg-slate-50 text-slate-500 border-slate-200" };
+    if (completed >= 10) return { name: "Elite Solver", icon: <Shield className="w-4 h-4 text-white" fill="currentColor" />, color: "bg-emerald-600 text-white border-emerald-700 shadow-md" };
+    if (completed >= 5) return { name: "Proven Solver", icon: <ShieldCheck className="w-4 h-4 text-emerald-700" />, color: "bg-emerald-100 text-emerald-800 border-emerald-300 shadow-sm" };
+    if (completed >= 1) return { name: "Contributor", icon: <Shield className="w-4 h-4 text-emerald-600" />, color: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+    return { name: "Initiate", icon: <Circle className="w-4 h-4 text-slate-400" />, color: "bg-slate-50 text-slate-500 border-slate-200" };
   };
 
   const getFilenameFromUrl = (url: string) => {
@@ -149,6 +151,111 @@ export function ReviewSolutionsTab({ problem }: ReviewSolutionsTabProps) {
   return (
     <div className="flex flex-col lg:flex-row gap-6 animate-in fade-in duration-500">
       
+      {/* ── METRICS GUIDE MODAL ── */}
+      {isGuideModalOpen && (
+        <Portal>
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsGuideModalOpen(false)}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-100 animate-in zoom-in-95 duration-200 overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50/50">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">Understanding Solver Metrics</h3>
+                  <p className="text-sm font-medium text-slate-500 mt-1">Guide to performance indicators.</p>
+                </div>
+                <button onClick={() => setIsGuideModalOpen(false)} className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
+                 
+                 {/* Tiers */}
+                 <div>
+                   <h4 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+                     <Shield className="w-4 h-4 text-emerald-600"/> Solver Tiers
+                   </h4>
+                   <ul className="space-y-4">
+                     <li className="flex items-start gap-4">
+                       <div className="w-10 h-10 rounded-[12px] bg-emerald-600 shrink-0 flex items-center justify-center shadow-sm">
+                         <Shield className="w-5 h-5 text-white" fill="currentColor" />
+                       </div>
+                       <div>
+                         <p className="font-bold text-slate-900 text-sm">Elite Solver <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200 ml-1">10+</span></p>
+                         <p className="text-xs text-slate-500 mt-1 leading-relaxed">Deep expertise and consistent delivery of top-tier industry solutions.</p>
+                       </div>
+                     </li>
+                     <li className="flex items-start gap-4">
+                       <div className="w-10 h-10 rounded-[12px] bg-emerald-100 shrink-0 flex items-center justify-center border border-emerald-200/50">
+                         <ShieldCheck className="w-5 h-5 text-emerald-700" />
+                       </div>
+                       <div>
+                         <p className="font-bold text-slate-900 text-sm">Proven Solver <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200 ml-1">5+</span></p>
+                         <p className="text-xs text-slate-500 mt-1 leading-relaxed">Highly reliable solver across multiple successful project completions.</p>
+                       </div>
+                     </li>
+                     <li className="flex items-start gap-4">
+                       <div className="w-10 h-10 rounded-[12px] bg-emerald-50 shrink-0 flex items-center justify-center border border-emerald-200/50">
+                         <Shield className="w-5 h-5 text-emerald-600" />
+                       </div>
+                       <div>
+                         <p className="font-bold text-slate-900 text-sm">Contributor <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200 ml-1">1+</span></p>
+                         <p className="text-xs text-slate-500 mt-1 leading-relaxed">Successfully finalized at least one problem and building a track record.</p>
+                       </div>
+                     </li>
+                     <li className="flex items-start gap-4">
+                       <div className="w-10 h-10 rounded-[12px] bg-slate-50 shrink-0 flex items-center justify-center border border-slate-200">
+                         <Circle className="w-5 h-5 text-slate-400" />
+                       </div>
+                       <div>
+                         <p className="font-bold text-slate-900 text-sm">Initiate <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200 ml-1">0</span></p>
+                         <p className="text-xs text-slate-500 mt-1 leading-relaxed">New to the platform. Ready to make an impact.</p>
+                       </div>
+                     </li>
+                   </ul>
+                 </div>
+                 
+                 <hr className="border-slate-100" />
+                 
+                 {/* Metrics */}
+                 <div className="space-y-4">
+                   <div className="flex items-start gap-4">
+                     <div className="w-10 h-10 rounded-[12px] bg-white border border-slate-200 shrink-0 flex items-center justify-center shadow-sm">
+                       <Shield className="w-5 h-5 text-emerald-500" />
+                     </div>
+                     <div>
+                       <p className="font-bold text-slate-900 text-sm">Completed</p>
+                       <p className="text-xs text-slate-500 mt-1 leading-relaxed">The total number of industry sub-problems this solver has successfully resolved and had approved.</p>
+                     </div>
+                   </div>
+                   <div className="flex items-start gap-4">
+                     <div className="w-10 h-10 rounded-[12px] bg-white border border-slate-200 shrink-0 flex items-center justify-center shadow-sm">
+                       <Activity className="w-5 h-5 text-accent" />
+                     </div>
+                     <div>
+                       <p className="font-bold text-slate-900 text-sm">Reliability</p>
+                       <p className="text-xs text-slate-500 mt-1 leading-relaxed">Percentage of claimed problems that resulted in a completed, approved solution (ignoring abandoned or rejected attempts).</p>
+                     </div>
+                   </div>
+                   <div className="flex items-start gap-4">
+                     <div className="w-10 h-10 rounded-[12px] bg-white border border-slate-200 shrink-0 flex items-center justify-center shadow-sm">
+                       <Clock className="w-5 h-5 text-blue-500" />
+                     </div>
+                     <div>
+                       <p className="font-bold text-slate-900 text-sm">Turnaround</p>
+                       <p className="text-xs text-slate-500 mt-1 leading-relaxed">The average number of days it takes this solver to complete a sub-problem from the day it was claimed.</p>
+                     </div>
+                   </div>
+                 </div>
+
+              </div>
+              <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex justify-end">
+                <button onClick={() => setIsGuideModalOpen(false)} className="px-6 py-2.5 font-bold text-sm bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-colors shadow-sm active:scale-95 cursor-pointer">
+                  Got it
+                </button>
+              </div>
+            </div>
+          </div>
+        </Portal>
+      )}
+
       {/* ── SIDEBAR ── */}
       <div className="w-full lg:w-[320px] shrink-0 space-y-2">
         <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 ml-1">Filter by Sub-problem</h3>
@@ -294,27 +401,40 @@ export function ReviewSolutionsTab({ problem }: ReviewSolutionsTabProps) {
                     {[1, 2, 3, 4].map(i => <div key={i} className="h-16 bg-slate-100 border border-slate-200 rounded-xl" />)}
                   </div>
                 ) : solverMetrics && (
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
-                    {(() => {
-                      const tier = getTierDetails(solverMetrics.solutionsCompleted);
-                      return (
-                        <div className={`p-3 rounded-xl border flex flex-col justify-center shadow-sm ${tier.color}`}>
-                          <div className="flex items-center gap-1.5 mb-1 opacity-80"><span className="text-[10px] font-bold uppercase tracking-wider">Solver Tier</span></div>
-                          <span className="text-sm font-black tracking-tight flex items-center gap-2">{tier.icon} {tier.name}</span>
-                        </div>
-                      );
-                    })()}
-                    <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Completed</span>
-                      <span className="text-sm font-black text-slate-900">{solverMetrics.solutionsCompleted}</span>
+                  <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                    {/* 🚀 New Metrics Header with Guide Button */}
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Solver Performance</h3>
+                      <button 
+                        onClick={() => setIsGuideModalOpen(true)} 
+                        className="text-[10px] font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 hover:border-emerald-300 border border-emerald-200 px-2.5 py-1 rounded-md transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                      >
+                        <Info className="w-3 h-3" /> Metrics Guide
+                      </button>
                     </div>
-                    <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Reliability</span>
-                      <span className="text-sm font-black text-emerald-600">{solverMetrics.solutionsCompleted === 0 ? "N/A" : `${Math.round(solverMetrics.completionRate)}%`}</span>
-                    </div>
-                    <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Turnaround</span>
-                      <span className="text-sm font-black text-slate-900">{solverMetrics.avgTurnaroundDays ? `${Math.round(solverMetrics.avgTurnaroundDays)} days` : "N/A"}</span>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {(() => {
+                        const tier = getTierDetails(solverMetrics.solutionsCompleted);
+                        return (
+                          <div className={`p-3 rounded-xl border flex flex-col justify-center shadow-sm ${tier.color}`}>
+                            <div className="flex items-center gap-1.5 mb-1 opacity-80"><span className="text-[10px] font-bold uppercase tracking-wider">Solver Tier</span></div>
+                            <span className="text-sm font-black tracking-tight flex items-center gap-2">{tier.icon} {tier.name}</span>
+                          </div>
+                        );
+                      })()}
+                      <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Completed</span>
+                        <span className="text-sm font-black text-slate-900">{solverMetrics.solutionsCompleted}</span>
+                      </div>
+                      <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Reliability</span>
+                        <span className="text-sm font-black text-emerald-600">{solverMetrics.solutionsCompleted === 0 ? "N/A" : `${Math.round(solverMetrics.completionRate)}%`}</span>
+                      </div>
+                      <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Turnaround</span>
+                        <span className="text-sm font-black text-slate-900">{solverMetrics.avgTurnaroundDays ? `${Math.round(solverMetrics.avgTurnaroundDays)} days` : "N/A"}</span>
+                      </div>
                     </div>
                   </div>
                 )}

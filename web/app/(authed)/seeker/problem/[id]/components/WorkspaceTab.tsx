@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { getActiveWorkspaces, updateSubtaskMaxSolvers } from "../api/problem";
+import { getActiveWorkspaces, updateSubtaskMaxSolvers, terminateSolverAttempt } from "../api/problem";
 import type { SolutionAttemptSummary } from "@/types/attempt";
 import type { ProblemResponse } from "@/types/problem";
 
@@ -22,6 +22,11 @@ export function WorkspaceTab({ problem, onProblemUpdate, onLocateInTree }: Works
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
+  // 🚀 Termination State
+  const [terminateData, setTerminateData] = useState<{ id: string, name: string } | null>(null);
+  const [terminationReason, setTerminationReason] = useState("");
+  const [isTerminating, setIsTerminating] = useState(false);
 
   useEffect(() => {
     fetchActiveWorkspaces();
@@ -61,6 +66,23 @@ export function WorkspaceTab({ problem, onProblemUpdate, onLocateInTree }: Works
       }));
     } finally {
       setSavingSubtaskId(null);
+    }
+  };
+
+  // 🚀 Handle manual termination execution
+  const handleTerminate = async () => {
+    if (!terminateData || !terminationReason.trim()) return;
+    setIsTerminating(true);
+    try {
+      await terminateSolverAttempt(terminateData.id, terminationReason);
+      setNotification({ type: "success", message: `Solver ${terminateData.name} has been terminated.` });
+      setTerminateData(null);
+      setTerminationReason("");
+      fetchActiveWorkspaces(); // Refresh the list
+    } catch (err: any) {
+      setNotification({ type: "error", message: err.message || "Failed to terminate solver." });
+    } finally {
+      setIsTerminating(false);
     }
   };
 
@@ -120,7 +142,6 @@ export function WorkspaceTab({ problem, onProblemUpdate, onLocateInTree }: Works
     return filteredGroups.reduce((acc, g) => acc + g.active.length, 0);
   }, [filteredGroups]);
 
-  // 🚀 SKELETON LOADER (Matching Proposals layout)
   if (loading) {
     return (
       <div className="flex flex-col lg:flex-row gap-6 animate-in fade-in duration-500">
@@ -221,7 +242,6 @@ export function WorkspaceTab({ problem, onProblemUpdate, onLocateInTree }: Works
               const isSaving = savingSubtaskId === group.id;
               const hasUnsavedChanges = currentLimit !== group.originalLimit;
 
-              // Hide groups that are empty IF we are viewing all (to clean up the view)
               if (selectedSubtaskId === "ALL" && activeCount === 0) return null;
 
               return (
@@ -242,7 +262,6 @@ export function WorkspaceTab({ problem, onProblemUpdate, onLocateInTree }: Works
                   {!isCollapsed && (
                     <div className="bg-white flex flex-col overflow-hidden">
                       
-                      {/* 🚀 Sub-problem Capacity Controller */}
                       <div className="bg-slate-50/30 border-b border-slate-100 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
                           <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Sub-problem Capacity</h4>
@@ -289,15 +308,14 @@ export function WorkspaceTab({ problem, onProblemUpdate, onLocateInTree }: Works
                         </div>
                       </div>
 
-                      {/* 🚀 Active Workspaces Data Table */}
                       <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse min-w-[600px]">
                           <thead>
                             <tr className="bg-slate-50/50 border-b border-slate-100">
                               <th className="p-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-[40%]">Active Solver</th>
-                              <th className="p-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-[20%]">Status</th>
-                              <th className="p-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-[20%]">Claimed Date</th>
-                              <th className="p-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-right w-[20%]">Tree Locator</th>
+                              <th className="p-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-[15%]">Status</th>
+                              <th className="p-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-[15%]">Claimed Date</th>
+                              <th className="p-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-right w-[30%]">Actions</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
@@ -326,11 +344,27 @@ export function WorkspaceTab({ problem, onProblemUpdate, onLocateInTree }: Works
                                 <td className="p-4 text-xs font-bold text-slate-600">
                                   {new Date(solver.claimedAt).toLocaleDateString()}
                                 </td>
+                                {/* 🚀 UPDATED ROW BUTTONS */}
                                 <td className="p-4 text-right">
-                                  <button className="text-[11px] font-bold text-slate-600 bg-white border border-slate-200 hover:border-accent hover:text-accent px-4 py-2 rounded-lg transition-all shadow-sm flex items-center justify-center gap-2 ml-auto w-fit active:scale-95 cursor-pointer">
-                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" /></svg>
-                                    Locate
-                                  </button>
+                                  <div className="flex items-center justify-end gap-2">
+                                    <button 
+                                      onClick={(e) => { 
+                                        e.stopPropagation(); 
+                                        setTerminateData({ id: solver.id, name: `${solver.solverFirstName} ${solver.solverLastName}` }); 
+                                      }} 
+                                      className="text-[11px] font-bold text-rose-600 bg-white border border-rose-200 hover:bg-rose-50 hover:border-rose-300 px-3 py-2 rounded-lg transition-all shadow-sm flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
+                                    >
+                                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                                      Terminate
+                                    </button>
+                                    <button 
+                                      onClick={(e) => { e.stopPropagation(); onLocateInTree(solver.id); }} 
+                                      className="text-[11px] font-bold text-slate-600 bg-white border border-slate-200 hover:border-accent hover:text-accent px-3 py-2 rounded-lg transition-all shadow-sm flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
+                                    >
+                                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" /></svg>
+                                      Locate
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             ))}
@@ -346,9 +380,44 @@ export function WorkspaceTab({ problem, onProblemUpdate, onLocateInTree }: Works
         </div>
       </div>
 
+      {/* ─── TERMINATION MODAL ─── */}
+      {terminateData && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => !isTerminating && setTerminateData(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 text-left border border-slate-100 animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 rounded-full bg-rose-50 flex items-center justify-center text-rose-600 border border-rose-100 shrink-0">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 leading-tight">Terminate Solver</h3>
+                <p className="text-sm text-slate-500 font-medium">End workspace for <span className="font-bold text-slate-700">{terminateData.name}</span></p>
+              </div>
+            </div>
+            
+            <p className="text-xs text-rose-600 font-bold uppercase tracking-wider mb-2 ml-1">Reason (Visible to Solver)</p>
+            <textarea 
+              value={terminationReason}
+              onChange={(e) => setTerminationReason(e.target.value)}
+              placeholder="e.g., The approach deviated from original requirements..."
+              className="w-full min-h-[100px] p-3 rounded-xl border border-slate-200 bg-slate-50 text-sm mb-6 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 focus:bg-white outline-none resize-none transition-all placeholder:text-slate-400"
+              disabled={isTerminating}
+            />
+            
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setTerminateData(null)} disabled={isTerminating} className="px-4 py-2 rounded-xl text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 border border-transparent hover:border-slate-300 transition-all cursor-pointer">
+                Cancel
+              </button>
+              <button onClick={handleTerminate} disabled={!terminationReason.trim() || isTerminating} className="px-5 py-2 rounded-xl text-sm font-bold text-white bg-rose-600 hover:bg-rose-700 shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                {isTerminating ? "Terminating..." : "Confirm Termination"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ─── NOTIFICATION MODAL ─── */}
       {notification && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setNotification(null)}>
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setNotification(null)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center border border-slate-100 animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
             <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-5 shadow-inner ${notification.type === "success" ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-rose-50 text-rose-600 border border-rose-100"}`}>
               {notification.type === "success" 

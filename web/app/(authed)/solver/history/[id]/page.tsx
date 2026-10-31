@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ExternalLink, CheckCircle2, Calendar, FileText, Paperclip, Download, AlertCircle, Network } from "lucide-react";
+import { ArrowLeft, ExternalLink, CheckCircle2, Calendar, FileText, Paperclip, Download, AlertCircle, Network, Bot, UserMinus } from "lucide-react";
 import { getAttemptDetails } from "../../dashboard/api/dashboard";
 import type { AttemptDetail } from "@/types/attempt";
 
@@ -67,7 +67,7 @@ export default function HistoryViewPage() {
                 attempt.status === "COMPLETED" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-rose-50 text-rose-700 border border-rose-200"
               }`}>
                 {attempt.status === "COMPLETED" ? <CheckCircle2 className="w-3.5 h-3.5" /> : <FileText className="w-3.5 h-3.5" />}
-                {attempt.status === "TERMINATED" ? "REJECTED" : attempt.status.replace(/_/g, " ")}
+                {attempt.status.replace(/_/g, " ")}
               </span>
             </div>
             <p className="text-slate-600 font-medium flex flex-wrap items-center gap-4">
@@ -79,8 +79,25 @@ export default function HistoryViewPage() {
           </div>
 
           <div className="p-6 md:p-8">
+
+         {/* 🚀 ADDED: TERMINATION REASON FEEDBACK BLOCK */}
+            {attempt.status === "TERMINATED" && attempt.terminationReason && (
+              <div className="mb-8 p-5 md:p-6 bg-rose-50 border border-rose-200 rounded-xl shadow-sm">
+                <h4 className="text-xs font-bold text-rose-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                  {attempt.terminationReason.startsWith("Automatically terminated:") ? (
+                    <><Bot className="w-4 h-4" /> System Auto-Termination</>
+                  ) : (
+                    <><UserMinus className="w-4 h-4" /> Terminated by Seeker</>
+                  )}
+                </h4>
+                <div className="text-sm text-rose-900 font-medium whitespace-pre-wrap leading-relaxed">
+                  {attempt.terminationReason}
+                </div>
+              </div>
+            )}
+
             {attempt.status === "REJECTED" && attempt.rejectionReason && (
-              <div className="mb-8 p-5 md:p-6 bg-rose-50 border border-rose-200 rounded-xl">
+              <div className="mb-8 p-5 md:p-6 bg-rose-50 border border-rose-200 rounded-xl shadow-sm">
                 <h4 className="text-xs font-bold text-rose-700 uppercase tracking-wider mb-3 flex items-center gap-2">
                   <AlertCircle className="w-4 h-4" /> Rejection Feedback
                 </h4>

@@ -88,3 +88,17 @@ export async function getAuditSummaries(problemId: string): Promise<AuditDateSum
 export async function getAuditLogsByDate(problemId: string, date: string): Promise<AuditLog[]> {
   return apiRequest<AuditLog[]>(`/audit/problem/${problemId}?date=${date}`, { method: "GET" });
 }
+
+// Add this new optimized fetcher
+export async function getMyAttemptSummaryForProblem(problemId: string): Promise<SolutionAttemptSummary | null> {
+  try {
+    const res = await apiRequest<SolutionAttemptSummary | string>(`/problems/${problemId}/attempts/my-summary`, { 
+      method: "GET" 
+    });
+    // If backend returns 204 No Content, our apiRequest might return an empty string
+    if (!res || typeof res === "string") return null;
+    return res as SolutionAttemptSummary;
+  } catch (error) {
+    return null; // Safely return null if no attempt exists
+  }
+}

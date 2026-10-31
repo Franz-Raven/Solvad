@@ -1,5 +1,6 @@
 package com.solvad.backend.merit;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 
@@ -11,6 +12,11 @@ import java.util.stream.Collectors;
 public class MeritService {
 
     private final MeritRepository meritRepository;
+    @Autowired
+    public MeritService(MeritRepository meritRepository) {
+        this.meritRepository = meritRepository;
+    }
+
 
     public MeritService(MeritRepository meritRepository) {
         this.meritRepository = meritRepository;
