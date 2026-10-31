@@ -340,6 +340,30 @@ public class ClaimRequestService {
     }
 
     @Transactional(readOnly = true)
+    public PaginatedClaimsResponse getHistoryWorkspaceClaims(UUID solverUserId, int page, int size) {
+        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
+                .orElseThrow(() -> new RuntimeException("Solver profile not found"));
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<ClaimRequest> claimPage = claimRequestRepository.findBySolverAndStatusIn(
+                solver, List.of(ClaimRequestStatus.REJECTED, ClaimRequestStatus.CANCELLED), pageable);
+
+        List<ClaimSummaryResponse> summaries = claimPage.getContent().stream()
+                .map(claim -> new ClaimSummaryResponse(
+                        claim.getId(),
+                        claim.getProblem().getId(),
+                        claim.getProblem().getTitle(),
+                        claim.getTargetSubtask() != null ? claim.getTargetSubtask().getId() : null,
+                        claim.getTargetSubtask() != null ? claim.getTargetSubtask().getTitle() : null,
+                        claim.getStatus().name(),
+                        claim.getCreatedAt()))
+                .collect(Collectors.toList());
+
+        return new PaginatedClaimsResponse(summaries, claimPage.getNumber(),
+                claimPage.getTotalPages(), claimPage.getTotalElements(), claimPage.getSize());
+    }
+
+    @Transactional(readOnly = true)
     public List<ClaimRequest> getPendingProposalsForProblem(UUID problemId) {
         // Fetch the problem first to ensure it exists
         Problem problem = problemRepository.findById(problemId)

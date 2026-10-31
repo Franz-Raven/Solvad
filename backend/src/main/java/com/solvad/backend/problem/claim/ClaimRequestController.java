@@ -153,6 +153,20 @@ public class ClaimRequestController {
         }
     }
 
+    @GetMapping("/claims/my-history")
+    @PreAuthorize("hasRole('SOLVER')")
+    public ResponseEntity<PaginatedClaimsResponse> getMyClaimHistory(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "5") int size) {
+        try {
+            UUID solverId = extractUserId(authHeader);
+            return ResponseEntity.ok(claimRequestService.getHistoryWorkspaceClaims(solverId, page, size));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
     private Map<String, Object> mapToDTO(ClaimRequest r) {
         Map<String, Object> dto = new java.util.HashMap<>();
         var solver = r.getSolver();

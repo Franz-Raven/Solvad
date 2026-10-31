@@ -138,12 +138,14 @@ export function SolutionTreeTab({
 
   const structuredTreeRoots = buildHierarchyTree(filteredAttempts);
   
-  // 🚀 FIXED: Isolated `canSubmitOriginal` so it DOES NOT fail if `onForkRequest` is missing.
   const hasPendingOrApproved = !isCompleted && (myProposalStatus === "PENDING" || myProposalStatus === "APPROVED");
-  const canInteract = !isSeekerView && !isAlreadyClaimed && !isPendingReview && !isUnavailable && !hasPendingOrApproved;
-  const canFork = canInteract && !!onForkRequest;
+  
+  // 🚀 FIXED: Allow forking if not currently blocked by a pending review or active proposal, 
+  // without being locked out just because `isAlreadyClaimed` is true.
+  const canFork = !isSeekerView && !isPendingReview && !isUnavailable && !hasPendingOrApproved && !!onForkRequest;
+  const canInteract = !isAlreadyClaimed && !isPendingReview && !isUnavailable && !hasPendingOrApproved && !!onForkRequest;
 
-  // 🚀 ADDED: Smart fallback to click the "Sub-problems" tab if the parent page didn't pass the prop
+  // Smart fallback to click the "Sub-problems" tab if onClaimNew prop is missing
   const handleClaimNew = () => {
     if (onClaimNew) {
       onClaimNew();
@@ -193,6 +195,7 @@ export function SolutionTreeTab({
       <div style={{ display: "flex", flexDirection: "row", alignItems: "flex-start", gap: "32px", justifyContent: "center" }}>
         {nodes.map((node) => {
           const isFetching = fetchingDetailsId === node.id;
+          
           const isOwner = node.id === myAttemptId;
           let canViewDetails = false;
 
@@ -238,6 +241,7 @@ export function SolutionTreeTab({
                 </div>
 
                 <div className="flex items-center gap-2 mt-auto">
+                  {/* 🚀 FIXED: Uses `canFork` instead of `canInteract` so completed nodes can always be built upon */}
                   {node.status === "COMPLETED" && canFork && onForkRequest && (
                     <button onClick={() => onForkRequest(node.id, node.targetSubtaskId!)} className="flex-1 py-1.5 bg-accent/10 hover:bg-accent text-accent hover:text-white text-[11px] font-bold rounded-lg transition-all border border-accent/20 cursor-pointer shadow-sm active:scale-[0.98]">
                       Build Upon ➔
@@ -270,8 +274,7 @@ export function SolutionTreeTab({
       </div>
     );
   }
-
-  function buildConnectorLines(nodes: TreeAttemptNodeSummary[]): React.ReactNode[] {
+function buildConnectorLines(nodes: TreeAttemptNodeSummary[]): React.ReactNode[] {
     if (!containerRef.current) return [];
     const containerRect = containerRef.current.getBoundingClientRect();
     const lines: React.ReactNode[] = [];
@@ -291,6 +294,7 @@ export function SolutionTreeTab({
           const parentCard = parentWrapper ? (parentWrapper.children[0] as HTMLElement) : null;
           if (!parentCard) { walk(node.children); return; }
 
+          // 🚀 FIXED: Safely read scroll position from containerRef.current
           const scroll = { x: containerRef.current!.scrollLeft, y: containerRef.current!.scrollTop };
           const toL = (r: DOMRect) => ({ cx: r.left + r.width / 2 - containerRect.left + scroll.x, top: r.top - containerRect.top + scroll.y, bottom: r.bottom - containerRect.top + scroll.y });
 
@@ -333,7 +337,7 @@ export function SolutionTreeTab({
       {modalNode && (
         <AttemptDetailModal
           node={modalNode}
-          canInteract={canInteract} // Passed generalized interact boolean
+          canInteract={canInteract}
           onForkRequest={(id, subtaskId) => {
             setModalNode(null);
             if (onForkRequest) onForkRequest(id, subtaskId);
@@ -343,15 +347,14 @@ export function SolutionTreeTab({
       )}
 
       <div className="animate-in fade-in duration-500 max-w-7xl mx-auto w-full">
-        {/* 🚀 FIXED: Banner relies ONLY on `canInteract`. */}
-        {canInteract && (
+        {canInteract && attempts.length > 0 && (
           <div className="bg-white rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.04)] border border-slate-100 p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 transition-all hover:shadow-md">
             <div>
-              <h3 className="font-bold text-slate-900 text-lg">Submit an Original Solution</h3>
-              <p className="text-sm font-medium text-slate-500 mt-1">Want to start from scratch? You can submit a fresh proposal instead of branching off an existing solution.</p>
+              <h3 className="font-bold text-slate-900 text-lg">Want to start from scratch?</h3>
+              <p className="text-sm font-medium text-slate-500 mt-1">Submit a fresh proposal instead of branching off an existing solution.</p>
             </div>
             <button onClick={handleClaimNew} className="w-full md:w-auto px-8 py-3 bg-accent hover:bg-accent/90 text-white font-bold rounded-xl transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer">
-              Submit Original Proposal <ArrowRight className="w-4 h-4" />
+              Submit New Proposal <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         )}
@@ -362,8 +365,7 @@ export function SolutionTreeTab({
               <Network className="w-8 h-8 text-slate-300" />
             </div>
             <h3 className="text-xl font-bold text-slate-900 mb-2">No attempts yet</h3>
-            <p className="text-slate-500 font-medium text-sm mb-6 max-w-sm mx-auto">Be the first to claim and solve this problem. Your original solution will become the root of this tree.</p>
-            {/* 🚀 FIXED: Fallback button also relies ONLY on `canInteract`. */}
+            <p className="text-slate-500 font-medium text-sm mb-6 max-w-sm mx-auto">Be the first to claim and solve this problem. Your solution will become the root of this tree.</p>
             {canInteract && (
               <button onClick={handleClaimNew} className="px-6 py-2.5 bg-accent hover:bg-accent/90 text-white font-bold rounded-xl transition-all shadow-md cursor-pointer inline-flex items-center gap-2 active:scale-[0.98]">
                 Submit a Proposal <ArrowRight className="w-4 h-4" />

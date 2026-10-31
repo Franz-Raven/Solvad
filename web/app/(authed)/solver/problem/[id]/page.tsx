@@ -408,6 +408,13 @@ function SolverProblemDetailContent() {
               problemId={problem.id}
               highlightedAttemptId={highlightedNodeId}
               myAttemptId={myAttempt?.id}
+              isAlreadyClaimed={isAlreadyClaimed}
+              isPendingReview={isPendingReview}
+              isCompleted={isCompleted}
+              isUnavailable={isUnavailable}
+              myProposalStatus={myProposalStatus}
+              onForkRequest={(attemptId, subtaskId) => openProposalModal(subtaskId, attemptId)}
+              onClaimNew={() => setActiveTab("subtasks")}
             />
           )}
 

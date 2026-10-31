@@ -115,3 +115,13 @@ export async function getMyLightweightAttempts(): Promise<SolutionAttemptSummary
 export async function getSolverOverviewStats(): Promise<SolverOverviewStats> {
   return apiRequest<SolverOverviewStats>("/attempts/me/overview-stats", { method: "GET" });
 }
+
+export async function getClaimHistory(
+  page: number = 0,
+  size: number = 5
+): Promise<PaginatedClaimsResponse> {
+  const params = new URLSearchParams();
+  params.set("page", page.toString());
+  params.set("size", size.toString());
+  return apiRequest<PaginatedClaimsResponse>(`/claims/my-history?${params.toString()}`, { method: "GET" });
+}
