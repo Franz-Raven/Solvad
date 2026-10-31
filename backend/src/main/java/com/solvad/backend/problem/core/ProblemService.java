@@ -7,6 +7,7 @@ import com.solvad.backend.problem.scope.GenerateScopeRequest;
 import com.solvad.backend.problem.scope.GenerateScopeResponse;
 import com.solvad.backend.problem.search.PaginatedProblemsResponse;
 import com.solvad.backend.problem.event.ProblemCreatedEvent;
+import com.solvad.backend.notification.SolutionAttemptTerminatedEvent;
 import com.solvad.backend.problem.attachment.AttachmentRequirementResponse;
 import com.solvad.backend.problem.attachment.ProblemAttachment;
 import com.solvad.backend.problem.search.ProblemSearchResult;
@@ -322,6 +323,11 @@ public class ProblemService {
                     attempt.setStatus(SolutionAttemptStatus.TERMINATED);
                     attempt.setTerminationReason(autoReason);
                     attemptRepository.save(attempt);
+                    eventPublisher.publishEvent(new SolutionAttemptTerminatedEvent(
+                            attempt.getSolver().getUser().getId(),
+                            problemId,
+                            problem.getTitle(),
+                            newStatus.name()));
 
                     // 🚀 FIXED: Removed the autoReason from the public audit log description
                     auditService.log(

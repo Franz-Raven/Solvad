@@ -68,4 +68,22 @@ public class NotificationEventListener {
             log.error("Failed to send decision email for request {}", e.claimRequestId(), ex);
         }
     }
+
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onSolutionAttemptTerminated(SolutionAttemptTerminatedEvent e) {
+        try {
+            notificationService.createAndPush(
+                    e.solverUserId(),
+                    NotificationType.SOLUTION_ATTEMPT_TERMINATED,
+                    "Your active solution work on '" + e.problemTitle()
+                            + "' was terminated because the seeker marked the problem as "
+                            + e.problemStatus().toLowerCase() + ".",
+                    e.problemId(),
+                    null);
+        } catch (Exception ex) {
+            log.error("Failed to create solution-attempt termination notification for problem {}",
+                    e.problemId(), ex);
+        }
+    }
 }

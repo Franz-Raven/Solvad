@@ -141,7 +141,11 @@ export function NotificationTray({ open, anchorRef, onClose }: NotificationTrayP
       // route them to their specific problem
       router.push(`/seeker/problem/${notification.problemId}?tab=proposals`);    
     } 
-    else if (notification.type === 'PROPOSAL_APPROVED' || notification.type === 'PROPOSAL_REJECTED') {
+    else if (
+      notification.type === 'PROPOSAL_APPROVED' ||
+      notification.type === 'PROPOSAL_REJECTED' ||
+      notification.type === 'SOLUTION_ATTEMPT_TERMINATED'
+    ) {
      router.push(`/solver/problem/${notification.problemId}?tab=workspace`);
     }
     else {
