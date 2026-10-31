@@ -1,9 +1,6 @@
 package com.solvad.backend.notification;
 
-import com.solvad.backend.email.ResendEmailService;
-import com.solvad.backend.notification.NotificationType;
-import com.solvad.backend.notification.ProposalStatusChangedEvent;
-import com.solvad.backend.notification.ProposalSubmittedEvent;
+import com.solvad.backend.email.NotificationEmailService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
@@ -17,12 +14,12 @@ public class NotificationEventListener {
     private static final Logger log = LoggerFactory.getLogger(NotificationEventListener.class);
 
     private final NotificationService notificationService;
-    private final ResendEmailService resendEmailService;
+    private final NotificationEmailService notificationEmailService;
 
     public NotificationEventListener(NotificationService notificationService,
-                                     ResendEmailService resendEmailService) {
+                                     NotificationEmailService notificationEmailService) {
         this.notificationService = notificationService;
-        this.resendEmailService = resendEmailService;
+        this.notificationEmailService = notificationEmailService;
     }
 
     // Seeker gets an in-app notification only, no email
@@ -65,7 +62,7 @@ public class NotificationEventListener {
         }
 
         try {
-            resendEmailService.sendProposalDecisionEmail(
+            notificationEmailService.sendProposalDecisionEmail(
                     e.solverEmail(), e.solverName(), e.problemTitle(), approved, e.problemId());
         } catch (Exception ex) {
             log.error("Failed to send decision email for request {}", e.claimRequestId(), ex);
