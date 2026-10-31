@@ -2,121 +2,69 @@
 
 import { Suspense, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { 
-  getDiscoveryDashboard, 
-  getMyActiveAttemptsCount, 
-  getMyLightweightAttempts // 🚀 FIX: Swapped to the optimized lightweight fetcher
-} from "./api/dashboard";
-import type { ProblemResponse } from "@/types/problem";
-import type { SolutionAttemptSummary } from "@/types/attempt"; // 🚀 FIX: Changed to Summary type
-
-// Extracted Components
-import { SolverOverview } from "./components/SolverOverview";
-import { WorkspaceBanner } from "./components/WorkspaceBanner";
-import { RecommendationsList } from "./components/RecommendationsList";
 import { ExploreProblems } from "./components/ExploreProblems";
 import { MyWorkspace } from "./components/MyWorkspace";
+import { SolverOverview } from "./components/SolverOverview";
+import { getSolverOverviewStats} from "./api/dashboard";
+import { Loader2 } from "lucide-react";
 
-export default function SolverDashboardPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-linear-to-br from-accent/20 via-background to-accent/10 p-8" />}>
-      <SolverDashboardContent />
-    </Suspense>
-  );
-}
-
+import type { SolverOverviewStats } from "@/types/attempt";
 function SolverDashboardContent() {
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab") || "home";
 
-  // Shared Data
-  const [recommended, setRecommended] = useState<ProblemResponse[]>([]);
-  const [solverCourse, setSolverCourse] = useState("");
-  const [isRecommendationsLoading, setIsRecommendationsLoading] = useState(true);
+  // 🚀 State to hold the new lightweight, pre-calculated stats
+  const [stats, setStats] = useState<SolverOverviewStats | null>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
 
-  // 🚀 Home Tab Data (Lightweight Integer Fetch)
-  const [activeCount, setActiveCount] = useState<number>(0);
-  const [isCountLoading, setIsCountLoading] = useState(true);
-
-  // 🚀 Overview Tab Data (Lightweight Summary Fetch)
-  const [myAttempts, setMyAttempts] = useState<SolutionAttemptSummary[]>([]); // 🚀 FIX: Updated state type
-  const [isAttemptsLoading, setIsAttemptsLoading] = useState(true);
-
-  // 1. Always load recommendations for the Home tab
+  // 🚀 Only fetch the stats from the backend when the user actually opens the Overview tab
   useEffect(() => {
-    setIsRecommendationsLoading(true);
-    getDiscoveryDashboard()
-      .then((discovery) => {
-        setRecommended(discovery.recommended);
-        setSolverCourse(discovery.solverCourse);
-      })
-      .catch((err) => console.error("Failed to load recommendations", err))
-      .finally(() => setIsRecommendationsLoading(false));
-  }, []);
-
-  // 2. Fetch the fast lightweight count ONLY for the Home tab banner
-  useEffect(() => {
-    if (activeTab === "home") {
-      setIsCountLoading(true);
-      getMyActiveAttemptsCount()
-        .then(setActiveCount)
-        .catch(() => setActiveCount(0))
-        .finally(() => setIsCountLoading(false));
+    if (activeTab === "overview" && !stats) {
+      setLoadingStats(true);
+      getSolverOverviewStats()
+        .then(setStats)
+        .catch((error) => console.error("Failed to fetch overview stats:", error))
+        .finally(() => setLoadingStats(false));
     }
-  }, [activeTab]);
-
-  // 3. LAZY-LOAD the lightweight attempt history ONLY if they click the Overview tab
-  useEffect(() => {
-    if (activeTab === "overview" && myAttempts.length === 0) {
-      setIsAttemptsLoading(true);
-      getMyLightweightAttempts() // 🚀 FIX: Triggering optimized backend endpoint
-        .then(setMyAttempts)
-        .catch(() => setMyAttempts([]))
-        .finally(() => setIsAttemptsLoading(false));
-    }
-  }, [activeTab, myAttempts.length]);
+  }, [activeTab, stats]);
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-accent/20 via-background to-accent/10 p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-slate-50/50 pt-8 pb-16">
+      <div className="max-w-7xl mx-auto px-6 md:px-8">
+        
         {activeTab === "home" && (
           <div className="animate-in fade-in duration-300">
-            <div className="mb-10 text-center">
-              <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-                Find Problems
-              </h1>
-              <p className="text-lg text-gray-700 max-w-3xl mx-auto">
-                Discover industry challenges matched to your course
-                {solverCourse ? <span className="font-medium text-secondary"> ({solverCourse})</span> : null} and skills.
-              </p>
-            </div>
-
-            <WorkspaceBanner
-              isLoading={isCountLoading}
-              activeCount={activeCount}
-            />
-
-            <RecommendationsList
-              isLoading={isRecommendationsLoading}
-              recommendations={recommended}
-            />
-
             <ExploreProblems />
           </div>
         )}
-
-        {activeTab === "overview" && (
-          <div className="animate-in fade-in duration-300">
-            <SolverOverview attempts={myAttempts} loading={isAttemptsLoading} />
-          </div>
-        )}
-
+        
         {activeTab === "workspace" && (
           <div className="animate-in fade-in duration-300">
             <MyWorkspace />
           </div>
         )}
+        
+        {activeTab === "overview" && (
+          <div className="animate-in fade-in duration-300">
+            {/* 🚀 FIXED: Pass 'stats' and 'loading' instead of 'attempts' */}
+            <SolverOverview stats={stats} loading={loadingStats} />
+          </div>
+        )}
+
       </div>
     </div>
+  );
+}
+
+export default function SolverDashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-[60vh] flex flex-col items-center justify-center bg-slate-50/50">
+        <Loader2 className="w-8 h-8 text-emerald-500 animate-spin mb-4" />
+        <p className="text-sm font-bold text-slate-500 uppercase tracking-wider">Loading Dashboard...</p>
+      </div>
+    }>
+      <SolverDashboardContent />
+    </Suspense>
   );
 }

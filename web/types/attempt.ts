@@ -200,3 +200,17 @@ export interface SolverMetrics {
   completionRate: number;
   avgTurnaroundDays: number | null;
 }
+
+export interface WeeklyAttemptStat {
+  week: string;
+  count: number;
+}
+
+export interface SolverOverviewStats {
+  totalAttempts: number;
+  activeWorkspaces: number;
+  completedSolutions: number;
+  successRate: number;
+  timelineData: WeeklyAttemptStat[];
+}
+

@@ -8,6 +8,8 @@ import type { ProblemResponse } from "@/types/problem";
 import type { ClaimDetail, AttemptDetail } from "@/types/attempt";
 import type { SolutionAttemptSummary } from "@/types/attempt";
 
+import type { SolverOverviewStats } from "@/types/attempt";
+
 export interface DiscoveryQuery {
   search?: string;
   tags?: string;
@@ -108,4 +110,8 @@ export async function getAttemptDetails(id: string): Promise<AttemptDetail> {
 }
 export async function getMyLightweightAttempts(): Promise<SolutionAttemptSummary[]> {
   return apiRequest<SolutionAttemptSummary[]>("/attempts/me/summary", { method: "GET" });
+}
+
+export async function getSolverOverviewStats(): Promise<SolverOverviewStats> {
+  return apiRequest<SolverOverviewStats>("/attempts/me/overview-stats", { method: "GET" });
 }

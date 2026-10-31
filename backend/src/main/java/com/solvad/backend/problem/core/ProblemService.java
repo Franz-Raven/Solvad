@@ -317,19 +317,20 @@ public class ProblemService {
 
                 String autoReason = "Automatically terminated: Problem was marked as " + newStatus.name() + " by the seeker.";
 
+                // Inside your activeAttempts loop in updateProblemStatus:
                 for (SolutionAttempt attempt : activeAttempts) {
                     attempt.setStatus(SolutionAttemptStatus.TERMINATED);
                     attempt.setTerminationReason(autoReason);
                     attemptRepository.save(attempt);
 
-                    // Log the automatic termination for the solver's history
+                    // 🚀 FIXED: Removed the autoReason from the public audit log description
                     auditService.log(
                             problemId,
                             seekerUserId,
                             seeker.getOrganizationName(),
                             "SEEKER",
                             AuditEventType.STATUS_CHANGED,
-                            "System Auto-Termination for solver " + attempt.getSolver().getFirstName() + ": " + autoReason
+                            "System Auto-Termination for solver " + attempt.getSolver().getFirstName() + "."
                     );
                 }
 
