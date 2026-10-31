@@ -1,8 +1,17 @@
 import { Client, type StompSubscription } from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
 import type { Notification } from '@/types/notification';
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL;
+// Fallback to localhost if env var is missing
+const RAW_WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080/ws';
+
+// Helper to use ws:// for localhost and wss:// for production
+function getBrokerURL(): string {
+  let url = RAW_WS_URL;
+  if (url.startsWith('https://')) url = url.replace('https://', 'wss://');
+  else if (url.startsWith('http://')) url = url.replace('http://', 'ws://');
+  return url;
+}
+
 const NOTIFICATIONS_DESTINATION = '/user/queue/notifications';
 
 type NotificationHandler = (notification: Notification) => void;
@@ -14,32 +23,27 @@ class WebSocketService {
   private onReconnect: (() => void) | null = null;
   private connectCount = 0;
 
-  // One connection per app session. Safe to call repeatedly.
   connect(token: string): Promise<void> {
-    if (!WS_URL) {
-      return Promise.reject(new Error('NEXT_PUBLIC_WS_URL is not set'));
-    }
     if (this.client?.active) {
       return Promise.resolve();
     }
 
     return new Promise<void>((resolve, reject) => {
       const client = new Client({
-        webSocketFactory: () => new SockJS(WS_URL),
+        brokerURL: getBrokerURL(), 
         connectHeaders: { Authorization: `Bearer ${token}` },
         reconnectDelay: 5000,
         heartbeatIncoming: 4000,
         heartbeatOutgoing: 4000,
         onConnect: () => {
-          if (this.client !== client) return; // stale client (e.g. StrictMode remount)
+          if (this.client !== client) return;
           this.connectCount += 1;
           this.attachSubscription();
-          if (this.connectCount > 1) this.onReconnect?.(); // catch up on anything missed while offline
+          if (this.connectCount > 1) this.onReconnect?.();
           resolve();
         },
         onStompError: (frame) => {
           reject(new Error(frame.headers['message'] ?? 'WebSocket authentication failed'));
-          // Never connected = rejected handshake (bad/expired token). Stop the retry loop.
           if (this.connectCount === 0) {
             void client.deactivate();
             if (this.client === client) this.client = null;
@@ -52,12 +56,6 @@ class WebSocketService {
     });
   }
 
-  /**
-   Register the handler for /user/queue/notifications. Can be called before or
-    after connect(); the subscription is (re)attached on every (re)connect. 
-    onReconnect fires after each reconnect, not the first connect.
-    Returns an unsubscribe function.
-   */
   subscribeToNotifications(
     onNotification: NotificationHandler,
     onReconnect?: () => void,
