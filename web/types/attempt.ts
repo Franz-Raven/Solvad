@@ -37,7 +37,8 @@ export interface SolutionAttemptResponse {
   parentFileUrls?: string[];
   seekerName?: string;
   seekerProfileUrl?: string;
-  rejectionReason?: string; // 🚀 ADDED
+  rejectionReason?: string; 
+  terminationReason?: string | null; 
 }
 
 export interface TreeAttemptNode extends SolutionAttemptResponse {
@@ -165,7 +166,8 @@ export interface AttemptDetail {
   completedAt: string;
   summary: string;
   attachedFiles?: string[];
-  rejectionReason?: string; // 🚀 ADDED
+  rejectionReason?: string;
+  terminationReason?: string | null; // 🚀 ADDED
   deltaDescription?: string;
 }
 
@@ -198,3 +200,17 @@ export interface SolverMetrics {
   completionRate: number;
   avgTurnaroundDays: number | null;
 }
+
+export interface WeeklyAttemptStat {
+  week: string;
+  count: number;
+}
+
+export interface SolverOverviewStats {
+  totalAttempts: number;
+  activeWorkspaces: number;
+  completedSolutions: number;
+  successRate: number;
+  timelineData: WeeklyAttemptStat[];
+}
+

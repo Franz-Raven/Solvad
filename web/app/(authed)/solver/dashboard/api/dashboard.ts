@@ -8,6 +8,8 @@ import type { ProblemResponse } from "@/types/problem";
 import type { ClaimDetail, AttemptDetail } from "@/types/attempt";
 import type { SolutionAttemptSummary } from "@/types/attempt";
 
+import type { SolverOverviewStats } from "@/types/attempt";
+
 export interface DiscoveryQuery {
   search?: string;
   tags?: string;
@@ -108,4 +110,18 @@ export async function getAttemptDetails(id: string): Promise<AttemptDetail> {
 }
 export async function getMyLightweightAttempts(): Promise<SolutionAttemptSummary[]> {
   return apiRequest<SolutionAttemptSummary[]>("/attempts/me/summary", { method: "GET" });
+}
+
+export async function getSolverOverviewStats(): Promise<SolverOverviewStats> {
+  return apiRequest<SolverOverviewStats>("/attempts/me/overview-stats", { method: "GET" });
+}
+
+export async function getClaimHistory(
+  page: number = 0,
+  size: number = 5
+): Promise<PaginatedClaimsResponse> {
+  const params = new URLSearchParams();
+  params.set("page", page.toString());
+  params.set("size", size.toString());
+  return apiRequest<PaginatedClaimsResponse>(`/claims/my-history?${params.toString()}`, { method: "GET" });
 }

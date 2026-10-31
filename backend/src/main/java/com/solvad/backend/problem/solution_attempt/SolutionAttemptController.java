@@ -323,4 +323,41 @@ public class SolutionAttemptController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    @PostMapping("/api/attempts/{attemptId}/terminate")
+    @PreAuthorize("hasRole('SEEKER')")
+    public ResponseEntity<?> terminateAttempt(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable UUID attemptId,
+            @RequestParam("reason") String reason) {
+        try {
+            UUID seekerUserId = extractUserId(authHeader);
+            SolutionAttemptResponse response = attemptService.terminateAttemptManually(attemptId, reason, seekerUserId);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/api/problems/{problemId}/attempts/my-summary")
+    @PreAuthorize("hasRole('SOLVER')")
+    public ResponseEntity<SolutionAttemptSummaryResponse> getMyAttemptSummaryForProblem(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable UUID problemId) {
+
+        UUID solverUserId = extractUserId(authHeader);
+        SolutionAttemptSummaryResponse summary = attemptService.getMyAttemptSummaryForProblem(solverUserId, problemId);
+
+        if (summary == null) {
+            return ResponseEntity.noContent().build(); // 204 means successful request, but no data (expected if not claimed)
+        }
+        return ResponseEntity.ok(summary);
+    }
+
+    @GetMapping("/api/attempts/me/overview-stats")
+    @PreAuthorize("hasRole('SOLVER')")
+    public ResponseEntity<SolverOverviewStatsResponse> getSolverOverviewStats(@RequestHeader("Authorization") String authHeader) {
+        UUID userId = extractUserId(authHeader);
+        return ResponseEntity.ok(attemptService.getSolverOverviewStats(userId));
+    }
 }

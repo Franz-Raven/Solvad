@@ -7,13 +7,13 @@ import dynamic from "next/dynamic";
 import { ChevronLeft } from "lucide-react";
 import { 
   getProblemById, 
-  getMyAttempt, 
-  getMyProposalStatus 
-} from "./api/problem";
-import { getMyActiveAttempts } from "../../dashboard/api/dashboard";
+  getMyProposalStatus,
 
+} from "./api/problem";
+
+import { getMyAttemptSummaryForProblem } from "./api/problem";
 import type { ProblemResponse } from "@/types/problem";
-import type { SolutionAttemptResponse } from "@/types/attempt";
+import type { SolutionAttemptSummary } from "@/types/attempt"; // 🚀 Updated type
 
 const BlueprintTab = dynamic(() => import("./components/BlueprintTab").then((mod) => mod.BlueprintTab), {
   loading: () => (
@@ -95,7 +95,7 @@ function SolverProblemDetailContent() {
   const highlightParam = searchParams.get("highlight");
 
   const [problem, setProblem] = useState<ProblemResponse | null>(null);
-  const [myAttempt, setMyAttempt] = useState<SolutionAttemptResponse | null>(null);
+  const [myAttempt, setMyAttempt] = useState<SolutionAttemptSummary | null>(null); // 🚀 Updated to summary type
   const [myProposalStatus, setMyProposalStatus] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<TabType>(tabParam || "blueprint");
@@ -117,17 +117,19 @@ function SolverProblemDetailContent() {
     if (highlightParam) setHighlightedNodeId(highlightParam);
   }, [tabParam, highlightParam]);
 
-  const loadData = async () => {
+ const loadData = async () => {
     try {
       setLoading(true);
       setError(null);
 
       const [
         problemResult,
-        proposalStatusResult
+        proposalStatusResult,
+        myAttemptSummaryResult // 🚀 Call the specific fetcher
       ] = await Promise.allSettled([
         getProblemById(problemId),
-        getMyProposalStatus(problemId)
+        getMyProposalStatus(problemId),
+        getMyAttemptSummaryForProblem(problemId)
       ]);
 
       if (problemResult.status === "fulfilled") {
@@ -136,18 +138,16 @@ function SolverProblemDetailContent() {
         throw new Error("Failed to load problem details.");
       }
 
-      setMyProposalStatus(proposalStatusResult.status === "fulfilled" ? proposalStatusResult.value.status : null);
+      setMyProposalStatus(
+        proposalStatusResult.status === "fulfilled" ? proposalStatusResult.value.status : null
+      );
 
-      let attemptData = null;
-      try {
-        attemptData = await getMyAttempt(problemId);
-      } catch (e) {
-        try {
-          const allAttempts = await getMyActiveAttempts();
-          attemptData = allAttempts.find(a => a.problemId === problemId) || null;
-        } catch (err) {}
+      // 🚀 Directly set the single summary response (it will be null if no attempt exists)
+      if (myAttemptSummaryResult.status === "fulfilled") {
+        setMyAttempt(myAttemptSummaryResult.value);
+      } else {
+        setMyAttempt(null);
       }
-      setMyAttempt(attemptData as SolutionAttemptResponse | null);
 
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load problem");
@@ -407,12 +407,13 @@ function SolverProblemDetailContent() {
             <SolutionTreeTab
               problemId={problem.id}
               highlightedAttemptId={highlightedNodeId}
+              myAttemptId={myAttempt?.id}
               isAlreadyClaimed={isAlreadyClaimed}
               isPendingReview={isPendingReview}
               isCompleted={isCompleted}
               isUnavailable={isUnavailable}
               myProposalStatus={myProposalStatus}
-              onForkRequest={(parentId: string, subtaskId: string) => openProposalModal(subtaskId, parentId)}
+              onForkRequest={(attemptId, subtaskId) => openProposalModal(subtaskId, attemptId)}
               onClaimNew={() => setActiveTab("subtasks")}
             />
           )}

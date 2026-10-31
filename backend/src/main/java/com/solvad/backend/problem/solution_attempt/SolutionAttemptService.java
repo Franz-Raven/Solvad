@@ -64,6 +64,8 @@ public class SolutionAttemptService {
     @Autowired
     private ClaimRequestRepository claimRequestRepository;
 
+
+
     private SolutionAttemptResponse mapToResponse(SolutionAttempt attempt, List<SubtaskSubmission> submissions, UUID currentUserId) {
         List<SubtaskSubmissionResponse> submissionResponses = submissions.stream().map(sub -> mapSubmissionToResponse(sub, currentUserId)).collect(Collectors.toList());
         SolverProfile solver = attempt.getSolver();
@@ -93,7 +95,8 @@ public class SolutionAttemptService {
                 solver.getInstitution(), solver.getDegreeProgram(), attempt.getStatus().name(),
                 submissionResponses, attempt.getClaimedAt(), attempt.getUpdatedAt(), attempt.getCompletedAt(),
                 parentId, parentName, targetSubtaskId, targetSubtaskTitle, parentDesc, parentFiles,
-                seekerName, seekerProfileUrl, attempt.getRejectionReason() // 🚀 MAP IT HERE
+                seekerName, seekerProfileUrl, attempt.getRejectionReason(),
+                attempt.getTerminationReason() // 🚀 ADDED THIS LINE AT THE END
         );
     }
 
@@ -472,7 +475,6 @@ public class SolutionAttemptService {
         SolutionAttempt attempt = attemptRepository.findById(attemptId)
                 .orElseThrow(() -> new RuntimeException("Attempt not found"));
 
-        // Use the permission matrix to block unauthorized detail access
         if (!canViewAttemptDetails(attempt, currentUserId)) {
             throw new RuntimeException("Unauthorized: Attempt details are private.");
         }
@@ -488,10 +490,20 @@ public class SolutionAttemptService {
             deltaDescription = latestSubmission.getDeltaDescription();
         }
 
+        // 🚀 UPDATED: Pass terminationReason into the constructor
         return new AttemptDetailResponse(
-                attempt.getId(), attempt.getProblem().getId(), attempt.getProblem().getTitle(),
-                attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : null, attempt.getStatus().name(),
-                attempt.getCompletedAt() != null ? attempt.getCompletedAt() : attempt.getUpdatedAt(), summary, attachedFiles, attempt.getRejectionReason(), deltaDescription);
+                attempt.getId(),
+                attempt.getProblem().getId(),
+                attempt.getProblem().getTitle(),
+                attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : null,
+                attempt.getStatus().name(),
+                attempt.getCompletedAt() != null ? attempt.getCompletedAt() : attempt.getUpdatedAt(),
+                summary,
+                attachedFiles,
+                attempt.getRejectionReason(),
+                attempt.getTerminationReason(), // Add this line!
+                deltaDescription
+        );
     }
 
 
@@ -571,9 +583,6 @@ public class SolutionAttemptService {
             attempt.setRejectionReason(rejectionReason);
 
             String auditMsg = seekerName + " rejected the final solution for sub-problem \"" + subtaskTitle + "\" from " + attempt.getSolver().getFirstName() + ".";
-            if (rejectionReason != null && !rejectionReason.isBlank()) {
-                auditMsg += " Reason: " + rejectionReason;
-            }
             auditService.log(attempt.getProblem().getId(), seekerUserId, seekerName, "SEEKER", AuditEventType.STATUS_CHANGED, auditMsg);
         }
 
@@ -647,5 +656,84 @@ public class SolutionAttemptService {
         }
 
         return status == SolutionAttemptStatus.COMPLETED;
+    }
+
+    @Transactional
+    public SolutionAttemptResponse terminateAttemptManually(UUID attemptId, String reason, UUID seekerUserId) {
+        SolutionAttempt attempt = attemptRepository.findById(attemptId)
+                .orElseThrow(() -> new RuntimeException("Solution attempt not found"));
+
+        // Security check: Only the problem's seeker can terminate solvers
+        if (!attempt.getProblem().getSeeker().getUser().getId().equals(seekerUserId)) {
+            throw new RuntimeException("Only the problem owner can terminate this attempt.");
+        }
+
+        attempt.setStatus(SolutionAttemptStatus.TERMINATED);
+        attempt.setTerminationReason(reason);
+
+        SolutionAttempt savedAttempt = attemptRepository.save(attempt);
+        String seekerName = attempt.getProblem().getSeeker().getOrganizationName();
+
+        // Audit Log integration using your exact existing log method
+        auditService.log(
+                attempt.getProblem().getId(),
+                seekerUserId,
+                seekerName,
+                "SEEKER",
+                AuditEventType.STATUS_CHANGED,
+                "Manual Termination of solver " + attempt.getSolver().getFirstName() + " " + attempt.getSolver().getLastName() + "."
+        );
+
+        return mapToResponse(savedAttempt, submissionRepository.findByAttempt(savedAttempt), seekerUserId);
+    }
+
+    @Transactional(readOnly = true)
+    public SolutionAttemptSummaryResponse getMyAttemptSummaryForProblem(UUID solverUserId, UUID problemId) {
+        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
+                .orElseThrow(() -> new RuntimeException("Solver not found"));
+
+        return attemptRepository.findFirstByProblemIdAndSolverOrderByUpdatedAtDesc(problemId, solver)
+                .map(this::mapToSummaryResponse)
+                .orElse(null); // Return null gracefully if they haven't claimed this problem yet
+    }
+
+    @Transactional(readOnly = true)
+    public SolverOverviewStatsResponse getSolverOverviewStats(UUID solverUserId) {
+        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
+                .orElseThrow(() -> new RuntimeException("Solver not found"));
+
+        // Use native DB counts instead of fetching lists
+        long total = attemptRepository.countBySolver(solver);
+        long active = attemptRepository.countBySolverAndStatus(solver, SolutionAttemptStatus.ACTIVE) +
+                attemptRepository.countBySolverAndStatus(solver, SolutionAttemptStatus.PENDING_REVIEW);
+
+        // 🚀 FIXED: Removed the invalid status. Attempts are only marked as COMPLETED.
+        long completed = attemptRepository.countBySolverAndStatus(solver, SolutionAttemptStatus.COMPLETED);
+
+        int successRate = total > 0 ? (int) Math.round(((double) completed / total) * 100) : 0;
+
+        // Fetch ONLY the last 42 days (6 weeks) for the chart, ignoring old history
+        java.time.LocalDateTime sixWeeksAgo = java.time.LocalDateTime.now().minusDays(42);
+        List<SolutionAttempt> recentAttempts = attemptRepository.findBySolverAndClaimedAtAfter(solver, sixWeeksAgo);
+
+        int[] weeklyCounts = new int[6];
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+
+        for (SolutionAttempt attempt : recentAttempts) {
+            long daysBetween = java.time.Duration.between(attempt.getClaimedAt(), now).toDays();
+            int weekIndex = 5 - (int) (daysBetween / 7);
+            if (weekIndex >= 0 && weekIndex < 6) {
+                weeklyCounts[weekIndex]++;
+            }
+        }
+
+        List<WeeklyAttemptStat> timelineData = new java.util.ArrayList<>();
+        for (int i = 0; i < 6; i++) {
+            java.time.LocalDateTime weekDate = now.minusDays((5 - i) * 7);
+            String label = weekDate.getMonth().name().substring(0, 1) + weekDate.getMonth().name().substring(1, 3).toLowerCase() + " " + weekDate.getDayOfMonth();
+            timelineData.add(new WeeklyAttemptStat(label, weeklyCounts[i]));
+        }
+
+        return new SolverOverviewStatsResponse(total, active, completed, successRate, timelineData);
     }
 }

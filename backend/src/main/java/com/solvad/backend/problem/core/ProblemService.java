@@ -315,15 +315,31 @@ public class ProblemService {
 
             if (newStatus == ProblemStatus.CLOSED || newStatus == ProblemStatus.COMPLETED) {
                 List<SolutionAttempt> activeAttempts = attemptRepository.findByProblemAndStatus(problem, SolutionAttemptStatus.ACTIVE);
+
+                String autoReason = "Automatically terminated: Problem was marked as " + newStatus.name() + " by the seeker.";
+
+                // Inside your activeAttempts loop in updateProblemStatus:
                 for (SolutionAttempt attempt : activeAttempts) {
                     attempt.setStatus(SolutionAttemptStatus.TERMINATED);
+                    attempt.setTerminationReason(autoReason);
                     attemptRepository.save(attempt);
                     eventPublisher.publishEvent(new SolutionAttemptTerminatedEvent(
                             attempt.getSolver().getUser().getId(),
                             problemId,
                             problem.getTitle(),
                             newStatus.name()));
+
+                    // 🚀 FIXED: Removed the autoReason from the public audit log description
+                    auditService.log(
+                            problemId,
+                            seekerUserId,
+                            seeker.getOrganizationName(),
+                            "SEEKER",
+                            AuditEventType.STATUS_CHANGED,
+                            "System Auto-Termination for solver " + attempt.getSolver().getFirstName() + "."
+                    );
                 }
+
                 if (!activeAttempts.isEmpty()) {
                     auditService.log(
                             problemId,
@@ -746,4 +762,6 @@ public class ProblemService {
                 problem.getSeeker().getUser().getProfileUrl()
         );
     }
+
+
 }

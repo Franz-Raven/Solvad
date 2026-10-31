@@ -5,7 +5,7 @@ import Link from "next/link";
 import { 
   Inbox, Calendar, ChevronRight, Building2, ShieldHalf, FolderKanban
 } from "lucide-react";
-import { getWorkspaceAttempts, getPendingClaims } from "../api/dashboard";
+import { getWorkspaceAttempts, getPendingClaims, getClaimHistory } from "../api/dashboard";
 import type { PaginatedAttemptsResponse, PaginatedClaimsResponse } from "@/types/attempt";
 import {
   Pagination, PaginationContent, PaginationEllipsis, PaginationItem,
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/pagination";
 
 type WorkspaceTab = "ACTIVE" | "PENDING" | "HISTORY";
+type HistoryView = "SOLUTIONS" | "PROPOSALS";
 const ITEMS_PER_PAGE = 5;
 
 const TABS = [
@@ -21,21 +22,30 @@ const TABS = [
   { id: "HISTORY", label: "History" },
 ] as const;
 
-function EmptyState({ tab }: { tab: WorkspaceTab }) {
+const HISTORY_VIEWS = [
+  { id: "SOLUTIONS", label: "Solutions" },
+  { id: "PROPOSALS", label: "Rejected Proposals" },
+] as const;
+
+function EmptyState({ tab, historyView }: { tab: WorkspaceTab; historyView: HistoryView }) {
   const getMessage = () => {
     switch (tab) {
       case "ACTIVE": return { title: "No active workspaces", desc: "You aren't currently working on any problems." };
-      case "PENDING": return { title: "No pending solutions", desc: "Solutions awaiting Seeker approval will appear here." };
-      case "HISTORY": return { title: "No history yet", desc: "Your completed and abandoned attempts will appear here." };
+      case "PENDING": return { title: "No pending proposals", desc: "Proposals awaiting Seeker approval will appear here." };
+      case "HISTORY":
+        return historyView === "PROPOSALS"
+          ? { title: "No rejected proposals", desc: "Proposals that were rejected or cancelled will appear here." }
+          : { title: "No history yet", desc: "Your completed and abandoned attempts will appear here." };
     }
   };
 
   const { title, desc } = getMessage();
+  const showShield = tab === "PENDING" || (tab === "HISTORY" && historyView === "PROPOSALS");
 
   return (
     <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-slate-50 rounded-xl border-2 border-dashed border-slate-200 mt-4">
       <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm border border-slate-100 mb-4">
-        {tab === "PENDING" ? <ShieldHalf className="w-6 h-6 text-slate-300" /> : <FolderKanban className="w-6 h-6 text-slate-300" />}
+        {showShield ? <ShieldHalf className="w-6 h-6 text-slate-300" /> : <FolderKanban className="w-6 h-6 text-slate-300" />}
       </div>
       <h3 className="text-sm font-bold text-slate-900 mb-1">{title}</h3>
       <p className="text-sm text-slate-500 font-medium mb-6 max-w-sm">{desc}</p>
@@ -65,15 +75,22 @@ export function MyWorkspace() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<WorkspaceTab>("ACTIVE");
+  const [historyView, setHistoryView] = useState<HistoryView>("SOLUTIONS");
   const [currentPage, setCurrentPage] = useState(0);
+
+  // True when the list on screen is made of proposals (ClaimRequests) instead of attempts
+  const isProposalList =
+    activeTab === "PENDING" || (activeTab === "HISTORY" && historyView === "PROPOSALS");
 
   useEffect(() => {
     let isMounted = true;
     const loadData = async () => {
       try {
         setLoading(true);
-        if (activeTab === "PENDING") {
-          const data = await getPendingClaims(currentPage, ITEMS_PER_PAGE);
+        if (isProposalList) {
+          const data = activeTab === "PENDING"
+            ? await getPendingClaims(currentPage, ITEMS_PER_PAGE)
+            : await getClaimHistory(currentPage, ITEMS_PER_PAGE);
           if (isMounted) { setPaginatedClaims(data); setPaginatedAttempts(null); setError(null); }
         } else {
           const data = await getWorkspaceAttempts(activeTab, currentPage, ITEMS_PER_PAGE);
@@ -87,11 +104,17 @@ export function MyWorkspace() {
     };
     loadData();
     return () => { isMounted = false; };
-  }, [activeTab, currentPage]);
+  }, [activeTab, currentPage, historyView]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleTabChange = (tab: WorkspaceTab) => {
     if (activeTab === tab) return;
     setActiveTab(tab);
+    setCurrentPage(0);
+  };
+
+  const handleHistoryViewChange = (view: HistoryView) => {
+    if (historyView === view) return;
+    setHistoryView(view);
     setCurrentPage(0);
   };
 
@@ -102,6 +125,7 @@ export function MyWorkspace() {
       case "ABANDONED":
       case "REJECTED":
       case "TERMINATED":
+      case "CANCELLED":
         return "bg-rose-50 text-rose-700 border-rose-200";
       case "COMPLETED":
       case "APPROVED":
@@ -121,7 +145,7 @@ export function MyWorkspace() {
     url: item.seekerProfileUrl || item.seeker?.profileUrl || item.seeker?.user?.profileUrl || null,
   });
 
-  const normalizedItems = activeTab === "PENDING" 
+  const normalizedItems = isProposalList
     ? (paginatedClaims?.claims || []).map(c => {
         const seeker = extractSeekerInfo(c);
         return {
@@ -130,7 +154,7 @@ export function MyWorkspace() {
           status: c.status,
           subtask: c.targetSubtaskTitle,
           date: c.submittedAt,
-          dateLabel: "Applied",
+          dateLabel: activeTab === "PENDING" ? "Applied" : "Submitted",
           href: `/solver/proposal/${c.id}`,
           badgeClass: getStatusStyles(c.status),
           btnText: "View Proposal",
@@ -156,8 +180,8 @@ export function MyWorkspace() {
         };
       });
 
-  const totalElements = activeTab === "PENDING" ? (paginatedClaims?.totalElements || 0) : (paginatedAttempts?.totalElements || 0);
-  const totalPages = activeTab === "PENDING" ? (paginatedClaims?.totalPages || 0) : (paginatedAttempts?.totalPages || 0);
+  const totalElements = isProposalList ? (paginatedClaims?.totalElements || 0) : (paginatedAttempts?.totalElements || 0);
+  const totalPages = isProposalList ? (paginatedClaims?.totalPages || 0) : (paginatedAttempts?.totalPages || 0);
   const rangeStart = totalElements === 0 ? 0 : (currentPage * ITEMS_PER_PAGE) + 1;
   const rangeEnd = Math.min((currentPage + 1) * ITEMS_PER_PAGE, totalElements);
 
@@ -185,12 +209,30 @@ export function MyWorkspace() {
           ))}
         </div>
 
+        {activeTab === "HISTORY" && (
+          <div className="flex flex-wrap gap-2 mb-6">
+            {HISTORY_VIEWS.map((view) => (
+              <button
+                key={view.id}
+                onClick={() => handleHistoryViewChange(view.id)}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-colors cursor-pointer active:scale-[0.98] outline-none ${
+                  historyView === view.id
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                    : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-slate-900"
+                }`}
+              >
+                {view.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {loading ? (
           <div className="space-y-4 animate-in fade-in duration-300">
             {[...Array(ITEMS_PER_PAGE)].map((_, i) => <SkeletonCard key={i} />)}
           </div>
         ) : normalizedItems.length === 0 ? (
-          <EmptyState tab={activeTab} />
+          <EmptyState tab={activeTab} historyView={historyView} />
         ) : (
           <div className="animate-in fade-in duration-300">
             <p className="text-[11px] text-slate-500 mb-4 font-bold uppercase tracking-wider">

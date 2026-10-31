@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -51,5 +52,6 @@ public interface ClaimRequestRepository extends JpaRepository<ClaimRequest, UUID
     );
 
     Page<ClaimRequest> findBySolverAndStatus(SolverProfile solver, ClaimRequestStatus status, Pageable pageable);
-
+    Page<ClaimRequest> findBySolverAndStatusIn(
+            SolverProfile solver, Collection<ClaimRequestStatus> statuses, Pageable pageable);
 }

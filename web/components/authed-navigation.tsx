@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import { getDashboardPath } from "@/lib/auth-utils";
 import ProfileDropdown from "@/components/profile-dropdown";
 import { NotificationBell } from '@/components/notification-bell';
+import { Loader2 } from "lucide-react"; // 🚀 Imported for the loading spinner
 
 const baseLink =
   "px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer " +
@@ -19,10 +21,18 @@ export default function AuthedNavigation() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  
+  // 🚀 ADDED: State to freeze the UI during logout
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
-    await logout();
-    router.push("/landing");
+    setIsLoggingOut(true); // Freeze the UI immediately
+    try {
+      await logout();
+      router.push("/landing");
+    } catch (error) {
+      setIsLoggingOut(false); // Revert if logout fails
+    }
   };
 
   const homePath = user?.role ? getDashboardPath(user.role) : "/";
@@ -52,7 +62,7 @@ export default function AuthedNavigation() {
           {/* ── Logo + wordmark ── */}
           <Link
             href={homePath}
-            className="group flex items-center gap-3 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 cursor-pointer active:scale-[0.98] transition-transform duration-200"
+            className={`group flex items-center gap-3 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 transition-transform duration-200 ${isLoggingOut ? "pointer-events-none opacity-50" : "cursor-pointer active:scale-[0.98]"}`}
           >
             <img
               src="/solvad_logo.png"
@@ -66,7 +76,12 @@ export default function AuthedNavigation() {
 
           {/* ── Navigation Tabs ── */}
           <nav className="hidden md:flex items-center gap-2">
-            {user?.role === "SEEKER" ? (
+            {/* 🚀 ADDED: Show a loading state instead of falling back to "Home" */}
+            {isLoggingOut ? (
+              <div className="flex items-center gap-2 text-sm font-bold text-slate-400 px-4 py-2 animate-in fade-in">
+                <Loader2 className="w-4 h-4 animate-spin" /> Signing out...
+              </div>
+            ) : user?.role === "SEEKER" ? (
               <>
                 <Link href="/seeker/dashboard" className={linkClass(isSeekerTabActive("home"))}>Home</Link>
                 <Link href="/seeker/dashboard?tab=activity" className={linkClass(isSeekerTabActive("activity"))}>Recent Activity</Link>
@@ -82,15 +97,20 @@ export default function AuthedNavigation() {
               <Link href={homePath} className={linkClass(isActive(homePath))}>Home</Link>
             )}
 
-            {user?.role === "ADMIN" && (
+            {!isLoggingOut && user?.role === "ADMIN" && (
               <Link href="/admin/add-industry" className={linkClass(isActive("/admin/add-industry"))}>Add Industry</Link>
             )}
           </nav>
 
           {/* ── Right Side ── */}
           <div className="flex items-center gap-4">
-             <NotificationBell /> 
-            <ProfileDropdown onLogout={handleLogout} />
+            {/* 🚀 ADDED: Hide bells and dropdown during the logout redirect */}
+            {!isLoggingOut && (
+              <>
+                <NotificationBell /> 
+                <ProfileDropdown onLogout={handleLogout} />
+              </>
+            )}
           </div>
         </div>
       </div>

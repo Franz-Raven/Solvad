@@ -65,5 +65,9 @@ public interface SolutionAttemptRepository extends JpaRepository<SolutionAttempt
             @Param("search") String search,
             Pageable pageable
     );
-
+    List<SolutionAttempt> findByProblemIdAndStatus(Long problemId, SolutionAttemptStatus status);
+    Optional<SolutionAttempt> findFirstByProblemIdAndSolverOrderByUpdatedAtDesc(UUID problemId, SolverProfile solver);
+    // Add these to your existing repository methods
+    long countBySolver(SolverProfile solver);
+    List<SolutionAttempt> findBySolverAndClaimedAtAfter(SolverProfile solver, java.time.LocalDateTime date);
 }

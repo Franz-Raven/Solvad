@@ -14,9 +14,11 @@ public class AttemptDetailResponse {
     private String summary;
     private List<String> attachedFiles;
     private String rejectionReason;
-    private String deltaDescription; // 🚀 ADDED
+    private String terminationReason; // 🚀 Moved up to group with rejection
+    private String deltaDescription;
 
-    public AttemptDetailResponse(UUID id, UUID problemId, String problemTitle, String targetSubtaskTitle, String status, LocalDateTime completedAt, String summary, List<String> attachedFiles, String rejectionReason, String deltaDescription) {
+    // 🚀 Constructor updated to 11 arguments matching SolutionAttemptService mapping
+    public AttemptDetailResponse(UUID id, UUID problemId, String problemTitle, String targetSubtaskTitle, String status, LocalDateTime completedAt, String summary, List<String> attachedFiles, String rejectionReason, String terminationReason, String deltaDescription) {
         this.id = id;
         this.problemId = problemId;
         this.problemTitle = problemTitle;
@@ -26,6 +28,7 @@ public class AttemptDetailResponse {
         this.summary = summary;
         this.attachedFiles = attachedFiles;
         this.rejectionReason = rejectionReason;
+        this.terminationReason = terminationReason; // 🚀 Added
         this.deltaDescription = deltaDescription;
     }
 
@@ -38,5 +41,7 @@ public class AttemptDetailResponse {
     public String getSummary() { return summary; }
     public List<String> getAttachedFiles() { return attachedFiles; }
     public String getRejectionReason() { return rejectionReason; }
+    public String getTerminationReason() { return terminationReason; } // 🚀 Added
+    public void setTerminationReason(String terminationReason) { this.terminationReason = terminationReason; } // 🚀 Added
     public String getDeltaDescription() { return deltaDescription; }
 }
