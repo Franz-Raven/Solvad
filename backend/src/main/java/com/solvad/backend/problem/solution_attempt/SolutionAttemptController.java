@@ -354,9 +354,8 @@ public class SolutionAttemptController {
         return ResponseEntity.ok(summary);
     }
 
-    // Add this to your controller
     @GetMapping("/api/attempts/me/overview-stats")
-    @PreAuthorize("hasRole('SOLVER')")
+    @PreAuthorize("hasAuthority('SOLVER')")
     public ResponseEntity<SolverOverviewStatsResponse> getSolverOverviewStats(@RequestHeader("Authorization") String authHeader) {
         UUID userId = extractUserId(authHeader);
         return ResponseEntity.ok(attemptService.getSolverOverviewStats(userId));
