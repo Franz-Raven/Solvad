@@ -66,5 +66,6 @@ public interface SolutionAttemptRepository extends JpaRepository<SolutionAttempt
             Pageable pageable
     );
     List<SolutionAttempt> findByProblemIdAndStatus(Long problemId, SolutionAttemptStatus status);
+    Optional<SolutionAttempt> findFirstByProblemIdAndSolverOrderByUpdatedAtDesc(UUID problemId, SolverProfile solver);
 
 }

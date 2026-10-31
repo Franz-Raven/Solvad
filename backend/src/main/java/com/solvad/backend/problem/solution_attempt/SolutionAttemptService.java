@@ -689,4 +689,14 @@ public class SolutionAttemptService {
 
         return mapToResponse(savedAttempt, submissionRepository.findByAttempt(savedAttempt), seekerUserId);
     }
+
+    @Transactional(readOnly = true)
+    public SolutionAttemptSummaryResponse getMyAttemptSummaryForProblem(UUID solverUserId, UUID problemId) {
+        SolverProfile solver = solverProfileRepository.findByUserId(solverUserId)
+                .orElseThrow(() -> new RuntimeException("Solver not found"));
+
+        return attemptRepository.findFirstByProblemIdAndSolverOrderByUpdatedAtDesc(problemId, solver)
+                .map(this::mapToSummaryResponse)
+                .orElse(null); // Return null gracefully if they haven't claimed this problem yet
+    }
 }

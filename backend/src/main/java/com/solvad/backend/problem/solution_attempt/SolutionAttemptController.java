@@ -338,4 +338,19 @@ public class SolutionAttemptController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    @GetMapping("/api/problems/{problemId}/attempts/my-summary")
+    @PreAuthorize("hasRole('SOLVER')")
+    public ResponseEntity<SolutionAttemptSummaryResponse> getMyAttemptSummaryForProblem(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable UUID problemId) {
+
+        UUID solverUserId = extractUserId(authHeader);
+        SolutionAttemptSummaryResponse summary = attemptService.getMyAttemptSummaryForProblem(solverUserId, problemId);
+
+        if (summary == null) {
+            return ResponseEntity.noContent().build(); // 204 means successful request, but no data (expected if not claimed)
+        }
+        return ResponseEntity.ok(summary);
+    }
 }
