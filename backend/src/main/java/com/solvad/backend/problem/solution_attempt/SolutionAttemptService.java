@@ -64,6 +64,8 @@ public class SolutionAttemptService {
     @Autowired
     private ClaimRequestRepository claimRequestRepository;
 
+
+
     private SolutionAttemptResponse mapToResponse(SolutionAttempt attempt, List<SubtaskSubmission> submissions, UUID currentUserId) {
         List<SubtaskSubmissionResponse> submissionResponses = submissions.stream().map(sub -> mapSubmissionToResponse(sub, currentUserId)).collect(Collectors.toList());
         SolverProfile solver = attempt.getSolver();
@@ -93,7 +95,8 @@ public class SolutionAttemptService {
                 solver.getInstitution(), solver.getDegreeProgram(), attempt.getStatus().name(),
                 submissionResponses, attempt.getClaimedAt(), attempt.getUpdatedAt(), attempt.getCompletedAt(),
                 parentId, parentName, targetSubtaskId, targetSubtaskTitle, parentDesc, parentFiles,
-                seekerName, seekerProfileUrl, attempt.getRejectionReason() // 🚀 MAP IT HERE
+                seekerName, seekerProfileUrl, attempt.getRejectionReason(),
+                attempt.getTerminationReason() // 🚀 ADDED THIS LINE AT THE END
         );
     }
 
@@ -472,7 +475,6 @@ public class SolutionAttemptService {
         SolutionAttempt attempt = attemptRepository.findById(attemptId)
                 .orElseThrow(() -> new RuntimeException("Attempt not found"));
 
-        // Use the permission matrix to block unauthorized detail access
         if (!canViewAttemptDetails(attempt, currentUserId)) {
             throw new RuntimeException("Unauthorized: Attempt details are private.");
         }
@@ -488,10 +490,20 @@ public class SolutionAttemptService {
             deltaDescription = latestSubmission.getDeltaDescription();
         }
 
+        // 🚀 UPDATED: Pass terminationReason into the constructor
         return new AttemptDetailResponse(
-                attempt.getId(), attempt.getProblem().getId(), attempt.getProblem().getTitle(),
-                attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : null, attempt.getStatus().name(),
-                attempt.getCompletedAt() != null ? attempt.getCompletedAt() : attempt.getUpdatedAt(), summary, attachedFiles, attempt.getRejectionReason(), deltaDescription);
+                attempt.getId(),
+                attempt.getProblem().getId(),
+                attempt.getProblem().getTitle(),
+                attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : null,
+                attempt.getStatus().name(),
+                attempt.getCompletedAt() != null ? attempt.getCompletedAt() : attempt.getUpdatedAt(),
+                summary,
+                attachedFiles,
+                attempt.getRejectionReason(),
+                attempt.getTerminationReason(), // Add this line!
+                deltaDescription
+        );
     }
 
 
@@ -647,5 +659,34 @@ public class SolutionAttemptService {
         }
 
         return status == SolutionAttemptStatus.COMPLETED;
+    }
+
+    @Transactional
+    public SolutionAttemptResponse terminateAttemptManually(UUID attemptId, String reason, UUID seekerUserId) {
+        SolutionAttempt attempt = attemptRepository.findById(attemptId)
+                .orElseThrow(() -> new RuntimeException("Solution attempt not found"));
+
+        // Security check: Only the problem's seeker can terminate solvers
+        if (!attempt.getProblem().getSeeker().getUser().getId().equals(seekerUserId)) {
+            throw new RuntimeException("Only the problem owner can terminate this attempt.");
+        }
+
+        attempt.setStatus(SolutionAttemptStatus.TERMINATED);
+        attempt.setTerminationReason(reason);
+
+        SolutionAttempt savedAttempt = attemptRepository.save(attempt);
+        String seekerName = attempt.getProblem().getSeeker().getOrganizationName();
+
+        // Audit Log integration using your exact existing log method
+        auditService.log(
+                attempt.getProblem().getId(),
+                seekerUserId,
+                seekerName,
+                "SEEKER",
+                AuditEventType.STATUS_CHANGED,
+                "Manual Termination of solver " + attempt.getSolver().getFirstName() + " " + attempt.getSolver().getLastName() + ": " + reason
+        );
+
+        return mapToResponse(savedAttempt, submissionRepository.findByAttempt(savedAttempt), seekerUserId);
     }
 }

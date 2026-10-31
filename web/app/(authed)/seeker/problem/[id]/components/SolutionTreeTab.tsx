@@ -4,7 +4,8 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { usePathname } from "next/navigation";
 import {
   Lock, Calendar, GitBranch, Network, ChevronDown, X,
-  Loader2, Columns, FileText, XCircle, AlertCircle, GitFork
+  Loader2, Columns, FileText, XCircle, AlertCircle, GitFork,
+  Bot, UserMinus // 🚀 ADDED IMPORTS
 } from "lucide-react";
 import Portal from "@/components/portal";
 import { getProblemTree, getFullAttemptDetails } from "../api/problem";
@@ -254,6 +255,22 @@ function AttemptDetailModal({
                         {activeSub.status}
                       </span>
                     </div>
+
+                    {/* 🚀 ADDED: TERMINATION REASON FEEDBACK BLOCK */}
+                    {node.status === "TERMINATED" && node.terminationReason && (
+                      <div className="mb-6 bg-rose-50 border border-rose-200 shadow-sm rounded-2xl p-6 animate-in fade-in duration-300">
+                        <h4 className="text-xs font-bold text-rose-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                          {node.terminationReason.startsWith("Automatically terminated:") ? (
+                            <><Bot className="w-4 h-4" /> System Auto-Termination</>
+                          ) : (
+                            <><UserMinus className="w-4 h-4" /> Terminated by Seeker</>
+                          )}
+                        </h4>
+                        <div className="text-sm text-rose-900 font-medium whitespace-pre-wrap leading-relaxed">
+                          {node.terminationReason}
+                        </div>
+                      </div>
+                    )}
 
                     {(node.status === "REJECTED" || node.status === "TERMINATED") && node.rejectionReason && (
                       <div className="mb-6 bg-rose-50 border border-rose-200 shadow-sm rounded-2xl p-6 animate-in fade-in duration-300">

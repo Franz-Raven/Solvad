@@ -54,6 +54,10 @@ public class SolutionAttempt {
     @Column(columnDefinition = "TEXT")
     private String rejectionReason;
 
+    @Column(name = "termination_reason", columnDefinition = "TEXT")
+    private String terminationReason;
+
+
     // getter + setter
     public ProblemSubtask getTargetSubtask() { return targetSubtask; }
     public void setTargetSubtask(ProblemSubtask targetSubtask) { this.targetSubtask = targetSubtask; }
@@ -103,4 +107,8 @@ public class SolutionAttempt {
 
     public String getRejectionReason() { return rejectionReason; }
     public void setRejectionReason(String rejectionReason) { this.rejectionReason = rejectionReason; }
+
+    // Add getters and setters for terminationReason
+    public String getTerminationReason() { return terminationReason; }
+    public void setTerminationReason(String terminationReason) { this.terminationReason = terminationReason; }
 }

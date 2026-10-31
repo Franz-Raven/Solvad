@@ -28,9 +28,10 @@ public class SolutionAttemptResponse {
     private List<String> parentFileUrls;
     private String seekerName;
     private String seekerProfileUrl;
-    private String rejectionReason; // 🚀 ADDED
+    private String rejectionReason;
+    private String terminationReason;
 
-    public SolutionAttemptResponse(UUID id, UUID problemId, String problemTitle, UUID solverId, String solverFirstName, String solverLastName, String profilePictureUrl, String institution, String degreeProgram, String status, List<SubtaskSubmissionResponse> submissions, LocalDateTime claimedAt, LocalDateTime updatedAt, LocalDateTime completedAt, UUID parentAttemptId, String parentAttemptName, UUID targetSubtaskId, String targetSubtaskTitle, String parentDescription, List<String> parentFileUrls, String seekerName, String seekerProfileUrl, String rejectionReason) {
+    public SolutionAttemptResponse(UUID id, UUID problemId, String problemTitle, UUID solverId, String solverFirstName, String solverLastName, String profilePictureUrl, String institution, String degreeProgram, String status, List<SubtaskSubmissionResponse> submissions, LocalDateTime claimedAt, LocalDateTime updatedAt, LocalDateTime completedAt, UUID parentAttemptId, String parentAttemptName, UUID targetSubtaskId, String targetSubtaskTitle, String parentDescription, List<String> parentFileUrls, String seekerName, String seekerProfileUrl, String rejectionReason, String terminationReason) {
         this.id = id;
         this.problemId = problemId;
         this.problemTitle = problemTitle;
@@ -54,6 +55,7 @@ public class SolutionAttemptResponse {
         this.seekerName = seekerName;
         this.seekerProfileUrl = seekerProfileUrl;
         this.rejectionReason = rejectionReason;
+        this.terminationReason = terminationReason;
     }
 
     public UUID getId() { return id; }
@@ -79,4 +81,6 @@ public class SolutionAttemptResponse {
     public String getSeekerName() { return seekerName; }
     public String getSeekerProfileUrl() { return seekerProfileUrl; }
     public String getRejectionReason() { return rejectionReason; }
+    public String getTerminationReason() { return terminationReason; }
+    public void setTerminationReason(String terminationReason) { this.terminationReason = terminationReason; }
 }

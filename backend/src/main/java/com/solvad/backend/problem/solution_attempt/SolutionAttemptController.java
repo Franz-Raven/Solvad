@@ -323,4 +323,19 @@ public class SolutionAttemptController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    @PostMapping("/api/attempts/{attemptId}/terminate")
+    @PreAuthorize("hasRole('SEEKER')")
+    public ResponseEntity<?> terminateAttempt(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable UUID attemptId,
+            @RequestParam("reason") String reason) {
+        try {
+            UUID seekerUserId = extractUserId(authHeader);
+            SolutionAttemptResponse response = attemptService.terminateAttemptManually(attemptId, reason, seekerUserId);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 }

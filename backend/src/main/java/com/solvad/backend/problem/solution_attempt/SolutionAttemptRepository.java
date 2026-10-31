@@ -65,5 +65,6 @@ public interface SolutionAttemptRepository extends JpaRepository<SolutionAttempt
             @Param("search") String search,
             Pageable pageable
     );
+    List<SolutionAttempt> findByProblemIdAndStatus(Long problemId, SolutionAttemptStatus status);
 
 }
