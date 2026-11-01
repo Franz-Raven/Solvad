@@ -52,7 +52,13 @@ public class MatchmakingService {
                 .orElseThrow(() -> new RuntimeException("Solver profile not found"));
 
         Set<String> solverSkills = resolveSolverSkills(solver);
+        Set<String> solverSkillPhrases = KeywordUtils.fromCommaList(solver.getSkills());
         String solverCourse = solver.getDegreeProgram();
+        Set<UUID> occupiedProblemIds = attemptRepository.findBySolver(solver).stream()
+                .filter(a -> a.getStatus() == SolutionAttemptStatus.ACTIVE
+                        || a.getStatus() == SolutionAttemptStatus.PENDING_REVIEW)
+                .map(a -> a.getProblem().getId())
+                .collect(Collectors.toSet());
 
         List<ProblemStatus> visibleStatuses = Arrays.asList(
                 ProblemStatus.OPEN,
@@ -83,7 +89,8 @@ public class MatchmakingService {
         Set<String> filterTags = KeywordUtils.fromCommaList(tagFilter);
         String searchLower = search != null ? search.trim().toLowerCase(Locale.ROOT) : "";
 
-        List<ScoredProblem> scored = new ArrayList<>();
+        List<ScoredProblem> allScored = new ArrayList<>();
+        List<ScoredProblem> exploreScored = new ArrayList<>();
 
         for (Problem problem : openProblems) {
             // 🚀 Read from our bulk-fetched memory maps instantly (Zero DB calls inside the loop!)
@@ -112,15 +119,10 @@ public class MatchmakingService {
                 continue; // Skip this problem because all subtasks are full
             }
 
-            if (!filterTags.isEmpty() && filterTags.stream().noneMatch(problemTags::contains)) {
-                continue;
-            }
-
-            if (!searchLower.isEmpty() && !matchesSearch(problem, problemTags, searchLower)) {
-                continue;
-            }
-
-            double skillSimilarity = KeywordUtils.jaccard(solverSkills, problemTags);
+            double skillSimilarity = KeywordUtils.skillMatch(
+                    solverSkillPhrases,
+                    buildMatchCorpus(problem, subtasks, problemTags)
+            );
             double courseAlignment = KeywordUtils.programAlignment(solverCourse, problem.getPreferredProgram());
             boolean courseMatch = courseAlignment >= 1.0;
             double score = SKILL_WEIGHT * skillSimilarity + COURSE_WEIGHT * courseAlignment;
@@ -130,22 +132,38 @@ public class MatchmakingService {
             response.setMatchScore(score);
             response.setCourseMatch(courseMatch);
 
-            scored.add(new ScoredProblem(response, score, courseMatch, problem.getCreatedAt()));
+            ScoredProblem scoredProblem = new ScoredProblem(
+                    response, score, skillSimilarity, courseMatch, problem.getCreatedAt());
+
+            if (!occupiedProblemIds.contains(problem.getId())) {
+                allScored.add(scoredProblem);
+            }
+
+            boolean passesTags = filterTags.isEmpty() || filterTags.stream().anyMatch(problemTags::contains);
+            boolean passesSearch = searchLower.isEmpty() || matchesSearch(problem, problemTags, searchLower);
+            if (passesTags && passesSearch) {
+                exploreScored.add(scoredProblem);
+            }
         }
 
         Comparator<ScoredProblem> byBestMatch = Comparator
                 .comparingDouble(ScoredProblem::score).reversed()
-                .thenComparing(ScoredProblem::courseMatch).reversed()
-                .thenComparing(ScoredProblem::createdAt).reversed();
+                .thenComparing(ScoredProblem::courseMatch, Comparator.reverseOrder())
+                .thenComparing(ScoredProblem::createdAt, Comparator.reverseOrder());
 
-        List<ProblemResponse> recommended = scored.stream()
+        List<ScoredProblem> withSkillHits = allScored.stream()
+                .filter(sp -> sp.skillSimilarity() > 0)
+                .toList();
+        List<ScoredProblem> recommendationPool = withSkillHits.isEmpty() ? allScored : withSkillHits;
+
+        List<ProblemResponse> recommended = recommendationPool.stream()
                 .filter(sp -> sp.score() >= MIN_RECOMMENDATION_SCORE)
                 .sorted(byBestMatch)
                 .limit(RECOMMENDATION_LIMIT)
                 .map(ScoredProblem::response)
                 .collect(Collectors.toList());
 
-        List<ProblemResponse> problems = scored.stream()
+        List<ProblemResponse> problems = exploreScored.stream()
                 .sorted(buildExploreListComparator())
                 .map(ScoredProblem::response)
                 .collect(Collectors.toList());
@@ -224,6 +242,35 @@ public class MatchmakingService {
                 .thenComparing(ScoredProblem::score, Comparator.reverseOrder());
     }
 
+    private String buildMatchCorpus(Problem problem, List<ProblemSubtask> subtasks, Set<String> tags) {
+        StringBuilder corpus = new StringBuilder();
+        appendCorpus(corpus, problem.getTitle());
+        appendCorpus(corpus, problem.getBackgroundContext());
+        appendCorpus(corpus, problem.getPrimaryStatement());
+        appendCorpus(corpus, problem.getObjectives());
+        appendCorpus(corpus, problem.getConstraints());
+        appendCorpus(corpus, problem.getPreferredProgram());
+        appendCorpus(corpus, problem.getSdgFocus());
+        if (tags != null) {
+            for (String tag : tags) {
+                appendCorpus(corpus, tag);
+            }
+        }
+        for (ProblemSubtask subtask : subtasks) {
+            appendCorpus(corpus, subtask.getTitle());
+            appendCorpus(corpus, subtask.getDepartmentFocus());
+            appendCorpus(corpus, subtask.getDescription());
+        }
+        return corpus.toString();
+    }
+
+    private void appendCorpus(StringBuilder corpus, String value) {
+        if (value == null || value.isBlank()) {
+            return;
+        }
+        corpus.append(' ').append(value);
+    }
+
     private ProblemResponse mapProblem(Problem problem, List<ProblemSubtask> subtasks, Set<String> tagSet) {
         List<SubtaskResponse> subtaskResponses = subtasks.stream()
                 .map(s -> new SubtaskResponse(
@@ -259,7 +306,7 @@ public class MatchmakingService {
         );
     }
 
-    private record ScoredProblem(ProblemResponse response, double score, boolean courseMatch,
-                                 java.time.LocalDateTime createdAt) {}
+    private record ScoredProblem(ProblemResponse response, double score, double skillSimilarity,
+                                 boolean courseMatch, java.time.LocalDateTime createdAt) {}
 
 }

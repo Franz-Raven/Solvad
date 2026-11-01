@@ -705,7 +705,7 @@ public class ProblemService {
     }
 
     @Transactional(readOnly = true)
-    public PaginatedProblemsResponse getDiscoverableProblems(int page, int size) {
+    public PaginatedProblemsResponse getDiscoverableProblems(int page, int size, String search) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
         List<ProblemStatus> visibleStatuses = Arrays.asList(
@@ -715,7 +715,14 @@ public class ProblemService {
                 ProblemStatus.SOLVED_OPEN_FOR_IMPROVEMENT
         );
 
-        Page<Problem> problemPage = problemRepository.findByStatusIn(visibleStatuses, pageable);
+        Page<Problem> problemPage;
+        
+        if (search != null && !search.trim().isEmpty()) {
+            String searchTerm = "%" + search.trim().toLowerCase() + "%";
+            problemPage = problemRepository.findByStatusInAndSearch(visibleStatuses, searchTerm, pageable);
+        } else {
+            problemPage = problemRepository.findByStatusIn(visibleStatuses, pageable);
+        }
 
         if (!problemPage.hasContent()) {
             return new PaginatedProblemsResponse(List.of(), page, 0, 0, size);

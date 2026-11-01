@@ -62,4 +62,12 @@ public interface ProblemRepository extends JpaRepository<Problem, UUID> {
                                             @Param("after") LocalDateTime after,
                                             @Param("query") String query,
                                             Pageable pageable);
+
+    @Query("SELECT p FROM Problem p WHERE p.status IN :statuses AND " +
+           "(LOWER(p.title) LIKE :query OR " +
+           "LOWER(p.seeker.organizationName) LIKE :query OR " +
+           "LOWER(p.preferredProgram) LIKE :query)")
+    Page<Problem> findByStatusInAndSearch(@Param("statuses") List<ProblemStatus> statuses,
+                                          @Param("query") String query,
+                                          Pageable pageable);
 }
