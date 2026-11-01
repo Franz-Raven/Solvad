@@ -70,4 +70,37 @@ public final class KeywordUtils {
         Set<String> programTokens = tokenize(preferredProgram);
         return jaccard(solverTokens, programTokens);
     }
+
+    /**
+     * Fraction of solver skill phrases found in problem text, in [0, 1].
+     * Multi-word skills match as phrases ("data science"); single-word skills match tokens
+     * so "java" does not count as a hit inside "javascript".
+     */
+    public static double skillMatch(Set<String> skillPhrases, String haystack) {
+        if (skillPhrases == null || skillPhrases.isEmpty()) {
+            return 0.0;
+        }
+        if (haystack == null || haystack.isBlank()) {
+            return 0.0;
+        }
+        String lower = haystack.toLowerCase(Locale.ROOT);
+        Set<String> tokens = tokenize(haystack);
+        long hits = 0;
+        for (String skill : skillPhrases) {
+            if (skill == null || skill.isBlank()) {
+                continue;
+            }
+            String phrase = skill.trim().toLowerCase(Locale.ROOT);
+            if (phrase.length() < 2) {
+                continue;
+            }
+            boolean matched = phrase.contains(" ")
+                    ? lower.contains(phrase)
+                    : tokens.contains(phrase);
+            if (matched) {
+                hits++;
+            }
+        }
+        return (double) hits / skillPhrases.size();
+    }
 }

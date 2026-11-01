@@ -38,11 +38,15 @@ export async function getDiscoveryDashboard(
 
 export async function getDiscoverableProblems(
   page: number = 0,
-  size: number = 5
+  size: number = 5,
+  search: string = ""
 ): Promise<PaginatedProblemsResponse> {
   const params = new URLSearchParams();
   params.set("page", page.toString());
   params.set("size", size.toString());
+  if (search.trim()) {
+    params.set("search", search.trim());
+  }
   
   return apiRequest<PaginatedProblemsResponse>(
     `/problems/discover?${params.toString()}`,

@@ -233,9 +233,10 @@ public class ProblemController {
     @GetMapping("/discover")
     public ResponseEntity<PaginatedProblemsResponse> getDiscoverableProblems(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false, defaultValue = "") String search
     ) {
-        PaginatedProblemsResponse response = problemService.getDiscoverableProblems(page, size);
+        PaginatedProblemsResponse response = problemService.getDiscoverableProblems(page, size, search);
         return ResponseEntity.ok(response);
     }
 

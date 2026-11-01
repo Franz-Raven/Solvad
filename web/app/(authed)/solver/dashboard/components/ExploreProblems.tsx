@@ -48,6 +48,7 @@ const SkeletonCard = () => (
 export function ExploreProblems() {
   const [paginatedProblems, setPaginatedProblems] = useState<ProblemSummary[]>([]);
   const [recommendations, setRecommendations] = useState<ProblemResponse[]>([]);
+  const [recommendationsLoaded, setRecommendationsLoaded] = useState(false);
   
   // 🚀 ADDED: State for the workspace banner
   const [activeCount, setActiveCount] = useState(0);
@@ -79,24 +80,41 @@ export function ExploreProblems() {
     return () => { isMounted = false; };
   }, []);
 
+  // 🚀 FIXED: Load recommendations ONCE on mount, based on skills & course (no search)
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadRecommendations = async () => {
+      try {
+        const recommendationsData = await getDiscoverableProblems(0, 3, "");
+        if (isMounted) {
+          const topRecs = (recommendationsData.problems || []).slice(0, 3) as unknown as ProblemResponse[];
+          setRecommendations(topRecs);
+          setRecommendationsLoaded(true);
+        }
+      } catch (err) {
+        if (isMounted) console.error("Failed to load recommendations", err);
+        if (isMounted) setRecommendationsLoaded(true);
+      }
+    };
+
+    loadRecommendations();
+    return () => { isMounted = false; };
+  }, []); // Run only once on mount
+
   useEffect(() => {
     let isMounted = true;
 
     const loadPaginatedData = async () => {
       try {
         setLoading(true);
-        const paginatedData = await getDiscoverableProblems(explorePage, EXPLORE_PAGE_SIZE);
+        const paginatedData = await getDiscoverableProblems(explorePage, EXPLORE_PAGE_SIZE, debouncedSearch);
         
         if (isMounted) {
           const fetchedProblems = paginatedData.problems || []; 
           setPaginatedProblems(fetchedProblems); 
           setTotalPages(paginatedData.totalPages || 1);
           setTotalElements(paginatedData.totalElements || fetchedProblems.length);
-          
-          if (explorePage === 0) {
-            const topRecs = fetchedProblems.slice(0, 3) as unknown as ProblemResponse[];
-            setRecommendations(topRecs);
-          }
         }
       } catch (err) {
         if (isMounted) console.error("Failed to load paginated problems", err);
@@ -125,7 +143,7 @@ export function ExploreProblems() {
       <WorkspaceBanner isLoading={loadingCount} activeCount={activeCount} />
 
       <RecommendationsList 
-        isLoading={loading && recommendations.length === 0} 
+        isLoading={!recommendationsLoaded} 
         recommendations={recommendations} 
       />
 
