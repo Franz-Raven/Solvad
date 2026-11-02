@@ -329,7 +329,7 @@ function ProblemDetailContent() {
 
           <div className="flex space-x-1 bg-slate-50 p-1 rounded-xl mt-4 w-fit max-w-full overflow-x-auto no-scrollbar border border-slate-100">
             {tabs.map((tab) => (
-              <button key={tab.id} onClick={() => handleTabChange(tab.id)} className={`px-5 md:px-6 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${activeTab === tab.id ? "bg-white text-accent shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-900 hover:bg-slate-100 border border-transparent"}`}>
+              <button key={tab.id} data-tour={`tab-${tab.id}`} onClick={() => handleTabChange(tab.id)} className={`px-5 md:px-6 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${activeTab === tab.id ? "bg-white text-accent shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-900 hover:bg-slate-100 border border-transparent"}`}>
                 {tab.label}
               </button>
             ))}

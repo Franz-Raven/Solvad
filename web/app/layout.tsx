@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
 import { SplashScreen } from "@/components/SplashScreen";
+import { TutorialHost } from "@/components/tutorial-host";
 //app layout
 const poppins = Poppins({
   variable: "--font-sans",
@@ -33,6 +34,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <SplashScreen />
         {children}
+        <TutorialHost />
         <div id="portal-root" />
       </body>
     </html>

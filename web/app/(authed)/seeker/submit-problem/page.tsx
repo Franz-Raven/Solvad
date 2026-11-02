@@ -224,7 +224,7 @@ export default function SubmitProblemPage() {
                 </div>
               )}
 
-              <form onSubmit={handleGenerateScope} className="space-y-6">
+              <form onSubmit={handleGenerateScope} className="space-y-6" data-tour="problem-form">
                 <ProblemFormFields
                   formData={formData}
                   validationErrors={validationErrors}
@@ -243,7 +243,7 @@ export default function SubmitProblemPage() {
                   <Link href="/dashboard" className="flex-1 px-6 py-3 border border-border text-foreground font-semibold rounded-lg hover:bg-accent/10 transition-all text-center">
                     Cancel
                   </Link>
-                  <button type="submit" className="flex-1 px-6 py-3 bg-secondary hover:bg-accent text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg">
+                  <button type="submit" data-tour="problem-analyze" className="flex-1 px-6 py-3 bg-secondary hover:bg-accent text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg">
                     Analyze & Generate Scope
                   </button>
                 </div>

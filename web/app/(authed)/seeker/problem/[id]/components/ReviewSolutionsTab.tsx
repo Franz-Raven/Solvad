@@ -257,7 +257,7 @@ export function ReviewSolutionsTab({ problem }: ReviewSolutionsTabProps) {
       )}
 
       {/* ── SIDEBAR ── */}
-      <div className="w-full lg:w-[320px] shrink-0 space-y-2">
+      <div className="w-full lg:w-[320px] shrink-0 space-y-2" data-tour="solutions-subtasks">
         <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 ml-1">Filter by Sub-problem</h3>
         
         <button
@@ -292,7 +292,7 @@ export function ReviewSolutionsTab({ problem }: ReviewSolutionsTabProps) {
       </div>
 
       {/* ── MAIN AREA ── */}
-      <div className="w-full flex-1 flex flex-col min-w-0">
+      <div className="w-full flex-1 flex flex-col min-w-0" data-tour="solutions-list">
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-4 ml-1">
           <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider shrink-0">
             {selectedSubtaskId === "ALL" ? "Showing All Solutions" : "Filtered Solutions"} ({data?.totalElements || 0})
@@ -353,7 +353,7 @@ export function ReviewSolutionsTab({ problem }: ReviewSolutionsTabProps) {
                         <td className="p-4 text-xs font-bold text-slate-700 truncate">{sol.targetSubtaskTitle}</td>
                         <td className="p-4 text-xs font-bold text-slate-600">{new Date(sol.updatedAt).toLocaleDateString()}</td>
                         <td className="p-4 text-right">
-                          <button disabled={isFetching} className="text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-600 hover:text-white border border-emerald-200 px-4 py-2 rounded-lg transition-all shadow-sm flex items-center justify-center gap-2 ml-auto w-fit active:scale-95 cursor-pointer">
+                          <button disabled={isFetching} data-tour="solution-open" className="text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-600 hover:text-white border border-emerald-200 px-4 py-2 rounded-lg transition-all shadow-sm flex items-center justify-center gap-2 ml-auto w-fit active:scale-95 cursor-pointer">
                             {isFetching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Review"}
                           </button>
                         </td>

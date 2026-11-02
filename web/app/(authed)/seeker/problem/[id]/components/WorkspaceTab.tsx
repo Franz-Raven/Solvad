@@ -213,7 +213,7 @@ export function WorkspaceTab({ problem, onProblemUpdate, onLocateInTree }: Works
       </div>
 
       {/* ── MAIN AREA: Active Workspaces ── */}
-      <div className="w-full flex-1 flex flex-col min-w-0">
+      <div className="w-full flex-1 flex flex-col min-w-0" data-tour="workspaces-list">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 ml-1">
           <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
             {selectedSubtaskId === "ALL" ? "Showing All Workspaces" : "Filtered Workspaces"} ({filteredActiveCount})
@@ -313,7 +313,7 @@ export function WorkspaceTab({ problem, onProblemUpdate, onLocateInTree }: Works
                           <thead>
                             <tr className="bg-slate-50/50 border-b border-slate-100">
                               <th className="p-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-[40%]">Active Solver</th>
-                              <th className="p-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-[15%]">Status</th>
+                              <th className="p-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-[15%]" data-tour="workspace-statuses">Status</th>
                               <th className="p-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-[15%]">Claimed Date</th>
                               <th className="p-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-right w-[30%]">Actions</th>
                             </tr>
@@ -352,6 +352,7 @@ export function WorkspaceTab({ problem, onProblemUpdate, onLocateInTree }: Works
                                         e.stopPropagation(); 
                                         setTerminateData({ id: solver.id, name: `${solver.solverFirstName} ${solver.solverLastName}` }); 
                                       }} 
+                                      data-tour="workspace-terminate"
                                       className="text-[11px] font-bold text-rose-600 bg-white border border-rose-200 hover:bg-rose-50 hover:border-rose-300 px-3 py-2 rounded-lg transition-all shadow-sm flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
                                     >
                                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
@@ -359,6 +360,7 @@ export function WorkspaceTab({ problem, onProblemUpdate, onLocateInTree }: Works
                                     </button>
                                     <button 
                                       onClick={(e) => { e.stopPropagation(); onLocateInTree(solver.id); }} 
+                                      data-tour="workspace-locate"
                                       className="text-[11px] font-bold text-slate-600 bg-white border border-slate-200 hover:border-accent hover:text-accent px-3 py-2 rounded-lg transition-all shadow-sm flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
                                     >
                                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" /></svg>
