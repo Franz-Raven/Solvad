@@ -144,6 +144,7 @@ export function NotificationTray({ open, anchorRef, onClose }: NotificationTrayP
     else if (
       notification.type === 'PROPOSAL_APPROVED' ||
       notification.type === 'PROPOSAL_REJECTED' ||
+      notification.type === 'PROPOSAL_CANCELLED' ||
       notification.type === 'SOLUTION_ATTEMPT_TERMINATED'
     ) {
      router.push(`/solver/problem/${notification.problemId}?tab=workspace`);
@@ -187,7 +188,7 @@ export function NotificationTray({ open, anchorRef, onClose }: NotificationTrayP
                 <NotificationItem
                   key={notification.id}
                   notification={notification}
-                  onSelect={handleNotificationClick} // <-- Using the new handler
+                  onSelect={handleNotificationClick}
                 />
               ))}
             </ul>

@@ -268,10 +268,15 @@ public class ClaimRequestService {
                         + " for sub-problem \"" + targetSubtask.getTitle() + "\"."
         );
 
-
         if (currentActiveSolvers + 1 >= maxAllowed) {
-            claimRequestRepository.cancelRemainingPendingRequestsForSubtask(
-                    problem.getId(), targetSubtask.getId());
+            List<ClaimRequest> cancelledRequests = claimRequestRepository
+                    .findByProblemAndTargetSubtaskAndStatus(
+                            problem, targetSubtask, ClaimRequestStatus.PENDING);
+            cancelledRequests.forEach(cancelledRequest ->
+                    cancelledRequest.setStatus(ClaimRequestStatus.CANCELLED));
+            claimRequestRepository.saveAll(cancelledRequests);
+            cancelledRequests.forEach(cancelledRequest ->
+                    publishProposalDecision(cancelledRequest, problem, "CANCELLED"));
 
             auditService.log(
                     problem.getId(),

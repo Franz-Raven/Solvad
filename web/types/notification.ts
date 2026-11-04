@@ -2,6 +2,7 @@ export type NotificationType =
   | 'PROPOSAL_SUBMITTED'
   | 'PROPOSAL_APPROVED'
   | 'PROPOSAL_REJECTED'
+  | 'PROPOSAL_CANCELLED'
   | 'SOLUTION_ATTEMPT_TERMINATED';
 
 // all IDs are UUID strings
