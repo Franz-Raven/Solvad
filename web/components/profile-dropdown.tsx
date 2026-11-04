@@ -80,9 +80,7 @@ export default function ProfileDropdown({ onLogout }: ProfileDropdownProps) {
 
   const handleTourClick = () => {
     setIsOpen(false);
-    router.push(
-      user?.role === "SOLVER" ? "/public-tutorial?tour=solver-submit-proposal" : "/public-tutorial?tour=1",
-    );
+    router.push("/public-tutorial");
   };
 
   const handleLogoutClick = () => {
@@ -201,7 +199,7 @@ export default function ProfileDropdown({ onLogout }: ProfileDropdownProps) {
                   <Compass className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 transition-colors" />
                 </div>
                 <span className="text-sm font-bold text-slate-700 group-hover:text-emerald-700 transition-colors">
-                  Take a tour
+                  Tutorials
                 </span>
               </button>
             </div>

@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 import { ACTIONS, EVENTS, Joyride, STATUS, type EventData, type Step } from "react-joyride";
 
 import { onboardingClient } from "@/lib/onboarding/client";
+import { FLOW_SETS } from "@/lib/tutorial/flows";
 import { tutorial, tutorialFlowIds, tutorialStepCount, tutorialTargetProps } from "@/lib/tutorial/tutorial";
 
 export function TutorialHost() {

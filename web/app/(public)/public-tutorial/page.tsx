@@ -164,6 +164,7 @@ export default function PublicTutorialPage() {
   const snap = useSyncExternalStore(tutorial.subscribe, tutorial.getSnapshot, tutorial.getSnapshot);
   const [activeTab, setActiveTab] = useState<DemoTab>("problem");
   const [localMode, setLocalMode] = useState<TutorialGroup>("seeker");
+  const [lockedMode, setLockedMode] = useState<TutorialGroup | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
 
   const [formData, setFormData] = useState(INITIAL_FORM);
@@ -200,7 +201,7 @@ export default function PublicTutorialPage() {
   const [gapOpen, setGapOpen] = useState(false);
 
   const activeTarget = currentTutorialTarget();
-  const mode: TutorialGroup = snap.active ? snap.group : localMode;
+  const mode: TutorialGroup = lockedMode ?? (snap.active ? snap.group : localMode);
   const modeFlowIds = mode === "seeker" ? SEEKER_FLOW_IDS : SOLVER_FLOW_IDS;
   const displayTab =
     snap.active && snap.flowId && snap.group === "seeker"
@@ -234,6 +235,8 @@ export default function PublicTutorialPage() {
   };
 
   const selectMode = (next: TutorialGroup) => {
+    if (lockedMode) return;
+
     if (snap.active) tutorial.stop();
 
     setLocalMode(next);
@@ -241,12 +244,20 @@ export default function PublicTutorialPage() {
   };
 
   useEffect(() => {
+    const storedRole = window.localStorage.getItem("userRole");
+    const roleMode: TutorialGroup | null =
+      storedRole === "SOLVER" ? "solver" : storedRole ? "seeker" : null;
     const params = new URLSearchParams(window.location.search);
     const requested = params.get("tour") ?? params.get("flow");
+    const requestedMode =
+      requested && (FLOWS[requested] || SOLVER_FLOWS[requested]) ? groupForFlow(requested) : null;
+    const initialMode = roleMode ?? requestedMode ?? "seeker";
 
-    if (requested && (FLOWS[requested] || SOLVER_FLOWS[requested])) {
-      const group = groupForFlow(requested);
-      const timer = window.setTimeout(() => setLocalMode(group), 0);
+    if (roleMode || requestedMode) {
+      const timer = window.setTimeout(() => {
+        setLockedMode(roleMode);
+        setLocalMode(initialMode);
+      }, 0);
 
       return () => {
         window.clearTimeout(timer);
@@ -492,36 +503,39 @@ export default function PublicTutorialPage() {
 
         <header className="mt-5 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-secondary">
-              {mode === "seeker" ? "Seeker walkthrough" : "Solver walkthrough"}
-            </p>
             <h1 className="mt-2 text-3xl font-bold text-foreground md:text-4xl">
               See how Solvad works
             </h1>
-            <div className="mt-4 inline-flex rounded-xl border border-border bg-muted/40 p-1">
-              <button
-                className={`rounded-lg px-4 py-2 text-sm font-bold transition-all ${
-                  mode === "seeker"
-                    ? "bg-background text-accent shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                onClick={() => selectMode("seeker")}
-                type="button"
-              >
-                Seeker walkthrough
-              </button>
-              <button
-                className={`rounded-lg px-4 py-2 text-sm font-bold transition-all ${
-                  mode === "solver"
-                    ? "bg-background text-accent shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                onClick={() => selectMode("solver")}
-                type="button"
-              >
-                Solver walkthrough
-              </button>
-            </div>
+            {lockedMode ? (
+              <p className="mt-4 inline-flex rounded-xl border border-accent/20 bg-accent/10 px-4 py-2 text-sm font-bold text-accent">
+                {lockedMode === "solver" ? "Solver tutorials" : "Seeker tutorials"}
+              </p>
+            ) : (
+              <div className="mt-4 inline-flex rounded-xl border border-border bg-muted/40 p-1">
+                <button
+                  className={`rounded-lg px-4 py-2 text-sm font-bold transition-all ${
+                    mode === "seeker"
+                      ? "bg-background text-accent shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  onClick={() => selectMode("seeker")}
+                  type="button"
+                >
+                  Seeker walkthrough
+                </button>
+                <button
+                  className={`rounded-lg px-4 py-2 text-sm font-bold transition-all ${
+                    mode === "solver"
+                      ? "bg-background text-accent shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  onClick={() => selectMode("solver")}
+                  type="button"
+                >
+                  Solver walkthrough
+                </button>
+              </div>
+            )}
           </div>
 
         </header>
@@ -529,9 +543,6 @@ export default function PublicTutorialPage() {
         <section className="mt-6 rounded-3xl border border-border bg-background p-5 shadow-sm md:p-6">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-secondary">
-                {mode === "seeker" ? "Seeker tutorials" : "Solver tutorials"}
-              </p>
               <h2 className="mt-1 text-xl font-bold text-foreground md:text-2xl">
                 Choose a process to explore
               </h2>

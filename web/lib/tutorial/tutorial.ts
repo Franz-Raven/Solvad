@@ -145,25 +145,6 @@ export const tutorial = {
     persistSnapshot();
     emit();
   },
-  resume() {
-    const progress = readProgress();
-
-    if (!progress) return null;
-
-    const offset = FLOW_OFFSETS_BY_GROUP[progress.group][progress.flowId] ?? 0;
-    const length = FLOW_SETS[progress.group][progress.flowId].length;
-    const stepIndex = Math.min(Math.max(progress.stepIndex, offset), offset + length - 1);
-
-    snapshot = {
-      active: true,
-      group: progress.group,
-      flowId: progress.flowId,
-      stepIndex,
-    };
-    emit();
-
-    return { group: progress.group, flowId: progress.flowId };
-  },
   next() {
     if (!snapshot.active) return;
 
