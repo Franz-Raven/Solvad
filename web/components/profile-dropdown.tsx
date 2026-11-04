@@ -81,7 +81,7 @@ export default function ProfileDropdown({ onLogout }: ProfileDropdownProps) {
   const handleTourClick = () => {
     setIsOpen(false);
     router.push(
-      user?.role === "SOLVER" ? "/public-tutorial?tour=solver-browse" : "/public-tutorial?tour=1",
+      user?.role === "SOLVER" ? "/public-tutorial?tour=solver-submit-proposal" : "/public-tutorial?tour=1",
     );
   };
 

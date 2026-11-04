@@ -124,8 +124,9 @@ export function currentTutorialTarget(): string | undefined {
 
   const flows = FLOW_SETS[snapshot.group];
   const offset = FLOW_OFFSETS_BY_GROUP[snapshot.group][snapshot.flowId] ?? 0;
+  const target = flows[snapshot.flowId]?.[snapshot.stepIndex - offset]?.target;
 
-  return flows[snapshot.flowId]?.[snapshot.stepIndex - offset]?.target;
+  return target?.match(/data-tour="([^"]+)"/)?.[1] ?? target;
 }
 
 export const tutorialTargetProps = (active: boolean) => ({

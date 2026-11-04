@@ -16,6 +16,7 @@ import {
 
 import ProblemFormFields from "@/app/(authed)/seeker/submit-problem/components/ProblemFormFields";
 import { Button } from "@/components/ui/button";
+import SolverStage from "./solver-stage";
 import {
   FLOWS,
   SOLVER_FLOWS,
@@ -62,8 +63,7 @@ const FLOW_LABELS: Record<string, string> = {
   "active-workspaces": "Manage workspaces",
   "pending-solutions": "Review solutions",
   "ai-insights": "AI insights",
-  "solver-browse": "Browse problems",
-  "solver-workspace": "Solve a workspace",
+  "solver-submit-proposal": "Submit a proposal",
 };
 
 const FLOW_TABS: Record<string, DemoTab> = {
@@ -482,6 +482,30 @@ export default function PublicTutorialPage() {
             <h1 className="mt-2 text-3xl font-bold text-foreground md:text-4xl">
               See how Solvad works
             </h1>
+            <div className="mt-4 inline-flex rounded-xl border border-border bg-muted/40 p-1">
+              <button
+                className={`rounded-lg px-4 py-2 text-sm font-bold transition-all ${
+                  mode === "seeker"
+                    ? "bg-background text-accent shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                onClick={() => goToFlow(SEEKER_FLOW_IDS[0])}
+                type="button"
+              >
+                Seeker walkthrough
+              </button>
+              <button
+                className={`rounded-lg px-4 py-2 text-sm font-bold transition-all ${
+                  mode === "solver"
+                    ? "bg-background text-accent shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                onClick={() => goToFlow(SOLVER_FLOW_IDS[0])}
+                type="button"
+              >
+                Solver walkthrough
+              </button>
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -1563,159 +1587,11 @@ export default function PublicTutorialPage() {
           </div>
           </section>
         ) : (
-          <section
-            className="mt-6 overflow-hidden rounded-3xl border border-border bg-background shadow-xl"
-            id="tour-stage"
-          >
-            <div className="border-b border-border bg-muted/30 px-5 py-4 md:px-7">
-              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                    Solver workspace
-                  </p>
-                  <h2 className="mt-1 text-xl font-bold text-foreground md:text-2xl">
-                    Your solver dashboard
-                  </h2>
-                  <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-wider">
-                    <span className="rounded-md border border-secondary/20 bg-secondary/10 px-2.5 py-1 text-secondary">
-                      Preview
-                    </span>
-                    <span className="rounded-md border border-border bg-muted px-2.5 py-1 text-muted-foreground">
-                      Placeholder page
-                    </span>
-                  </div>
-                </div>
-                <Button size="sm" variant="outline">
-                  Change Status
-                </Button>
-              </div>
-
-              <nav className="mt-4 flex gap-1 overflow-x-auto rounded-xl border border-border bg-muted/40 p-1">
-                <button
-                  className="whitespace-nowrap rounded-lg border border-border bg-background px-4 py-2 text-sm font-bold text-accent shadow-sm"
-                  type="button"
-                >
-                  Dashboard
-                </button>
-                <button
-                  className="whitespace-nowrap rounded-lg border border-transparent px-4 py-2 text-sm font-bold text-muted-foreground"
-                  type="button"
-                >
-                  My Workspace
-                </button>
-              </nav>
-            </div>
-
-            <div className="grid gap-4 p-5 md:grid-cols-2 md:p-7">
-              <div
-                className={`rounded-2xl border border-border bg-background p-5 shadow-sm md:col-span-2 ${highlight(
-                  "solver-dashboard",
-                )}`}
-                data-tour="solver-dashboard"
-              >
-                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Solver dashboard
-                </p>
-                <h3 className="mt-1 text-lg font-bold text-foreground">
-                  Find work that matches your skills
-                </h3>
-                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                  This placeholder stands in for the solver dashboard. Problem discovery, proposal
-                  status, and active workspaces will live here.
-                </p>
-              </div>
-
-              <div
-                className={`rounded-2xl border border-border bg-background p-5 shadow-sm ${highlight(
-                  "solver-problems",
-                )}`}
-                data-tour="solver-problems"
-              >
-                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Open problems
-                </p>
-                <h3 className="mt-1 text-sm font-bold text-foreground">Browse sub-problems</h3>
-                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                  Placeholder for the searchable problem feed, filters, and capacity indicators.
-                </p>
-                <div className="mt-3 space-y-2">
-                  {["Route optimization", "Rider experience"].map((item) => (
-                    <div
-                      className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2"
-                      key={item}
-                    >
-                      <span className="text-xs font-bold text-foreground">{item}</span>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                        1 / 3 Active
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div
-                className={`rounded-2xl border border-border bg-background p-5 shadow-sm ${highlight(
-                  "solver-proposal",
-                )}`}
-                data-tour="solver-proposal"
-              >
-                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Proposal
-                </p>
-                <h3 className="mt-1 text-sm font-bold text-foreground">Send a proposal</h3>
-                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                  Placeholder for the approach editor, attachments, and proposal status.
-                </p>
-                <div className="mt-3 space-y-2 rounded-lg border border-border bg-muted/30 p-3">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                    Proposed approach
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Explain how you will solve this sub-problem...
-                  </p>
-                </div>
-              </div>
-
-              <div
-                className={`rounded-2xl border border-border bg-background p-5 shadow-sm ${highlight(
-                  "solver-workspace",
-                )}`}
-                data-tour="solver-workspace"
-              >
-                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Active workspace
-                </p>
-                <h3 className="mt-1 text-sm font-bold text-foreground">Work in your workspace</h3>
-                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                  Placeholder for the brief, attachments, notes, and submission requirements.
-                </p>
-                <div className="mt-3 flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2">
-                  <span className="text-xs font-bold text-foreground">Drafting</span>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700">
-                    Autosaved
-                  </span>
-                </div>
-              </div>
-
-              <div
-                className={`rounded-2xl border border-border bg-background p-5 shadow-sm ${highlight(
-                  "solver-submit",
-                )}`}
-                data-tour="solver-submit"
-              >
-                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Submission
-                </p>
-                <h3 className="mt-1 text-sm font-bold text-foreground">Submit your solution</h3>
-                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                  Placeholder for the final description, file uploads, and review status.
-                </p>
-                <Button className="mt-3" size="sm" type="button">
-                  Submit Solution
-                </Button>
-              </div>
-            </div>
-          </section>
+          <SolverStage
+            activeTarget={activeTarget}
+            flowId={snap.flowId}
+            highlight={highlight}
+          />
         )}
       </div>
     </main>

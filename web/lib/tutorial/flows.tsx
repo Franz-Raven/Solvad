@@ -51,14 +51,14 @@ export const FLOWS: Record<string, FlowStep[]> = {
 };
 
 export const SOLVER_FLOWS: Record<string, FlowStep[]> = {
-  "solver-browse": [
-    { tab: "Solver Dashboard", title: "Find problems to solve", body: "Open problems are grouped by industry and sub-problem so you can pick work that matches your skills.", target: '[data-tour="solver-dashboard"]' },
-    { tab: "Solver Dashboard", title: "Compare the work", body: "Each sub-problem shows its objectives, constraints, and how many solvers are already active.", target: '[data-tour="solver-problems"]' },
-    { tab: "Solver Dashboard", title: "Send a proposal", body: "Explain your approach and attach supporting files. The seeker reviews every request before a workspace is created.", target: '[data-tour="solver-proposal"]' },
-  ],
-  "solver-workspace": [
-    { tab: "Solver Workspace", title: "Work in your workspace", body: "Once a proposal is approved, your workspace opens with the full brief, attachments, and submission requirements.", target: '[data-tour="solver-workspace"]' },
-    { tab: "Solver Workspace", title: "Submit your solution", body: "Upload the final files and description when ready. The seeker reviews it before merit is awarded.", target: '[data-tour="solver-submit"]' },
+  "solver-submit-proposal": [
+    { tab: "Submit Proposal", title: "Open the problem", body: "This is the problem page. Read the full brief before you decide to apply.", target: '[data-tour="solver-problem-header"]' },
+    { tab: "Submit Proposal", title: "View the blueprint", body: "Open the Problem Blueprint tab to see the context, objectives, and limits the seeker has set.", target: '[data-tour="solver-blueprint-tab"]' },
+    { tab: "Submit Proposal", title: "Work one sub-problem at a time", body: "Each sub-problem is a separate proposal. You apply for that specific piece of work, not the whole problem.", target: '[data-tour="solver-subtasks"]' },
+    { tab: "Submit Proposal", title: "Pick the sub-problem that fits you", body: "Choose the sub-problem that matches your skills and the time you have available.", target: '[data-tour="solver-subtask-card"]' },
+    { tab: "Submit Proposal", title: "Explain your approach", body: "Describe how you will solve this sub-problem. Be specific about your method and what you will deliver.", target: '[data-tour="solver-proposal-approach"]' },
+    { tab: "Submit Proposal", title: "Attach supporting files", body: "Add any documents that help the seeker understand your plan. This part is optional.", target: '[data-tour="solver-proposal-files"]' },
+    { tab: "Submit Proposal", title: "Submit one proposal per sub-problem", body: "After you submit, the seeker reviews your approach. If approved, a workspace opens for this sub-problem only.", target: '[data-tour="solver-proposal-submit"]' },
   ],
 };
 

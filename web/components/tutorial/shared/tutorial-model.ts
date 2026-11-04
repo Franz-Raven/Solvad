@@ -40,8 +40,7 @@ export const FLOW_LABELS: Record<string, string> = {
   "active-workspaces": "Manage workspaces",
   "pending-solutions": "Review solutions",
   "ai-insights": "AI insights",
-  "solver-browse": "Browse problems",
-  "solver-workspace": "Solve a workspace",
+  "solver-submit-proposal": "Submit a proposal",
 };
 
 export const INITIAL_FORM = {
