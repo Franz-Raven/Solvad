@@ -44,7 +44,7 @@ function NotificationItem({ notification, onSelect }: NotificationItemProps) {
       <button
         type="button"
         onClick={() => onSelect(notification)}
-        className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+        className="flex w-full cursor-pointer items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
       >
         <span
           aria-hidden="true"
