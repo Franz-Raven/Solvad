@@ -41,6 +41,7 @@ export const FLOW_LABELS: Record<string, string> = {
   "pending-solutions": "Review solutions",
   "ai-insights": "AI insights",
   "solver-submit-proposal": "Submit a proposal",
+  "solver-solution-tree": "Solution tree",
 };
 
 export const INITIAL_FORM = {

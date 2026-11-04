@@ -60,6 +60,14 @@ export const SOLVER_FLOWS: Record<string, FlowStep[]> = {
     { tab: "Submit Proposal", title: "Attach supporting files", body: "Add any documents that help the seeker understand your plan. This part is optional.", target: '[data-tour="solver-proposal-files"]' },
     { tab: "Submit Proposal", title: "Submit one proposal per sub-problem", body: "After you submit, the seeker reviews your approach. If approved, a workspace opens for this sub-problem only.", target: '[data-tour="solver-proposal-submit"]' },
   ],
+  "solver-solution-tree": [
+    { tab: "Solution Tree", title: "Open the solution tree", body: "The solution tree shows every attempt on this problem and how solutions build on each other.", target: '[data-tour="solver-tree-tab"]' },
+    { tab: "Solution Tree", title: "Start with no solutions", body: "When no one has solved the problem yet, the tree is empty. The first approved proposal becomes the root.", target: '[data-tour="solver-tree-empty"]' },
+    { tab: "Solution Tree", title: "See completed solutions", body: "Completed attempts appear as nodes. Forked attempts branch from the solution they build on.", target: '[data-tour="solver-tree-complete"]' },
+    { tab: "Solution Tree", title: "Build upon a completed solution", body: "Use Build Upon to start from an existing approach. The original solution stays in the tree.", target: '[data-tour="solver-tree-build-upon"]' },
+    { tab: "Solution Tree", title: "Explain your fork", body: "Describe what you will change or improve on the original solution. Your fork starts from that completed work.", target: '[data-tour="solver-fork-approach"]' },
+    { tab: "Solution Tree", title: "Submit the fork proposal", body: "The seeker reviews your fork before a workspace is created. You only work on the sub-problem you forked.", target: '[data-tour="solver-fork-submit"]' },
+  ],
 };
 
 export const FLOW_SETS = {

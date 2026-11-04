@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   Building2,
+  Calendar,
   CheckCircle2,
   ClipboardList,
   FileText,
@@ -12,6 +13,7 @@ import {
   History,
   Lock,
   Mail,
+  Network,
   Pencil,
   Phone,
   Upload,
@@ -21,6 +23,22 @@ import {
 } from "lucide-react";
 
 type SolverTab = "blueprint" | "subtasks" | "tree" | "history";
+type SolverTreeState = "empty" | "complete";
+
+type SolverAttempt = {
+  id: string;
+  solverFirstName: string;
+  solverLastName: string;
+  degreeProgram: string;
+  institution: string;
+  status: "COMPLETED" | "PENDING_REVIEW" | "ACTIVE";
+  claimedAt: string;
+  parentAttemptId?: string;
+  parentSolverName?: string;
+  targetSubtaskTitle: string;
+  description: string;
+  deltaDescription?: string;
+};
 
 type SolverSubtask = {
   id: string;
@@ -75,6 +93,53 @@ const SOLVER_PROBLEM = {
   ] satisfies SolverSubtask[],
 };
 
+const COMPLETED_ATTEMPTS: SolverAttempt[] = [
+  {
+    id: "attempt-maya",
+    solverFirstName: "Maya",
+    solverLastName: "Chen",
+    degreeProgram: "BS Information Technology",
+    institution: "De La Salle University",
+    status: "COMPLETED",
+    claimedAt: "2026-10-12",
+    targetSubtaskTitle: "Route optimization",
+    description:
+      "Built a lightweight GPS arrival model from the live shuttle feed and validated it against two weeks of historical rides.",
+  },
+  {
+    id: "attempt-joseph",
+    solverFirstName: "Joseph",
+    solverLastName: "Kariuki",
+    degreeProgram: "BS Computer Science",
+    institution: "University of Nairobi",
+    status: "COMPLETED",
+    claimedAt: "2026-10-24",
+    parentAttemptId: "attempt-maya",
+    parentSolverName: "Maya Chen",
+    targetSubtaskTitle: "Route optimization",
+    description:
+      "Added weather and traffic signals to the original arrival model so peak-hour predictions stay accurate during rain.",
+    deltaDescription:
+      "Added weather and traffic signals to the model, improving peak-hour accuracy from 74% to 89%.",
+  },
+  {
+    id: "attempt-amina",
+    solverFirstName: "Amina",
+    solverLastName: "Bello",
+    degreeProgram: "BS Data Science",
+    institution: "University of Lagos",
+    status: "COMPLETED",
+    claimedAt: "2026-10-28",
+    parentAttemptId: "attempt-maya",
+    parentSolverName: "Maya Chen",
+    targetSubtaskTitle: "Route optimization",
+    description:
+      "Kept the original model and added a fallback that uses scheduled timetables when a shuttle loses GPS signal.",
+    deltaDescription:
+      "Added a timetable fallback for shuttles with weak GPS coverage, keeping ETAs available in dead zones.",
+  },
+];
+
 const TABS: { id: SolverTab; label: string }[] = [
   { id: "blueprint", label: "Problem Blueprint" },
   { id: "subtasks", label: "Sub-problems" },
@@ -96,6 +161,10 @@ export default function SolverStage({ activeTarget, flowId, highlight }: SolverS
   const [proposedApproach, setProposedApproach] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [submitted, setSubmitted] = useState(false);
+  const [treeState, setTreeState] = useState<SolverTreeState>("empty");
+  const [forkMode, setForkMode] = useState(false);
+  const [forkNodeId, setForkNodeId] = useState<string | null>(null);
+  const [detailNodeId, setDetailNodeId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const selectedSubtask =
@@ -106,17 +175,41 @@ export default function SolverStage({ activeTarget, flowId, highlight }: SolverS
     activeTarget === "solver-proposal-approach" ||
     activeTarget === "solver-proposal-files" ||
     activeTarget === "solver-proposal-submit";
-  const showProposalModal = (proposalOpen || proposalTargetActive) && !proposalDismissed;
+  const forkTargetActive =
+    activeTarget === "solver-fork-approach" ||
+    activeTarget === "solver-fork-files" ||
+    activeTarget === "solver-fork-submit";
+  const isForking = forkMode || forkTargetActive;
+  const modalPrefix = isForking ? "solver-fork" : "solver-proposal";
+  const showProposalModal =
+    (proposalOpen || proposalTargetActive || forkTargetActive) && !proposalDismissed;
   const tutorialTab: SolverTab | null =
     activeTarget === "solver-blueprint" || activeTarget === "solver-blueprint-tab"
       ? "blueprint"
-      : activeTarget === "solver-subtasks" ||
-          activeTarget === "solver-subtasks-tab" ||
-          activeTarget === "solver-subtask-card" ||
-          proposalTargetActive
-        ? "subtasks"
-        : null;
+      : activeTarget?.startsWith("solver-tree") || activeTarget?.startsWith("solver-fork")
+        ? "tree"
+        : activeTarget === "solver-subtasks" ||
+            activeTarget === "solver-subtasks-tab" ||
+            activeTarget === "solver-subtask-card" ||
+            proposalTargetActive
+          ? "subtasks"
+          : null;
   const displayTab = tutorialTab ?? tab;
+  const treeTargetActive =
+    activeTarget === "solver-tree-complete" ||
+    activeTarget === "solver-tree-complete-toggle" ||
+    activeTarget === "solver-tree-build-upon" ||
+    forkTargetActive;
+  const displayTreeState: SolverTreeState =
+    treeTargetActive
+      ? "complete"
+      : activeTarget === "solver-tree-empty" || activeTarget === "solver-tree-empty-toggle"
+        ? "empty"
+        : treeState;
+  const rootAttempt = COMPLETED_ATTEMPTS[0];
+  const forkNode = COMPLETED_ATTEMPTS.find((attempt) => attempt.id === forkNodeId) ?? rootAttempt;
+  const detailNode = COMPLETED_ATTEMPTS.find((attempt) => attempt.id === detailNodeId) ?? null;
+  const modalSubtaskTitle = isForking ? forkNode.targetSubtaskTitle : selectedSubtask.title;
 
   useEffect(() => {
     setTab("subtasks");
@@ -126,6 +219,9 @@ export default function SolverStage({ activeTarget, flowId, highlight }: SolverS
     setProposedApproach("");
     setFiles([]);
     setSubmitted(false);
+    setTreeState("empty");
+    setForkMode(false);
+    setForkNodeId(null);
   }, [flowId]);
 
   useEffect(() => {
@@ -143,6 +239,16 @@ export default function SolverStage({ activeTarget, flowId, highlight }: SolverS
       return;
     }
 
+    if (
+      activeTarget === "solver-fork-approach" ||
+      activeTarget === "solver-fork-files" ||
+      activeTarget === "solver-fork-submit"
+    ) {
+      setTab("tree");
+      setProposalOpen(true);
+      return;
+    }
+
     setProposalOpen(false);
 
     if (activeTarget === "solver-blueprint" || activeTarget === "solver-blueprint-tab") {
@@ -156,16 +262,91 @@ export default function SolverStage({ activeTarget, flowId, highlight }: SolverS
       activeTarget === "solver-subtask-card"
     ) {
       setTab("subtasks");
+      return;
+    }
+
+    if (activeTarget.startsWith("solver-tree")) {
+      setTab("tree");
     }
   }, [activeTarget]);
 
   const openProposal = (subtaskId: string) => {
     if (!canPropose) return;
 
+    setForkMode(false);
+    setForkNodeId(null);
     setSelectedSubtaskId(subtaskId);
     setProposalOpen(true);
     setProposalDismissed(false);
   };
+
+  const openFork = (node: SolverAttempt) => {
+    setForkMode(true);
+    setForkNodeId(node.id);
+    setTab("tree");
+    setProposalOpen(true);
+    setProposalDismissed(false);
+  };
+
+  const renderAttemptCard = (attempt: SolverAttempt, buildUponTour?: string) => (
+    <div className="w-[256px] min-w-[256px] max-w-[256px] overflow-hidden rounded-2xl border border-border bg-background p-5 shadow-sm">
+      <div className="mb-2 flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-bold leading-tight text-foreground">
+            {attempt.solverFirstName} {attempt.solverLastName}
+          </p>
+          <p className="mt-0.5 truncate text-[11px] font-medium leading-snug text-muted-foreground">
+            {attempt.degreeProgram}
+          </p>
+          <p className="mt-1 truncate text-[10px] font-bold text-muted-foreground/70">
+            {attempt.institution}
+          </p>
+        </div>
+        <span className="flex-shrink-0 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700">
+          {attempt.status.replace(/_/g, " ")}
+        </span>
+      </div>
+
+      {attempt.parentAttemptId && (
+        <div className="mb-1 mt-2 flex items-center">
+          <span className="inline-flex max-w-full items-center gap-1.5 truncate rounded-md border border-border bg-muted/50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            <GitBranch className="h-3 w-3 flex-shrink-0" /> Forked: {attempt.parentSolverName}
+          </span>
+        </div>
+      )}
+
+      <div className="mb-4 mt-3 flex items-center justify-between text-[11px] font-bold text-muted-foreground/70">
+        <p className="flex items-center gap-1.5">
+          <Calendar className="h-3.5 w-3.5" />
+          {new Date(attempt.claimedAt).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          })}
+        </p>
+      </div>
+
+      <div className="mt-auto flex items-center gap-2">
+        <button
+          className={`flex-1 rounded-lg border border-accent/20 bg-accent/10 py-1.5 text-[11px] font-bold text-accent transition-all hover:bg-accent hover:text-white active:scale-[0.98] ${
+            buildUponTour ? highlight(buildUponTour) : ""
+          }`}
+          data-tour={buildUponTour}
+          onClick={() => openFork(attempt)}
+          type="button"
+        >
+          Build Upon ➔
+        </button>
+        <button
+          className="rounded-lg border border-border bg-muted/50 px-3 py-1.5 text-[11px] font-bold text-muted-foreground transition-all hover:bg-muted hover:text-foreground active:scale-[0.98]"
+          onClick={() => setDetailNodeId(attempt.id)}
+          type="button"
+        >
+          View Details
+        </button>
+      </div>
+    </div>
+  );
 
   const handleFileSelect = (event: ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -479,16 +660,135 @@ export default function SolverStage({ activeTarget, flowId, highlight }: SolverS
         )}
 
         {displayTab === "tree" && (
-          <div className="rounded-2xl border border-border bg-background p-6 shadow-sm md:p-8">
-            <div className="flex min-h-[360px] flex-col items-center justify-center text-center">
-              <div className="rounded-full border border-border bg-muted/50 p-4">
-                <GitBranch className="h-8 w-8 text-muted-foreground" />
+          <div className="space-y-5">
+            <div className="flex flex-col gap-3 rounded-2xl border border-dashed border-border bg-muted/20 p-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Tutorial preview
+                </p>
+                <p className="mt-1 text-sm font-medium text-muted-foreground">
+                  Switch between an empty tree and a tree with completed solutions.
+                </p>
               </div>
-              <h3 className="mb-2 mt-4 text-xl font-bold text-foreground">No attempts yet</h3>
-              <p className="max-w-sm text-sm font-medium text-muted-foreground">
-                Solution attempts and forked work will appear here after a proposal is approved.
-              </p>
+              <div className="inline-flex w-fit rounded-full border border-border bg-muted/40 p-1">
+                <button
+                  className={`rounded-full px-4 py-2 text-sm font-bold transition-all ${
+                    displayTreeState === "empty"
+                      ? "bg-background text-accent shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  data-tour="solver-tree-empty-toggle"
+                  onClick={() => setTreeState("empty")}
+                  type="button"
+                >
+                  No solutions
+                </button>
+                <button
+                  className={`rounded-full px-4 py-2 text-sm font-bold transition-all ${
+                    displayTreeState === "complete"
+                      ? "bg-background text-accent shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  data-tour="solver-tree-complete-toggle"
+                  onClick={() => setTreeState("complete")}
+                  type="button"
+                >
+                  Complete solutions
+                </button>
+              </div>
             </div>
+
+            {displayTreeState === "empty" ? (
+              <div
+                className={`rounded-2xl border border-border bg-background p-12 text-center shadow-sm ${highlight(
+                  "solver-tree-empty",
+                )}`}
+                data-tour="solver-tree-empty"
+              >
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-border bg-muted/50 shadow-sm">
+                  <Network className="h-8 w-8 text-muted-foreground/60" />
+                </div>
+                <h3 className="mb-2 text-xl font-bold text-foreground">No attempts yet</h3>
+                <p className="mx-auto mb-6 max-w-sm text-sm font-medium text-muted-foreground">
+                  Be the first to claim and solve this problem. Your solution will become the root
+                  of this tree.
+                </p>
+                <button
+                  className="inline-flex items-center gap-2 rounded-xl bg-accent px-6 py-2.5 font-bold text-white shadow-md transition-all hover:bg-accent/90 active:scale-[0.98]"
+                  onClick={() => {
+                    setTab("subtasks");
+                    openProposal(SOLVER_PROBLEM.subtasks[0].id);
+                  }}
+                  type="button"
+                >
+                  Submit a Proposal <ArrowRight className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <div
+                className={`rounded-2xl border border-border bg-background p-6 shadow-sm md:p-8 ${highlight(
+                  "solver-tree-complete",
+                )}`}
+                data-tour="solver-tree-complete"
+              >
+                <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-start">
+                  <div className="flex-1">
+                    <h2 className="flex items-center gap-3 text-2xl font-bold text-foreground">
+                      <span className="rounded-xl border border-border bg-muted/50 p-2 text-muted-foreground">
+                        <Network className="h-5 w-5" />
+                      </span>
+                      Solution Evolution Tree
+                    </h2>
+                    <p className="mt-2 text-sm font-medium text-muted-foreground">
+                      Each node is a solution attempt. Click <strong>View Details</strong> to load
+                      the full history, or <strong>Build Upon</strong> to fork a completed solution.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col gap-2 md:flex-row md:items-center">
+                    <label
+                      className="whitespace-nowrap text-[11px] font-bold uppercase tracking-wider text-muted-foreground"
+                      htmlFor="solver-tree-filter"
+                    >
+                      Filter Tree:
+                    </label>
+                    <select
+                      className="block w-full cursor-pointer appearance-none rounded-xl border border-border bg-background px-4 py-2.5 text-sm font-bold text-foreground shadow-sm outline-none transition-colors hover:border-accent/50 focus:border-accent focus:ring-2 focus:ring-accent/20 md:w-auto"
+                      defaultValue="ALL"
+                      id="solver-tree-filter"
+                    >
+                      <option value="ALL">All Sub-problems</option>
+                      <option value="route-optimization">Route optimization</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div
+                  className="min-h-[480px] overflow-auto rounded-2xl border border-border bg-muted/30 shadow-inner"
+                  style={{
+                    backgroundImage:
+                      "radial-gradient(var(--border) 1.5px, transparent 1.5px)",
+                    backgroundSize: "24px 24px",
+                  }}
+                >
+                  <div className="flex min-w-max flex-col items-center px-10 py-12">
+                    {renderAttemptCard(rootAttempt, "solver-tree-build-upon")}
+                    <div className="h-10 w-0.5 bg-border" />
+                    <div className="relative flex gap-16 pt-10">
+                      <div className="absolute left-[128px] right-[128px] top-0 h-0.5 bg-border" />
+                      {COMPLETED_ATTEMPTS.filter((attempt) => attempt.parentAttemptId).map(
+                        (attempt) => (
+                          <div className="relative flex flex-col items-center" key={attempt.id}>
+                            <div className="absolute -top-10 h-10 w-0.5 bg-border" />
+                            {renderAttemptCard(attempt)}
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -537,8 +837,19 @@ export default function SolverStage({ activeTarget, flowId, highlight }: SolverS
             </div>
 
             <div className="flex-1 overflow-y-auto p-6">
+              {isForking && (
+                <div className="mb-6 flex items-center gap-2 rounded-lg border border-accent/20 bg-accent/10 px-4 py-3 font-medium text-accent">
+                  <GitBranch className="h-5 w-5 flex-shrink-0" />
+                  You are proposing to fork and build upon{" "}
+                  <strong>
+                    {forkNode.solverFirstName} {forkNode.solverLastName}
+                  </strong>
+                  &apos;s completed solution.
+                </div>
+              )}
+
               <div className="mb-6 rounded-lg border border-accent/20 bg-accent/10 px-4 py-3 font-medium text-accent">
-                You are proposing for: <strong>{selectedSubtask.title}</strong>
+                You are proposing for: <strong>{modalSubtaskTitle}</strong>
               </div>
 
               <form
@@ -550,8 +861,8 @@ export default function SolverStage({ activeTarget, flowId, highlight }: SolverS
                 }}
               >
                 <div
-                  className={`rounded-lg ${highlight("solver-proposal-approach")}`}
-                  data-tour="solver-proposal-approach"
+                  className={`rounded-lg ${highlight(`${modalPrefix}-approach`)}`}
+                  data-tour={`${modalPrefix}-approach`}
                 >
                   <label className="mb-2 block text-sm font-bold text-foreground">
                     Proposed Approach <span className="text-rose-500">*</span>
@@ -573,9 +884,9 @@ export default function SolverStage({ activeTarget, flowId, highlight }: SolverS
                   </label>
                   <div
                     className={`group cursor-pointer rounded-lg border-2 border-dashed border-input p-6 text-center transition-colors hover:border-accent/50 hover:bg-muted/30 ${highlight(
-                      "solver-proposal-files",
+                      `${modalPrefix}-files`,
                     )}`}
-                    data-tour="solver-proposal-files"
+                    data-tour={`${modalPrefix}-files`}
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <input
@@ -636,14 +947,120 @@ export default function SolverStage({ activeTarget, flowId, highlight }: SolverS
               </button>
               <button
                 className={`flex min-w-[160px] items-center justify-center gap-2 rounded-lg bg-secondary px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60 ${highlight(
-                  "solver-proposal-submit",
+                  `${modalPrefix}-submit`,
                 )}`}
-                data-tour="solver-proposal-submit"
+                data-tour={`${modalPrefix}-submit`}
                 disabled={!proposedApproach.trim()}
                 form="solver-proposal-form"
                 type="submit"
               >
                 Submit Proposal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {detailNode && (
+        <div
+          className="fixed inset-0 z-[58] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+          onClick={() => setDetailNodeId(null)}
+        >
+          <div
+            className="max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-xl border border-border bg-background shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-border bg-gradient-to-br from-accent/10 via-background to-background p-6">
+              <div className="flex min-w-0 items-start gap-4">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-primary-foreground text-lg font-bold text-white shadow-md">
+                  {detailNode.solverFirstName.charAt(0)}
+                  {detailNode.solverLastName.charAt(0)}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="truncate text-xl font-bold text-foreground">
+                      {detailNode.solverFirstName} {detailNode.solverLastName}
+                    </h3>
+                    <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700">
+                      {detailNode.status.replace(/_/g, " ")}
+                    </span>
+                    {detailNode.parentAttemptId && (
+                      <span className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                        <GitBranch className="h-3 w-3" /> Forked
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1 truncate text-sm font-medium text-muted-foreground">
+                    {detailNode.degreeProgram} · {detailNode.institution}
+                  </p>
+                  <p className="mt-1 text-xs font-bold text-muted-foreground/70">
+                    Claimed{" "}
+                    {new Date(detailNode.claimedAt).toLocaleDateString("en-US", {
+                      month: "long",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </p>
+                </div>
+              </div>
+              <button
+                className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                onClick={() => setDetailNodeId(null)}
+                type="button"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="max-h-[50vh] space-y-6 overflow-y-auto p-6">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Sub-problem
+                </p>
+                <p className="mt-1 text-sm font-bold text-foreground">
+                  {detailNode.targetSubtaskTitle}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Approach
+                </p>
+                <p className="mt-1 text-sm font-medium leading-relaxed text-foreground">
+                  {detailNode.description}
+                </p>
+              </div>
+
+              {detailNode.deltaDescription && (
+                <div className="rounded-xl border border-accent/20 bg-accent/5 p-4">
+                  <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-accent">
+                    <GitBranch className="h-3.5 w-3.5" /> What changed from{" "}
+                    {detailNode.parentSolverName}
+                  </p>
+                  <p className="mt-1 text-sm font-medium leading-relaxed text-foreground">
+                    {detailNode.deltaDescription}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col-reverse gap-3 border-t border-border bg-muted/40 p-6 sm:flex-row sm:justify-end">
+              <button
+                className="rounded-lg border border-input bg-background px-6 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                onClick={() => setDetailNodeId(null)}
+                type="button"
+              >
+                Close
+              </button>
+              <button
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-secondary"
+                onClick={() => {
+                  setDetailNodeId(null);
+                  openFork(detailNode);
+                }}
+                type="button"
+              >
+                <GitBranch className="h-4 w-4" /> Build Upon This Solution
               </button>
             </div>
           </div>
