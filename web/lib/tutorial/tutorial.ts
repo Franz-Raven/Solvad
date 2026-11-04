@@ -17,6 +17,13 @@ const ORIGIN_PROPS = {
   top: "50%",
   transform: "translate(-50%, -50%)",
 } as const;
+const PROGRESS_STORAGE_KEY = "tutorial-stage-completion";
+
+type TutorialProgress = {
+  group: TutorialGroup;
+  flowId: string;
+  stepIndex: number;
+};
 
 const FLOW_IDS_BY_GROUP: Record<TutorialGroup, string[]> = {
   seeker: Object.keys(FLOW_SETS.seeker),
@@ -57,6 +64,52 @@ function flowAt(group: TutorialGroup, globalIndex: number) {
   return { flowId: lastId, indexInFlow: FLOW_SETS[group][lastId].length - 1 };
 }
 
+function isProgress(value: unknown): value is TutorialProgress {
+  if (!value || typeof value !== "object") return false;
+
+  const progress = value as Partial<TutorialProgress>;
+  const group = progress.group as TutorialGroup | undefined;
+
+  return (
+    (group === "seeker" || group === "solver") &&
+    typeof progress.flowId === "string" &&
+    !!FLOW_SETS[group][progress.flowId] &&
+    typeof progress.stepIndex === "number"
+  );
+}
+
+function readProgress(): TutorialProgress | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(PROGRESS_STORAGE_KEY);
+
+    if (!raw) return null;
+
+    const parsed: unknown = JSON.parse(raw);
+
+    return isProgress(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeProgress(progress: TutorialProgress) {
+  if (typeof window === "undefined") return;
+
+  window.localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(progress));
+}
+
+function persistSnapshot() {
+  if (!snapshot.active || !snapshot.flowId) return;
+
+  writeProgress({
+    group: snapshot.group,
+    flowId: snapshot.flowId,
+    stepIndex: snapshot.stepIndex,
+  });
+}
+
 let snapshot = IDLE;
 const listeners = new Set<() => void>();
 
@@ -80,9 +133,36 @@ export const tutorial = {
     const ids = FLOW_IDS_BY_GROUP[group];
     const offsets = FLOW_OFFSETS_BY_GROUP[group];
     const resolved = offsets[flowId] === undefined ? ids[0] : flowId;
+    const offset = offsets[resolved];
+    const length = FLOW_SETS[group][resolved].length;
+    const progress = readProgress();
+    const stepIndex =
+      progress && progress.group === group && progress.flowId === resolved
+        ? Math.min(Math.max(progress.stepIndex, offset), offset + length - 1)
+        : offset;
 
-    snapshot = { active: true, group, flowId: resolved, stepIndex: offsets[resolved] };
+    snapshot = { active: true, group, flowId: resolved, stepIndex };
+    persistSnapshot();
     emit();
+  },
+  resume() {
+    const progress = readProgress();
+
+    if (!progress) return null;
+
+    const offset = FLOW_OFFSETS_BY_GROUP[progress.group][progress.flowId] ?? 0;
+    const length = FLOW_SETS[progress.group][progress.flowId].length;
+    const stepIndex = Math.min(Math.max(progress.stepIndex, offset), offset + length - 1);
+
+    snapshot = {
+      active: true,
+      group: progress.group,
+      flowId: progress.flowId,
+      stepIndex,
+    };
+    emit();
+
+    return { group: progress.group, flowId: progress.flowId };
   },
   next() {
     if (!snapshot.active) return;
@@ -94,6 +174,7 @@ export const tutorial = {
     const { flowId } = flowAt(snapshot.group, nextIndex);
 
     snapshot = { ...snapshot, flowId, stepIndex: nextIndex };
+    persistSnapshot();
     emit();
   },
   back() {
@@ -103,6 +184,7 @@ export const tutorial = {
     const { flowId } = flowAt(snapshot.group, previousIndex);
 
     snapshot = { ...snapshot, flowId, stepIndex: previousIndex };
+    persistSnapshot();
     emit();
   },
   stop() {

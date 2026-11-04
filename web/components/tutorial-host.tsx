@@ -1,31 +1,24 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 import { ACTIONS, EVENTS, Joyride, STATUS, type EventData, type Step } from "react-joyride";
 
 import { onboardingClient } from "@/lib/onboarding/client";
-import { FLOW_SETS } from "@/lib/tutorial/flows";
 import { tutorial, tutorialFlowIds, tutorialStepCount, tutorialTargetProps } from "@/lib/tutorial/tutorial";
 
 export function TutorialHost() {
   const snap = useSyncExternalStore(tutorial.subscribe, tutorial.getSnapshot, tutorial.getSnapshot);
-
-  useEffect(() => {
-    if (process.env.NODE_ENV === "production") return;
-
-    const params = new URLSearchParams(window.location.search);
-    const flowId = params.get("tutorial") ?? params.get("flow");
-
-    if (flowId && (FLOW_SETS.seeker[flowId] || FLOW_SETS.solver[flowId])) {
-      tutorial.start(flowId);
-    }
-  }, []);
 
   if (!snap.active) return null;
 
   const flows = FLOW_SETS[snap.group];
   const flowIds = tutorialFlowIds(snap.group);
   const total = tutorialStepCount(snap.group);
+
+  const stop = () => {
+    tutorial.stop();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const finish = () => {
     tutorial.stop();
@@ -64,7 +57,7 @@ export function TutorialHost() {
       } else if (data.action === ACTIONS.PREV) {
         tutorial.back();
       } else {
-        tutorial.stop();
+        stop();
       }
 
       return;
@@ -72,7 +65,7 @@ export function TutorialHost() {
 
     if (data.type === EVENTS.TOUR_END) {
       if (data.status === STATUS.FINISHED) finish();
-      else tutorial.stop();
+      else stop();
     }
   };
 

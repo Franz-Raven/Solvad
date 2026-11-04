@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   ChevronDown,
   GitBranch,
+  Play,
   ShieldAlert,
   Sparkles,
   X,
@@ -232,13 +233,25 @@ export default function PublicTutorialPage() {
     tutorial.start(id);
   };
 
+  const selectMode = (next: TutorialGroup) => {
+    if (snap.active) tutorial.stop();
+
+    setLocalMode(next);
+    if (next === "seeker") setActiveTab("problem");
+  };
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const requested = params.get("tour") ?? params.get("flow");
 
-    if (requested) {
-      const resolved = FLOWS[requested] || SOLVER_FLOWS[requested] ? requested : SEEKER_FLOW_IDS[0];
-      tutorial.start(resolved);
+    if (requested && (FLOWS[requested] || SOLVER_FLOWS[requested])) {
+      const group = groupForFlow(requested);
+      const timer = window.setTimeout(() => setLocalMode(group), 0);
+
+      return () => {
+        window.clearTimeout(timer);
+        tutorial.stop();
+      };
     }
 
     return () => tutorial.stop();
@@ -492,7 +505,7 @@ export default function PublicTutorialPage() {
                     ? "bg-background text-accent shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
-                onClick={() => goToFlow(SEEKER_FLOW_IDS[0])}
+                onClick={() => selectMode("seeker")}
                 type="button"
               >
                 Seeker walkthrough
@@ -503,7 +516,7 @@ export default function PublicTutorialPage() {
                     ? "bg-background text-accent shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
-                onClick={() => goToFlow(SOLVER_FLOW_IDS[0])}
+                onClick={() => selectMode("solver")}
                 type="button"
               >
                 Solver walkthrough
@@ -511,19 +524,67 @@ export default function PublicTutorialPage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {modeFlowIds.map((id) => (
-              <Button
-                key={id}
-                onClick={() => goToFlow(id)}
-                size="sm"
-                variant={id === snap.flowId ? "secondary" : "outline"}
-              >
-                {FLOW_LABELS[id] ?? id}
-              </Button>
-            ))}
-          </div>
         </header>
+
+        <section className="mt-6 rounded-3xl border border-border bg-background p-5 shadow-sm md:p-6">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-secondary">
+                {mode === "seeker" ? "Seeker tutorials" : "Solver tutorials"}
+              </p>
+              <h2 className="mt-1 text-xl font-bold text-foreground md:text-2xl">
+                Choose a process to explore
+              </h2>
+              <p className="mt-1 text-sm font-medium text-muted-foreground">
+                Click on a button to start the tutorial for each process.
+              </p>
+            </div>
+            <span className="w-fit rounded-full border border-accent/20 bg-accent/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-accent">
+              {modeFlowIds.length} tutorial{modeFlowIds.length === 1 ? "" : "s"}
+            </span>
+          </div>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {modeFlowIds.map((id) => {
+              const isActive = snap.active && id === snap.flowId;
+
+              return (
+                <button
+                  className={`group flex items-center justify-between gap-4 rounded-2xl border-2 p-4 text-left transition-all active:scale-[0.99] ${
+                    isActive
+                      ? "border-accent bg-accent/10 shadow-md"
+                      : "border-border bg-muted/20 hover:border-accent/60 hover:bg-accent/5 hover:shadow-md"
+                  }`}
+                  key={id}
+                  onClick={() => goToFlow(id)}
+                  type="button"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-bold text-foreground">
+                      {FLOW_LABELS[id] ?? id}
+                    </span>
+                    <span
+                      className={`mt-1 block text-[10px] font-bold uppercase tracking-wider ${
+                        isActive ? "text-accent" : "text-muted-foreground group-hover:text-accent"
+                      }`}
+                    >
+                      {isActive ? "Tutorial in progress" : "Start tutorial"}
+                    </span>
+                  </span>
+                  <span
+                    className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border transition-colors ${
+                      isActive
+                        ? "border-accent bg-accent text-white"
+                        : "border-accent/20 bg-background text-accent group-hover:border-accent group-hover:bg-accent group-hover:text-white"
+                    }`}
+                  >
+                    <Play className="h-4 w-4 fill-current" />
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
 
         {mode === "seeker" ? (
           <section
