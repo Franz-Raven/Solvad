@@ -62,11 +62,19 @@ export const SOLVER_FLOWS: Record<string, FlowStep[]> = {
   ],
   "solver-solution-tree": [
     { tab: "Solution Tree", title: "Open the solution tree", body: "The solution tree shows every attempt on this problem and how solutions build on each other.", target: '[data-tour="solver-tree-tab"]' },
-    { tab: "Solution Tree", title: "Start with no solutions", body: "When no one has solved the problem yet, the tree is empty. The first approved proposal becomes the root.", target: '[data-tour="solver-tree-empty"]' },
+    { tab: "Solution Tree", title: "No solutions", body: "When no one has solved the problem yet, the tree is empty. The first approved proposal becomes the root.", target: '[data-tour="solver-tree-empty"]' },
     { tab: "Solution Tree", title: "See completed solutions", body: "Completed attempts appear as nodes. Forked attempts branch from the solution they build on.", target: '[data-tour="solver-tree-complete"]' },
     { tab: "Solution Tree", title: "Build upon a completed solution", body: "Use Build Upon to start from an existing approach. The original solution stays in the tree.", target: '[data-tour="solver-tree-build-upon"]' },
     { tab: "Solution Tree", title: "Explain your fork", body: "Describe what you will change or improve on the original solution. Your fork starts from that completed work.", target: '[data-tour="solver-fork-approach"]' },
     { tab: "Solution Tree", title: "Submit the fork proposal", body: "The seeker reviews your fork before a workspace is created. You only work on the sub-problem you forked.", target: '[data-tour="solver-fork-submit"]' },
+  ],
+  "solver-active-workspace": [
+    { tab: "Active Workspace", title: "Open your workspace", body: "Once a proposal is approved, your workspace opens for that sub-problem. This is where you do the actual work.", target: '[data-tour="solver-workspace-header"]' },
+    { tab: "Active Workspace", title: "Keep the brief in view", body: "The top card keeps the sub-problem, department focus, and seeker contact visible while you work.", target: '[data-tour="solver-workspace-brief"]' },
+    { tab: "Active Workspace", title: "Write your solution narrative", body: "Document your findings, code architecture, or research method. This is the main work the seeker will review.", target: '[data-tour="solver-workspace-narrative"]' },
+    { tab: "Active Workspace", title: "Explain fork changes", body: "If you built upon another solution, describe exactly what you changed and why compared with the original approach.", target: '[data-tour="solver-workspace-delta"]' },
+    { tab: "Active Workspace", title: "Save your draft", body: "Save whenever you want. Your workspace also autosaves every 30 seconds, so you can leave and continue later.", target: '[data-tour="solver-workspace-save"]' },
+    { tab: "Active Workspace", title: "Submit for review", body: "Submitting locks the workspace and sends it to the seeker. You can no longer edit while it is under review.", target: '[data-tour="solver-workspace-submit"]' },
   ],
 };
 

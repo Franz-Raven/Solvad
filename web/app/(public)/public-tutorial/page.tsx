@@ -17,6 +17,7 @@ import {
 import ProblemFormFields from "@/app/(authed)/seeker/submit-problem/components/ProblemFormFields";
 import { Button } from "@/components/ui/button";
 import SolverStage from "./solver-stage";
+import WorkspaceStage from "./workspace-stage";
 import {
   FLOWS,
   SOLVER_FLOWS,
@@ -65,6 +66,7 @@ const FLOW_LABELS: Record<string, string> = {
   "ai-insights": "AI insights",
   "solver-submit-proposal": "Submit a proposal",
   "solver-solution-tree": "Solution tree",
+  "solver-active-workspace": "Active workspace",
 };
 
 const FLOW_TABS: Record<string, DemoTab> = {
@@ -1587,11 +1589,14 @@ export default function PublicTutorialPage() {
             )}
           </div>
           </section>
+        ) : snap.flowId === "solver-active-workspace" ||
+          activeTarget?.startsWith("solver-workspace") ? (
+          <WorkspaceStage highlight={highlight} />
         ) : (
           <SolverStage
             activeTarget={activeTarget}
-            flowId={snap.flowId}
             highlight={highlight}
+            key={snap.flowId ?? "solver"}
           />
         )}
       </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ChangeEvent } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   ArrowRight,
   Building2,
@@ -10,7 +10,6 @@ import {
   ClipboardList,
   FileText,
   GitBranch,
-  History,
   Lock,
   Mail,
   Network,
@@ -22,7 +21,7 @@ import {
   X,
 } from "lucide-react";
 
-type SolverTab = "blueprint" | "subtasks" | "tree" | "history";
+type SolverTab = "blueprint" | "subtasks" | "tree";
 type SolverTreeState = "empty" | "complete";
 
 type SolverAttempt = {
@@ -144,20 +143,18 @@ const TABS: { id: SolverTab; label: string }[] = [
   { id: "blueprint", label: "Problem Blueprint" },
   { id: "subtasks", label: "Sub-problems" },
   { id: "tree", label: "Solution Tree" },
-  { id: "history", label: "History" },
 ];
 
 type SolverStageProps = {
   activeTarget?: string;
-  flowId?: string | null;
   highlight: (target: string) => string;
 };
 
-export default function SolverStage({ activeTarget, flowId, highlight }: SolverStageProps) {
+export default function SolverStage({ activeTarget, highlight }: SolverStageProps) {
   const [tab, setTab] = useState<SolverTab>("subtasks");
   const [selectedSubtaskId, setSelectedSubtaskId] = useState(SOLVER_PROBLEM.subtasks[0].id);
   const [proposalOpen, setProposalOpen] = useState(false);
-  const [proposalDismissed, setProposalDismissed] = useState(false);
+  const [dismissedTarget, setDismissedTarget] = useState<string | null>(null);
   const [proposedApproach, setProposedApproach] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [submitted, setSubmitted] = useState(false);
@@ -182,7 +179,7 @@ export default function SolverStage({ activeTarget, flowId, highlight }: SolverS
   const isForking = forkMode || forkTargetActive;
   const modalPrefix = isForking ? "solver-fork" : "solver-proposal";
   const showProposalModal =
-    (proposalOpen || proposalTargetActive || forkTargetActive) && !proposalDismissed;
+    (proposalOpen || proposalTargetActive || forkTargetActive) && dismissedTarget !== activeTarget;
   const tutorialTab: SolverTab | null =
     activeTarget === "solver-blueprint" || activeTarget === "solver-blueprint-tab"
       ? "blueprint"
@@ -211,65 +208,6 @@ export default function SolverStage({ activeTarget, flowId, highlight }: SolverS
   const detailNode = COMPLETED_ATTEMPTS.find((attempt) => attempt.id === detailNodeId) ?? null;
   const modalSubtaskTitle = isForking ? forkNode.targetSubtaskTitle : selectedSubtask.title;
 
-  useEffect(() => {
-    setTab("subtasks");
-    setSelectedSubtaskId(SOLVER_PROBLEM.subtasks[0].id);
-    setProposalOpen(false);
-    setProposalDismissed(false);
-    setProposedApproach("");
-    setFiles([]);
-    setSubmitted(false);
-    setTreeState("empty");
-    setForkMode(false);
-    setForkNodeId(null);
-  }, [flowId]);
-
-  useEffect(() => {
-    if (!activeTarget) return;
-
-    setProposalDismissed(false);
-
-    if (
-      activeTarget === "solver-proposal-approach" ||
-      activeTarget === "solver-proposal-files" ||
-      activeTarget === "solver-proposal-submit"
-    ) {
-      setTab("subtasks");
-      setProposalOpen(true);
-      return;
-    }
-
-    if (
-      activeTarget === "solver-fork-approach" ||
-      activeTarget === "solver-fork-files" ||
-      activeTarget === "solver-fork-submit"
-    ) {
-      setTab("tree");
-      setProposalOpen(true);
-      return;
-    }
-
-    setProposalOpen(false);
-
-    if (activeTarget === "solver-blueprint" || activeTarget === "solver-blueprint-tab") {
-      setTab("blueprint");
-      return;
-    }
-
-    if (
-      activeTarget === "solver-subtasks" ||
-      activeTarget === "solver-subtasks-tab" ||
-      activeTarget === "solver-subtask-card"
-    ) {
-      setTab("subtasks");
-      return;
-    }
-
-    if (activeTarget.startsWith("solver-tree")) {
-      setTab("tree");
-    }
-  }, [activeTarget]);
-
   const openProposal = (subtaskId: string) => {
     if (!canPropose) return;
 
@@ -277,7 +215,7 @@ export default function SolverStage({ activeTarget, flowId, highlight }: SolverS
     setForkNodeId(null);
     setSelectedSubtaskId(subtaskId);
     setProposalOpen(true);
-    setProposalDismissed(false);
+    setDismissedTarget(null);
   };
 
   const openFork = (node: SolverAttempt) => {
@@ -285,7 +223,7 @@ export default function SolverStage({ activeTarget, flowId, highlight }: SolverS
     setForkNodeId(node.id);
     setTab("tree");
     setProposalOpen(true);
-    setProposalDismissed(false);
+    setDismissedTarget(null);
   };
 
   const renderAttemptCard = (attempt: SolverAttempt, buildUponTour?: string) => (
@@ -360,7 +298,7 @@ export default function SolverStage({ activeTarget, flowId, highlight }: SolverS
 
   const closeProposal = () => {
     setProposalOpen(false);
-    setProposalDismissed(true);
+    setDismissedTarget(activeTarget ?? null);
   };
 
   const submitProposal = () => {
@@ -792,19 +730,6 @@ export default function SolverStage({ activeTarget, flowId, highlight }: SolverS
           </div>
         )}
 
-        {displayTab === "history" && (
-          <div className="rounded-2xl border border-border bg-background p-6 shadow-sm md:p-8">
-            <div className="flex min-h-[360px] flex-col items-center justify-center text-center">
-              <div className="rounded-full border border-border bg-muted/50 p-4">
-                <History className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <h3 className="mb-2 mt-4 text-xl font-bold text-foreground">No activity yet</h3>
-              <p className="max-w-sm text-sm font-medium text-muted-foreground">
-                Problem and submission events will be recorded here.
-              </p>
-            </div>
-          </div>
-        )}
       </div>
 
       {showProposalModal && (
