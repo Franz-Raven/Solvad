@@ -20,7 +20,7 @@ export function NotificationBell() {
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => setOpen((prev) => !prev)}
-        className="relative inline-flex h-9 w-9 items-center justify-center rounded-full text-accent transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        className="relative inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-accent transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
