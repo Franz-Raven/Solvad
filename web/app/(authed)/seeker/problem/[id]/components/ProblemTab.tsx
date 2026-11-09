@@ -2,6 +2,7 @@
 
 import { Building2, UserCircle, Phone, Mail, Users, FileText } from "lucide-react";
 import type { ProblemResponse } from "@/types/problem";
+import MarkdownViewer from "@/components/ui/markdown-viewer";
 
 export function ProblemTab({ problem }: { problem: ProblemResponse }) {
   
@@ -15,7 +16,9 @@ export function ProblemTab({ problem }: { problem: ProblemResponse }) {
           return (
             <ul className="list-disc pl-5 space-y-2 marker:text-slate-400">
               {parsed.map((item, idx) => (
-                <li key={idx} className="pl-1 leading-relaxed">{item}</li>
+                <li key={idx} className="pl-1 leading-relaxed">
+                  <MarkdownViewer content={String(item)} />
+                </li>
               ))}
             </ul>
           );
@@ -24,7 +27,7 @@ export function ProblemTab({ problem }: { problem: ProblemResponse }) {
     } catch (e) {
       // Failsafe: Just return normal text if JSON.parse fails
     }
-    return <div className="whitespace-pre-wrap">{text}</div>;
+    return <MarkdownViewer content={text} className="whitespace-pre-wrap" />;
   };
 
   return (
@@ -97,7 +100,10 @@ export function ProblemTab({ problem }: { problem: ProblemResponse }) {
                         {subtask.departmentFocus}
                       </span>
                     </div>
-                    <p className="text-sm font-medium text-slate-600 leading-relaxed">{subtask.description}</p>
+                    <MarkdownViewer
+                      content={subtask.description}
+                      className="text-sm font-medium text-slate-600 leading-relaxed"
+                    />
                   </div>
                 </div>
               </div>

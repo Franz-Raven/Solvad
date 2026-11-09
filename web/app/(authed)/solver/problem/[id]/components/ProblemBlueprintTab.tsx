@@ -2,6 +2,7 @@
 
 import { FileText, Target, ShieldAlert, AlignLeft, CheckCircle2 } from "lucide-react";
 import type { ProblemResponse } from "@/types/problem";
+import MarkdownViewer from "@/components/ui/markdown-viewer";
 
 export function ProblemBlueprintTab({ problem }: { problem: ProblemResponse }) {
   return (
@@ -21,9 +22,10 @@ export function ProblemBlueprintTab({ problem }: { problem: ProblemResponse }) {
               <AlignLeft className="w-4 h-4 text-slate-300" /> Background Context
             </h3>
             <div className="bg-slate-50/50 rounded-xl p-5 border border-slate-100 group-hover:bg-slate-50 group-hover:border-slate-200 transition-colors">
-              <p className="text-slate-700 leading-relaxed text-sm font-medium">
-                {problem.backgroundContext}
-              </p>
+              <MarkdownViewer
+                content={problem.backgroundContext}
+                className="text-slate-700 leading-relaxed text-sm font-medium"
+              />
             </div>
           </div>
         )}
@@ -34,9 +36,10 @@ export function ProblemBlueprintTab({ problem }: { problem: ProblemResponse }) {
             <Target className="w-4 h-4 text-slate-300" /> Primary Problem Statement
           </h3>
           <div className="bg-slate-50/50 rounded-xl p-5 border border-slate-100 group-hover:bg-slate-50 group-hover:border-slate-200 transition-colors border-l-4 border-l-accent">
-            <p className="text-slate-900 leading-relaxed text-base font-bold">
-              {problem.primaryStatement}
-            </p>
+            <MarkdownViewer
+              content={problem.primaryStatement}
+              className="text-slate-900 leading-relaxed text-base font-bold"
+            />
           </div>
         </div>
         
@@ -47,9 +50,10 @@ export function ProblemBlueprintTab({ problem }: { problem: ProblemResponse }) {
               <CheckCircle2 className="w-4 h-4 text-slate-300" /> Objectives
             </h3>
             <div className="bg-slate-50/50 rounded-xl p-5 border border-slate-100 group-hover:bg-slate-50 group-hover:border-slate-200 transition-colors">
-              <p className="text-slate-700 leading-relaxed text-sm font-medium whitespace-pre-wrap">
-                {problem.objectives}
-              </p>
+              <MarkdownViewer
+                content={problem.objectives}
+                className="text-slate-700 leading-relaxed text-sm font-medium whitespace-pre-wrap"
+              />
             </div>
           </div>
         )}
@@ -61,9 +65,10 @@ export function ProblemBlueprintTab({ problem }: { problem: ProblemResponse }) {
               <ShieldAlert className="w-4 h-4 text-slate-300" /> Constraints
             </h3>
             <div className="bg-slate-50/50 rounded-xl p-5 border border-slate-100 group-hover:bg-slate-50 group-hover:border-slate-200 transition-colors">
-              <p className="text-slate-700 leading-relaxed text-sm font-medium whitespace-pre-wrap">
-                {problem.constraints}
-              </p>
+              <MarkdownViewer
+                content={problem.constraints}
+                className="text-slate-700 leading-relaxed text-sm font-medium whitespace-pre-wrap"
+              />
             </div>
           </div>
         )}
