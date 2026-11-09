@@ -2,6 +2,7 @@
 
 import { ClipboardList, Lock, ArrowRight, Loader2 } from "lucide-react";
 import type { ProblemResponse } from "@/types/problem";
+import MarkdownViewer from "@/components/ui/markdown-viewer";
 
 interface SubtasksTabProps {
   problem: ProblemResponse;
@@ -74,9 +75,10 @@ export function SubtasksTab({ problem, canPropose, isPendingReview, onPropose }:
                       </span>
                     </div>
 
-                    <p className="text-sm text-slate-600 leading-relaxed font-medium max-w-3xl">
-                      {subtask.description}
-                    </p>
+                    <MarkdownViewer
+                      content={subtask.description}
+                      className="text-sm text-slate-600 leading-relaxed font-medium max-w-3xl"
+                    />
                   </div>
                 </div>
 

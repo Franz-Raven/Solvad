@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "@uiw/react-md-editor/markdown-editor.css";
+@import "@uiw/react-markdown-preview/markdown.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -127,6 +129,17 @@
   html {
     @apply font-sans;
   }
+}
+
+.markdown-editor-content {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.markdown-editor-content:empty::before {
+  content: attr(data-placeholder);
+  color: var(--muted-foreground);
+  pointer-events: none;
 }
 
 #portal-root {
