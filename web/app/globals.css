@@ -142,6 +142,25 @@
   pointer-events: none;
 }
 
+.problem-rich-text .wmde-markdown {
+  background-color: transparent;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
+
+.problem-rich-text .wmde-markdown ul:not(.no-list) {
+  list-style-type: disc;
+  padding-left: 2em;
+}
+
+.problem-rich-text .wmde-markdown ol:not(.no-list) {
+  list-style-type: decimal;
+  padding-left: 2em;
+}
+
 #portal-root {
   position: fixed;
   top: 0;
