@@ -2,34 +2,9 @@
 
 import { Building2, UserCircle, Phone, Mail, Users, FileText } from "lucide-react";
 import type { ProblemResponse } from "@/types/problem";
-import MarkdownViewer from "@/components/ui/markdown-viewer";
+import ProblemRichText from "@/components/ui/problem-rich-text";
 
 export function ProblemTab({ problem }: { problem: ProblemResponse }) {
-  
-  // 🚀 FORMATTING HELPER: Automatically converts stringified JSON arrays into clean bullet points.
-  const formatTextContent = (text: string | undefined) => {
-    if (!text) return null;
-    try {
-      if (text.trim().startsWith("[") && text.trim().endsWith("]")) {
-        const parsed = JSON.parse(text);
-        if (Array.isArray(parsed)) {
-          return (
-            <ul className="list-disc pl-5 space-y-2 marker:text-slate-400">
-              {parsed.map((item, idx) => (
-                <li key={idx} className="pl-1 leading-relaxed">
-                  <MarkdownViewer content={String(item)} />
-                </li>
-              ))}
-            </ul>
-          );
-        }
-      }
-    } catch (e) {
-      // Failsafe: Just return normal text if JSON.parse fails
-    }
-    return <MarkdownViewer content={text} className="whitespace-pre-wrap" />;
-  };
-
   return (
     <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start animate-in fade-in duration-300">
       
@@ -46,23 +21,23 @@ export function ProblemTab({ problem }: { problem: ProblemResponse }) {
           <div className="space-y-8">
             <section>
               <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">Background Context</h3>
-              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 text-sm font-medium text-slate-700 leading-relaxed shadow-sm">
-                {formatTextContent(problem.backgroundContext)}
+              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 shadow-sm">
+                <ProblemRichText content={problem.backgroundContext} className="text-sm font-medium text-slate-700 leading-relaxed" />
               </div>
             </section>
 
             <section>
               <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">Primary Problem Statement</h3>
-              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 text-sm font-bold text-slate-900 leading-relaxed shadow-sm">
-                {formatTextContent(problem.primaryStatement)}
+              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 shadow-sm">
+                <ProblemRichText content={problem.primaryStatement} className="text-sm font-normal text-slate-900 leading-relaxed" />
               </div>
             </section>
 
             {problem.objectives && (
               <section>
                 <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">Objectives</h3>
-                <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 text-sm font-medium text-slate-700 leading-relaxed shadow-sm">
-                  {formatTextContent(problem.objectives)}
+                <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 shadow-sm">
+                  <ProblemRichText content={problem.objectives} className="text-sm font-medium text-slate-700 leading-relaxed" />
                 </div>
               </section>
             )}
@@ -70,8 +45,8 @@ export function ProblemTab({ problem }: { problem: ProblemResponse }) {
             {problem.constraints && (
               <section>
                 <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">Technical Constraints</h3>
-                <div className="bg-rose-50/50 border border-rose-100 rounded-2xl p-6 text-sm font-medium text-slate-700 leading-relaxed shadow-sm">
-                  {formatTextContent(problem.constraints)}
+                <div className="bg-rose-50/50 border border-rose-100 rounded-2xl p-6 shadow-sm">
+                  <ProblemRichText content={problem.constraints} className="text-sm font-medium text-slate-700 leading-relaxed" />
                 </div>
               </section>
             )}
@@ -100,7 +75,7 @@ export function ProblemTab({ problem }: { problem: ProblemResponse }) {
                         {subtask.departmentFocus}
                       </span>
                     </div>
-                    <MarkdownViewer
+                    <ProblemRichText
                       content={subtask.description}
                       className="text-sm font-medium text-slate-600 leading-relaxed"
                     />
