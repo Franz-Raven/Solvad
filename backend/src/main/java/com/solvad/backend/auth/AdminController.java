@@ -19,7 +19,7 @@ public class AdminController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> registerSeeker(@Valid @RequestBody SeekerRegisterRequest request) {
         try {
-            AuthResponse response = authService.registerSeeker(request);
+            AuthResponse response = authService.registerSeekerByAdmin(request);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
