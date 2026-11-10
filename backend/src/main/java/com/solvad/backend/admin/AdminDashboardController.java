@@ -23,6 +23,11 @@ public class AdminDashboardController {
         return ResponseEntity.ok(adminDashboardService.getStats());
     }
 
+    @GetMapping("/analytics")
+    public ResponseEntity<AdminAnalyticsResponse> getAnalytics() {
+        return ResponseEntity.ok(adminDashboardService.getAnalytics());
+    }
+
     @GetMapping("/activity")
     public ResponseEntity<?> getActivity(
             @RequestParam(required = false) String eventType,

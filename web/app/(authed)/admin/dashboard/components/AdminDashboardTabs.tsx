@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { Activity, Building2, FolderOpen, GraduationCap } from "lucide-react";
+import { Activity, BarChart3, Building2, FolderOpen, GraduationCap } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TabChunkSkeleton } from "./AdminPanelStates";
 
@@ -10,9 +10,12 @@ import { TabChunkSkeleton } from "./AdminPanelStates";
 const AdminActivityTab = dynamic(() => import("./AdminActivityTab"), { loading: TabChunkSkeleton, ssr: false });
 const AdminUsersTab = dynamic(() => import("./AdminUsersTab"), { loading: TabChunkSkeleton, ssr: false });
 const AdminProblemsTab = dynamic(() => import("./AdminProblemsTab"), { loading: TabChunkSkeleton, ssr: false });
+// Recharts is the heaviest dependency on this page, so it only ships when Analytics is opened
+const AdminAnalyticsTab = dynamic(() => import("./analytics/AdminAnalyticsTab"), { loading: TabChunkSkeleton, ssr: false });
 
 const TABS = [
   { value: "activity", label: "Recent Activity", icon: Activity },
+  { value: "analytics", label: "Analytics", icon: BarChart3 },
   { value: "solvers", label: "Solvers", icon: GraduationCap },
   { value: "partners", label: "Industry Partners", icon: Building2 },
   { value: "problems", label: "Problems", icon: FolderOpen },
@@ -40,6 +43,9 @@ export function AdminDashboardTabs() {
         <div className="p-6 md:p-8">
           <TabsContent value="activity">
             <AdminActivityTab />
+          </TabsContent>
+          <TabsContent value="analytics">
+            <AdminAnalyticsTab />
           </TabsContent>
           <TabsContent value="solvers">
             <AdminUsersTab role="SOLVER" />
