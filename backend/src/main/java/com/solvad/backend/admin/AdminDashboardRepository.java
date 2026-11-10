@@ -86,4 +86,42 @@ public interface AdminDashboardRepository extends Repository<User, UUID> {
     /** Returns [id, title] pairs; AuditLog stores only the problem id. */
     @Query("SELECT p.id, p.title FROM Problem p WHERE p.id IN :ids")
     List<Object[]> findProblemTitles(@Param("ids") Collection<UUID> ids);
+
+    // ── Analytics: time series (bucketed by month in the service) ────────────
+    /** Returns [role, createdAt] pairs. */
+    @Query("SELECT u.role, u.createdAt FROM User u WHERE u.createdAt >= :since AND u.role IN :roles")
+    List<Object[]> findSignupsSince(@Param("since") LocalDateTime since, @Param("roles") Collection<Role> roles);
+
+    @Query("SELECT p.createdAt FROM Problem p WHERE p.createdAt >= :since")
+    List<LocalDateTime> findProblemPostDatesSince(@Param("since") LocalDateTime since);
+
+    @Query("SELECT a.claimedAt FROM SolutionAttempt a WHERE a.claimedAt >= :since")
+    List<LocalDateTime> findAttemptStartDatesSince(@Param("since") LocalDateTime since);
+
+    @Query("SELECT a.completedAt FROM SolutionAttempt a WHERE a.status = :status AND a.completedAt >= :since")
+    List<LocalDateTime> findAttemptCompletionDatesSince(@Param("status") SolutionAttemptStatus status,
+                                                        @Param("since") LocalDateTime since);
+
+    // ── Analytics: distributions (all return [key, count] pairs) ─────────────
+    @Query("SELECT p.status, COUNT(p) FROM Problem p GROUP BY p.status")
+    List<Object[]> countProblemsGroupedByStatus();
+
+    @Query("SELECT a.status, COUNT(a) FROM SolutionAttempt a GROUP BY a.status")
+    List<Object[]> countAttemptsGroupedByStatus();
+
+    @Query("SELECT p.sdgFocus, COUNT(p) FROM Problem p WHERE p.sdgFocus IS NOT NULL AND p.sdgFocus <> '' GROUP BY p.sdgFocus")
+    List<Object[]> countProblemsGroupedBySdg();
+
+    @Query("SELECT p.preferredProgram, COUNT(p) FROM Problem p " +
+           "WHERE p.preferredProgram IS NOT NULL AND p.preferredProgram <> '' GROUP BY p.preferredProgram")
+    List<Object[]> countProblemsGroupedByProgram();
+
+    @Query("SELECT s.degreeProgram, COUNT(s) FROM SolverProfile s " +
+           "WHERE s.degreeProgram IS NOT NULL AND s.degreeProgram <> '' GROUP BY s.degreeProgram")
+    List<Object[]> countSolversGroupedByProgram();
+
+    /** Returns [organizationName, problemCount], most active first; limit via Pageable. */
+    @Query("SELECT s.organizationName, COUNT(p) FROM Problem p JOIN p.seeker s " +
+           "GROUP BY s.id, s.organizationName ORDER BY COUNT(p) DESC")
+    List<Object[]> findTopPartnersByProblemCount(Pageable pageable);
 }

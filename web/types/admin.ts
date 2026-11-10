@@ -59,3 +59,15 @@ export interface AdminPage<T> {
   totalElements: number;
   size: number;
 }
+
+export interface AdminAnalytics {
+  userGrowth: { month: string; solvers: number; seekers: number }[];
+  platformActivity: { month: string; problemsPosted: number; attemptsStarted: number; solutionsCompleted: number }[];
+  /** Same shape as ProblemStatusGroupDto (shared DonutChart). */
+  problemStatus: { open: number; active: number; solvedNeedsImprovement: number; completed: number; closed: number };
+  /** Same shape as SdgDistributionDto[] (shared SDG BarChart). */
+  sdgDistribution: { sdgFocus: string; problemCount: number }[];
+  attemptOutcomes: { status: string; count: number }[];
+  programDemand: { program: string; problems: number; solvers: number }[];
+  topPartners: { organizationName: string; problems: number }[];
+}

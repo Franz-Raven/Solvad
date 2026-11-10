@@ -1,6 +1,7 @@
 import { apiRequest } from "@/lib/api";
 import type {
   AdminActivity,
+  AdminAnalytics,
   AdminDashboardStats,
   AdminListedRole,
   AdminPage,
@@ -18,6 +19,10 @@ function buildQuery(params: Record<string, string | number | undefined>): string
 
 export async function getAdminStats(): Promise<AdminDashboardStats> {
   return apiRequest<AdminDashboardStats>("/admin/dashboard/stats", { method: "GET" });
+}
+
+export async function getAdminAnalytics(): Promise<AdminAnalytics> {
+  return apiRequest<AdminAnalytics>("/admin/dashboard/analytics", { method: "GET" });
 }
 
 export async function getAdminActivity(

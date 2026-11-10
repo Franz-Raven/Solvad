@@ -90,3 +90,15 @@ export function getRoleBadge(role: string): string {
       return "bg-slate-100 text-slate-600 border-slate-200";
   }
 }
+
+/** "2026-06" -> "Jun '26" */
+export function formatMonth(isoMonth: string): string {
+  const [year, month] = isoMonth.split("-").map(Number);
+  if (!year || !month) return isoMonth;
+  const label = new Date(year, month - 1, 1).toLocaleDateString("en-US", { month: "short" });
+  return `${label} '${String(year).slice(-2)}`;
+}
+
+export function truncateLabel(value: string, max = 22): string {
+  return value.length > max ? `${value.slice(0, max - 1)}…` : value;
+}
