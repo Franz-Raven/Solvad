@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Lock, XCircle, FileText, X, GitBranch, Columns } from "lucide-react";
 import Portal from "@/components/portal";
+import ProblemRichText from "@/components/ui/problem-rich-text";
 import type { TreeAttemptNode } from "@/types/attempt";
 
 interface AttemptDetailModalProps {
@@ -25,7 +26,7 @@ export function AttemptDetailModal({
   const activeSub = node.submissions[activeSubIdx] ?? null;
 
   const predecessorSub = activeSub && node.parentAttemptId ? {
-    description: node.parentDescription || "No description provided.",
+    description: node.parentDescription || "",
     fileUrls: node.parentFileUrls || []
   } : null;
 
@@ -251,9 +252,13 @@ export function AttemptDetailModal({
                                 </div>
                               </div>
                               <div className={`p-5 md:p-6 pt-4 ${viewPanel === "compare" ? "max-h-[60vh] overflow-y-auto overscroll-contain" : ""}`}>
-                                <p className="text-sm text-slate-600 whitespace-pre-wrap break-words font-medium leading-relaxed">
-                                  {predecessorSub.description || "No description provided."}
-                                </p>
+                                <div className="break-words">
+                                  {predecessorSub.description ? (
+                                    <ProblemRichText content={predecessorSub.description} preserveLineBreaks className="text-sm text-slate-600 font-medium leading-relaxed" />
+                                  ) : (
+                                    <p className="text-sm text-slate-600 font-medium leading-relaxed">No description provided.</p>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           )}
@@ -269,9 +274,13 @@ export function AttemptDetailModal({
                                 </div>
                               </div>
                               <div className={`p-5 md:p-6 pt-4 ${viewPanel === "compare" ? "max-h-[60vh] overflow-y-auto overscroll-contain" : ""}`}>
-                                <p className="text-sm text-slate-800 whitespace-pre-wrap break-words font-medium leading-relaxed">
-                                  {activeSub.description || "No description provided."}
-                                </p>
+                                <div className="break-words">
+                                  {activeSub.description ? (
+                                    <ProblemRichText content={activeSub.description} preserveLineBreaks className="text-sm text-slate-800 font-medium leading-relaxed" />
+                                  ) : (
+                                    <p className="text-sm text-slate-800 font-medium leading-relaxed">No description provided.</p>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           )}
@@ -283,9 +292,13 @@ export function AttemptDetailModal({
                         <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">
                             {node.solverFirstName}'s Approach
                         </p>
-                        <p className="text-sm text-slate-800 whitespace-pre-wrap font-medium break-words leading-relaxed">
-                          {activeSub.description || "No description provided."}
-                        </p>
+                        <div className="break-words">
+                          {activeSub.description ? (
+                            <ProblemRichText content={activeSub.description} preserveLineBreaks className="text-sm text-slate-800 font-medium leading-relaxed" />
+                          ) : (
+                            <p className="text-sm text-slate-800 font-medium leading-relaxed">No description provided.</p>
+                          )}
+                        </div>
                       </div>
                     )}
                   </>
