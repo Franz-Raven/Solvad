@@ -86,6 +86,28 @@ public class AuthService {
     @Transactional
     public AuthResponse registerSeeker(SeekerRegisterRequest request) {
         User user = findOrCreateUnverifiedUser(request.getEmail(), request.getPassword(), Role.SEEKER);
+        saveSeekerProfile(user, request);
+        createAndSendVerificationToken(user);
+        String token = jwtService.generateToken(user.getId(), user.getEmail(), user.getRole().name());
+
+        return new AuthResponse(token, user.getId(), user.getEmail(), user.getRole(), user.getProfileUrl());
+    }
+
+    /**
+     * Admin-created seekers are trusted: mark them verified immediately and skip the email code.
+     */
+    @Transactional
+    public AuthResponse registerSeekerByAdmin(SeekerRegisterRequest request) {
+        User user = findOrCreateUnverifiedUser(request.getEmail(), request.getPassword(), Role.SEEKER);
+        user.setVerified(true);
+        user = userRepository.save(user);
+        saveSeekerProfile(user, request);
+        String token = jwtService.generateToken(user.getId(), user.getEmail(), user.getRole().name());
+
+        return new AuthResponse(token, user.getId(), user.getEmail(), user.getRole(), user.getProfileUrl());
+    }
+
+    private void saveSeekerProfile(User user, SeekerRegisterRequest request) {
         SeekerProfile profile = seekerProfileRepository.findByUserId(user.getId())
                 .orElseGet(SeekerProfile::new);
         profile.setUser(user);
@@ -93,10 +115,6 @@ public class AuthService {
         profile.setContactPerson(request.getContactPerson());
         profile.setContactNumber(request.getContactNumber());
         seekerProfileRepository.save(profile);
-        createAndSendVerificationToken(user);
-        String token = jwtService.generateToken(user.getId(), user.getEmail(), user.getRole().name());
-
-        return new AuthResponse(token, user.getId(), user.getEmail(), user.getRole(), user.getProfileUrl());
     }
 
     @Transactional
