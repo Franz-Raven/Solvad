@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowLeft, ExternalLink, CheckCircle2, Calendar, FileText, Paperclip, Download, AlertCircle, Network, Bot, UserMinus } from "lucide-react";
 import { getAttemptDetails } from "../../dashboard/api/dashboard";
 import type { AttemptDetail } from "@/types/attempt";
+import ProblemRichText from "@/components/ui/problem-rich-text";
 
 const DetailSkeleton = () => (
   <div className="min-h-screen bg-slate-50 p-6 md:p-8 animate-in fade-in duration-300">
@@ -119,8 +120,16 @@ export default function HistoryViewPage() {
             )}
 
             <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">Resolution Summary</h3>
-            <div className="bg-slate-50 rounded-xl p-5 border border-slate-200 text-slate-700 text-sm leading-relaxed whitespace-pre-wrap">
-              {attempt.summary}
+            <div className="bg-slate-50 rounded-xl p-5 border border-slate-200 break-words">
+              {attempt.summary ? (
+                <ProblemRichText
+                  content={attempt.summary}
+                  preserveLineBreaks
+                  className="text-slate-700 text-sm leading-relaxed"
+                />
+              ) : (
+                <p className="text-slate-400 text-sm">No narrative provided.</p>
+              )}
             </div>
 
             {attempt.attachedFiles && attempt.attachedFiles.length > 0 && (
