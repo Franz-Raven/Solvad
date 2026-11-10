@@ -67,7 +67,7 @@ public class AdminAccountEmailService {
                     + "Email: " + toEmail + "\n"
                     + "Password: " + password + "\n\n"
                     + "Sign in here: " + loginUrl + "\n\n"
-                    + "Keep this password private and delete this email once you've signed in. "
+                    + "For your security, change this password after your first sign-in from Profile > Account Settings, then delete this email. "
                     + "If you weren't expecting this account, please contact the Solvad team.\n\n"
                     + "Thanks,\nThe Solvad team";
 
@@ -89,7 +89,7 @@ public class AdminAccountEmailService {
                         <p style="margin:0 0 24px;text-align:center;">
                           <a href="%s" style="display:inline-block;padding:12px 28px;background:#059669;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;border-radius:8px;">Sign in to Solvad</a>
                         </p>
-                        <p style="margin:0 0 20px;font-size:14px;line-height:1.6;">Keep this password private and <strong>delete this email</strong> once you've signed in.</p>
+                        <p style="margin:0 0 20px;font-size:14px;line-height:1.6;">For your security, <strong>change this password after your first sign-in</strong> from <strong>Profile &rsaquo; Account Settings</strong>, then delete this email.</p>
                         <p style="margin:0 0 20px;font-size:14px;line-height:1.6;">If you weren't expecting this account, please contact the Solvad team.</p>
                         <p style="margin:0;font-size:14px;line-height:1.6;">Thanks,<br>The Solvad team</p>
                       </div>

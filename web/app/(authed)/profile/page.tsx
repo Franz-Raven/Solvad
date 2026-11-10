@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
 import { useAuth } from "@/context/auth-context";
 import { useRouter } from "next/navigation";
 import { AlertCircle, ArrowLeft, CheckCircle2, Mail, Settings2, Shield, User2, Loader2 } from "lucide-react";
@@ -12,6 +13,19 @@ import { uploadProfilePicture } from "./api/user";
 import { ProfileSidebar } from "./components/ProfileSidebar";
 import { SeekerProfileForm } from "./components/SeekerProfileForm";
 import { SolverProfileForm } from "./components/SolverProfileForm";
+
+// Settings sit behind a tab, so load them only when that tab is opened
+const AccountSettings = dynamic(
+  () => import("./components/AccountSettings").then((mod) => mod.AccountSettings),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center py-24">
+        <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+      </div>
+    ),
+  }
+);
 
 export default function ProfilePage() {
   const { user, setUser } = useAuth();
@@ -266,18 +280,8 @@ export default function ProfilePage() {
                     </div>
                   )}
 
-                  {/* ── Settings Tab Placeholder ── */}
-                  {activeTab === "settings" && (
-                    <div className="rounded-[2rem] border-2 border-dashed border-slate-200 bg-slate-50/50 px-6 py-16 text-center animate-in fade-in zoom-in-95 duration-300">
-                      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-sm border border-slate-100 mb-5">
-                        <Settings2 className="h-6 w-6" />
-                      </div>
-                      <h2 className="text-lg font-bold text-slate-900">Settings are staying light for now</h2>
-                      <p className="mt-2 text-sm font-medium text-slate-500 max-w-md mx-auto">
-                        More account controls can live here later, but the essential profile editing tools are already available in the details tab.
-                      </p>
-                    </div>
-                  )}
+                  {/* ── Account Settings Tab ── */}
+                  {activeTab === "settings" && <AccountSettings />}
                 </>
               )}
             </div>
