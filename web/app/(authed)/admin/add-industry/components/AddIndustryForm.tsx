@@ -101,7 +101,7 @@ export default function AddIndustryForm() {
             </div>
             <div>
               <h4 className="text-base font-bold text-emerald-900 tracking-tight">Account Created Successfully</h4>
-              <p className="text-sm font-medium text-emerald-700 mt-1 leading-relaxed">The industry partner can now securely log into the platform using these credentials.</p>
+              <p className="text-sm font-medium text-emerald-700 mt-1 leading-relaxed">The sign-in email and password are being sent to the industry partner&apos;s inbox. They can log in right away.</p>
             </div>
           </div>
         )}
