@@ -3,8 +3,14 @@
 import MarkdownViewer from "@/components/ui/markdown-viewer";
 
 interface ProblemRichTextProps {
-  content: string | undefined;
+  content: string | null | undefined;
   className: string;
+  /** Render single newlines as line breaks instead of collapsing them into spaces. */
+  preserveLineBreaks?: boolean;
+}
+
+function toHardLineBreaks(markdown: string): string {
+  return markdown.replace(/\r\n/g, "\n").replace(/([^\n])\n(?!\n)/g, "$1  \n");
 }
 
 function getMarkdownSource(content: string): string {
@@ -29,12 +35,15 @@ function getMarkdownSource(content: string): string {
 export default function ProblemRichText({
   content,
   className,
+  preserveLineBreaks = false,
 }: ProblemRichTextProps) {
   if (!content) return null;
 
+  const source = getMarkdownSource(content);
+
   return (
     <MarkdownViewer
-      content={getMarkdownSource(content)}
+      content={preserveLineBreaks ? toHardLineBreaks(source) : source}
       className={`problem-rich-text ${className}`}
     />
   );

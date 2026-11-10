@@ -8,6 +8,7 @@ import {
   Bot, UserMinus // 🚀 ADDED IMPORTS
 } from "lucide-react";
 import Portal from "@/components/portal";
+import ProblemRichText from "@/components/ui/problem-rich-text";
 import { getProblemTree, getFullAttemptDetails } from "../api/problem";
 import type { TreeAttemptNode, SolutionAttemptSummary } from "@/types/attempt";
 
@@ -309,7 +310,7 @@ function AttemptDetailModal({
                                 </div>
                               </div>
                               <div className={`p-5 md:p-6 pt-4 ${viewPanel === "compare" ? "max-h-[60vh] overflow-y-auto overscroll-contain" : ""}`}>
-                                <p className="text-sm text-slate-600 whitespace-pre-wrap break-words font-medium leading-relaxed">{renderWithLinks(predecessorSub.description)}</p>
+                                <div className="break-words">{predecessorSub.description ? <ProblemRichText content={predecessorSub.description} preserveLineBreaks className="text-sm text-slate-600 font-medium leading-relaxed" /> : <p className="text-sm text-slate-600 font-medium leading-relaxed">No narrative provided.</p>}</div>
                                 {prevGithub && <RepoLink url={prevGithub} label="Original Repository" muted />}
                               </div>
                             </div>
@@ -324,7 +325,7 @@ function AttemptDetailModal({
                                 </div>
                               </div>
                               <div className={`p-5 md:p-6 pt-4 ${viewPanel === "compare" ? "max-h-[60vh] overflow-y-auto overscroll-contain" : ""}`}>
-                                <p className="text-sm text-slate-800 whitespace-pre-wrap break-words font-medium leading-relaxed">{renderWithLinks(activeSub.description)}</p>
+                                <div className="break-words">{activeSub.description ? <ProblemRichText content={activeSub.description} preserveLineBreaks className="text-sm text-slate-800 font-medium leading-relaxed" /> : <p className="text-sm text-slate-800 font-medium leading-relaxed">No narrative provided.</p>}</div>
                                 {currentGithub && <RepoLink url={currentGithub} label="Project Repository" />}
                               </div>
                             </div>
@@ -334,7 +335,7 @@ function AttemptDetailModal({
                     ) : (
                       <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6 animate-in fade-in duration-300">
                         <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">Submitted Narrative</p>
-                        <p className="text-sm text-slate-800 whitespace-pre-wrap break-words font-medium leading-relaxed">{renderWithLinks(activeSub.description)}</p>
+                        <div className="break-words">{activeSub.description ? <ProblemRichText content={activeSub.description} preserveLineBreaks className="text-sm text-slate-800 font-medium leading-relaxed" /> : <p className="text-sm text-slate-800 font-medium leading-relaxed">No narrative provided.</p>}</div>
                         {currentGithub && <RepoLink url={currentGithub} label="Project Repository" />}
                       </div>
                     )}
