@@ -39,26 +39,38 @@ public class NotificationEventListener {
         }
     }
 
-    // Solver gets in-app + email, only for APPROVED / REJECTED
+    // Solver gets in-app + email, only for APPROVED / REJECTED / CANCELLED
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onProposalStatusChanged(ProposalStatusChangedEvent e) {
         boolean approved = "APPROVED".equalsIgnoreCase(e.newStatus());
         boolean rejected = "REJECTED".equalsIgnoreCase(e.newStatus());
-        if (!approved && !rejected) {
+        boolean cancelled = "CANCELLED".equalsIgnoreCase(e.newStatus());
+        if (!approved && !rejected && !cancelled) {
             return;
         }
-        String outcome = approved ? "approved" : "rejected";
+        NotificationType type = approved
+                ? NotificationType.PROPOSAL_APPROVED
+                : rejected ? NotificationType.PROPOSAL_REJECTED : NotificationType.PROPOSAL_CANCELLED;
+        String message = cancelled
+                ? "Your proposal on '" + e.problemTitle()
+                        + "' was cancelled because the sub-problem reached its solver capacity."
+                : "Your proposal on '" + e.problemTitle() + "' has been "
+                        + (approved ? "approved" : "rejected");
 
         try {
             notificationService.createAndPush(
                     e.solverId(),
-                    approved ? NotificationType.PROPOSAL_APPROVED : NotificationType.PROPOSAL_REJECTED,
-                    "Your proposal on '" + e.problemTitle() + "' has been " + outcome,
+                    type,
+                    message,
                     e.problemId(),
                     e.claimRequestId());
         } catch (Exception ex) {
             log.error("Failed to create in-app notification for request {}", e.claimRequestId(), ex);
+        }
+
+        if (cancelled) {
+            return;
         }
 
         try {

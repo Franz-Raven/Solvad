@@ -6,6 +6,8 @@ import { CheckCircle2, AlertCircle, Info, Loader2, ChevronDown, ChevronUp, Arrow
 import { saveSubtaskDraft, submitSubtaskFinal, submitFullAttempt } from "../api/workspace";
 import type { SubtaskResponse } from "@/types/problem";
 import Portal from "@/components/portal";
+import MarkdownEditor from "@/components/ui/markdown-editor";
+import ProblemRichText from "@/components/ui/problem-rich-text";
 
 interface SubtaskFormProps {
   attemptId: string;
@@ -47,7 +49,6 @@ export function SubtaskForm({
 
   const [showFullOriginal, setShowFullOriginal] = useState(false);
 
-  const narrativeRef = useRef<HTMLTextAreaElement>(null);
   const deltaRef = useRef<HTMLTextAreaElement>(null);
 
   const hasUnsavedChanges = description !== lastSavedDesc || deltaDescription !== lastSavedDelta;
@@ -59,7 +60,6 @@ export function SubtaskForm({
     }
   };
 
-  useEffect(() => { adjustTextareaHeight(narrativeRef.current); }, [description]);
   useEffect(() => { adjustTextareaHeight(deltaRef.current); }, [deltaDescription]);
 
   useEffect(() => {
@@ -156,8 +156,12 @@ export function SubtaskForm({
         <div className="p-8 space-y-8">
           <div>
             <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">Your Solution</h4>
-            <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 text-sm text-slate-800 font-medium whitespace-pre-wrap leading-relaxed shadow-sm">
-              {description}
+            <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 shadow-sm break-words">
+              <ProblemRichText
+                content={description}
+                preserveLineBreaks
+                className="text-sm text-slate-800 font-medium leading-relaxed"
+              />
             </div>
           </div>
           
@@ -259,17 +263,29 @@ export function SubtaskForm({
             <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">
               Solution Narrative {isReadOnly ? "" : <span className="text-rose-500">*</span>}
             </label>
-            <textarea
-              ref={narrativeRef}
-              disabled={isReadOnly}
-              className={`w-full px-5 py-4 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-colors text-sm font-medium placeholder:text-slate-400 overflow-hidden resize-none ${
-                isReadOnly ? "bg-slate-50 cursor-not-allowed opacity-70 text-slate-700" : "bg-slate-50/50 text-slate-900"
-              }`}
-              placeholder="Document your findings, code architecture, or research methodology here..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              style={{ minHeight: "400px" }}
-            />
+            {isReadOnly ? (
+              <div className="w-full px-5 py-4 border border-slate-200 rounded-xl bg-slate-50 opacity-70 break-words min-h-[400px]">
+                {description ? (
+                  <ProblemRichText
+                    content={description}
+                    preserveLineBreaks
+                    className="text-sm font-medium text-slate-700 leading-relaxed"
+                  />
+                ) : (
+                  <p className="text-sm font-medium text-slate-400">No narrative provided.</p>
+                )}
+              </div>
+            ) : (
+              <MarkdownEditor
+                id="solutionNarrative"
+                name="Solution Narrative"
+                value={description}
+                onChange={setDescription}
+                minHeight={400}
+                className="border-slate-200 rounded-xl text-sm font-medium bg-slate-50/50 text-slate-900 focus-within:ring-4 focus-within:ring-emerald-500/10 focus-within:border-emerald-500 transition-colors"
+                placeholder="Document your findings, code architecture, or research methodology here..."
+              />
+            )}
           </div>
 
           {/* Delta Description */}
@@ -296,9 +312,17 @@ export function SubtaskForm({
                     )}
                   </button>
                 </div>
-                <p className={`text-sm font-medium text-blue-900/80 leading-relaxed transition-all duration-300 ${showFullOriginal ? "whitespace-pre-wrap" : "line-clamp-3"}`}>
-                  {parentDescription || "No description provided in the original solution."}
-                </p>
+                <div className={`break-words transition-all duration-300 ${showFullOriginal ? "" : "max-h-[4.5rem] overflow-hidden"}`}>
+                  {parentDescription ? (
+                    <ProblemRichText
+                      content={parentDescription}
+                      preserveLineBreaks
+                      className="text-sm font-medium text-blue-900/80 leading-relaxed"
+                    />
+                  ) : (
+                    <p className="text-sm font-medium text-blue-900/80">No description provided in the original solution.</p>
+                  )}
+                </div>
               </div>
 
               <textarea

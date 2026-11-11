@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Loader2, X, Shield, ShieldHalf, ShieldCheck, Award, Clock, Activity, Search, ChevronLeft, ChevronRight, CheckCircle, Paperclip, Circle, Info } from "lucide-react";
 import Portal from "@/components/portal";
+import ProblemRichText from "@/components/ui/problem-rich-text";
 
 import { getPendingSolutions, evaluateSolution, getAttemptDetailsById, getSubtaskCapacities, getSolverMetrics } from "../api/problem";
 import type { SubtaskCapacity } from "../api/problem";
@@ -446,8 +447,16 @@ export function ReviewSolutionsTab({ problem }: ReviewSolutionsTabProps) {
                     <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                     Final Solution Description
                   </h4>
-                  <div className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed font-medium">
-                    {latestSubmission?.description || "No text provided."}
+                  <div className="break-words">
+                    {latestSubmission?.description ? (
+                      <ProblemRichText
+                        content={latestSubmission.description}
+                        preserveLineBreaks
+                        className="text-sm text-slate-800 leading-relaxed font-medium"
+                      />
+                    ) : (
+                      <p className="text-sm text-slate-800 leading-relaxed font-medium">No text provided.</p>
+                    )}
                   </div>
                 </div>
                 

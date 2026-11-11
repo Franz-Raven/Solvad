@@ -41,20 +41,22 @@ export default function SubmitProblemPage() {
   const [enhancedProblem, setEnhancedProblem] = useState<EnhancedProblem | null>(null);
   const [subProblems, setSubProblems] = useState<SubProblem[]>([]);
 
+  const handleTextChange = (name: string, value: string) => {
+    setFormData((current) => ({
+      ...current,
+      [name]: value,
+    }));
+    setValidationErrors((current) => {
+      const field = name as keyof typeof current;
+      return current[field] ? { ...current, [name]: false } : current;
+    });
+  };
+
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
-    if (validationErrors[name as keyof typeof validationErrors]) {
-      setValidationErrors({
-        ...validationErrors,
-        [name]: false,
-      });
-    }
+    handleTextChange(name, value);
   };
 
   const handleGenerateScope = async (e: React.FormEvent) => {
@@ -229,6 +231,7 @@ export default function SubmitProblemPage() {
                   formData={formData}
                   validationErrors={validationErrors}
                   onInputChange={handleInputChange}
+                  onTextChange={handleTextChange}
                   onProgramChange={handlePreferredProgramChange}
                 />
 
@@ -314,11 +317,11 @@ export default function SubmitProblemPage() {
             <h1 className="text-3xl font-bold text-foreground mb-2">Problem Published Successfully!</h1>
             <p className="text-muted-foreground text-center max-w-md mb-8">Your problem has been published and is now available for students to work on</p>
 
-            <div className="flex gap-4">
-              <Link href="/dashboard" className="flex-1 px-6 py-3 border border-border text-foreground font-semibold rounded-lg hover:bg-accent/10 transition-all text-center">
+            <div className="flex w-full max-w-[560px] flex-col gap-4 sm:flex-row">
+              <Link href="/dashboard" className="flex-1 whitespace-nowrap px-4 py-3 border border-border text-foreground font-semibold rounded-lg hover:bg-accent/10 transition-all text-center">
                 Return to Dashboard
               </Link>
-              <button onClick={handleDownloadPDF} className="flex-1 px-6 py-3 bg-secondary hover:bg-accent text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg">
+              <button onClick={handleDownloadPDF} className="flex-1 whitespace-nowrap px-4 py-3 bg-secondary hover:bg-accent text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg">
                 Download Specification (PDF)
               </button>
             </div>

@@ -1,5 +1,5 @@
 import { programCategories } from "@/lib/data/programs";
-import AutoResizeTextarea from "./AutoResizeTextarea";
+import MarkdownEditor from "@/components/ui/markdown-editor";
 import {
   Select,
   SelectContent,
@@ -83,10 +83,10 @@ export default function EnhancedProblemPreview({
           <label className="block text-sm font-medium text-foreground mb-2">
             Background Context
           </label>
-          <AutoResizeTextarea
+          <MarkdownEditor
             value={problem.backgroundContext}
-            onChange={(e) => onProblemChange("backgroundContext", e.target.value)}
-            minRows={4}
+            onChange={(value) => onProblemChange("backgroundContext", value)}
+            minHeight={180}
             className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary text-foreground"
           />
         </div>
@@ -96,10 +96,10 @@ export default function EnhancedProblemPreview({
           <label className="block text-sm font-medium text-foreground mb-2">
             Primary Problem Statement
           </label>
-          <AutoResizeTextarea
+          <MarkdownEditor
             value={problem.primaryStatement}
-            onChange={(e) => onProblemChange("primaryStatement", e.target.value)}
-            minRows={4}
+            onChange={(value) => onProblemChange("primaryStatement", value)}
+            minHeight={180}
             className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary text-foreground"
           />
         </div>

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Search, ChevronRight, Hash, Calendar, Building2, GraduationCap, FolderOpen } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 // 🚀 ADDED: Import the active count fetcher
-import { getDiscoverableProblems, getMyActiveAttemptsCount } from "../api/dashboard"; 
+import { getDiscoverableProblems, getDiscoveryDashboard, getMyActiveAttemptsCount } from "../api/dashboard"; 
 import type { ProblemSummary, ProblemResponse } from "@/types/problem";
 import { RecommendationsList } from "./RecommendationsList"; 
 // 🚀 ADDED: Import the WorkspaceBanner
@@ -80,16 +80,16 @@ export function ExploreProblems() {
     return () => { isMounted = false; };
   }, []);
 
-  // 🚀 FIXED: Load recommendations ONCE on mount, based on skills & course (no search)
+  // Load recommendations once on mount, matched against the solver's current skills & course
   useEffect(() => {
     let isMounted = true;
 
     const loadRecommendations = async () => {
       try {
-        const recommendationsData = await getDiscoverableProblems(0, 3, "");
+        // Scored by the backend MatchmakingService (solver skills + degree program)
+        const discovery = await getDiscoveryDashboard();
         if (isMounted) {
-          const topRecs = (recommendationsData.problems || []).slice(0, 3) as unknown as ProblemResponse[];
-          setRecommendations(topRecs);
+          setRecommendations((discovery.recommended || []).slice(0, 3));
           setRecommendationsLoaded(true);
         }
       } catch (err) {

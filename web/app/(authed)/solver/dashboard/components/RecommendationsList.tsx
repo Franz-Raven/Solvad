@@ -11,14 +11,8 @@ interface RecommendationsListProps {
 
 export function RecommendationsList({ isLoading, recommendations }: RecommendationsListProps) {
   const top = recommendations.slice(0, 3);
-  const scores = top.map((p) => (p.matchScore != null ? p.matchScore : 0));
-  const sum = scores.reduce((a, b) => a + b, 0);
-  const raw = sum > 0 ? scores.map((s) => (s / sum) * 100) : top.map(() => 100 / (top.length || 1));
-  const floors = raw.map((v) => Math.floor(v));
-  let remainder = 100 - floors.reduce((a, b) => a + b, 0);
-  const order = raw.map((v, i) => ({ i, frac: v - floors[i] })).sort((a, b) => b.frac - a.frac);
-  const percents = [...floors];
-  for (let k = 0; k < remainder && k < order.length; k++) percents[order[k].i] += 1;
+  // matchScore is the backend's 0–1 composite (70% skills, 30% course alignment)
+  const percents = top.map((p) => Math.round((p.matchScore ?? 0) * 100));
 
   return (
     <div className="bg-white rounded-2xl shadow-xl border border-secondary/30 p-8 mb-8">
