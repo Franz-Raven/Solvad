@@ -378,7 +378,7 @@ export function ProposalsTab({ problem, onLocateInTree }: ProposalsTabProps) {
       )}
 
       {/* ── SIDEBAR: Subtask Filters ── */}
-      <div className="w-full lg:w-[320px] shrink-0 space-y-2">
+      <div className="w-full lg:w-[320px] shrink-0 space-y-2" data-tour="proposals-list">
         <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 ml-1">Filter by Sub-problem</h3>
         
         <button
@@ -711,7 +711,7 @@ export function ProposalsTab({ problem, onLocateInTree }: ProposalsTabProps) {
             </div>
 
             <div className="p-5 md:p-6 border-t border-slate-200 bg-white flex flex-col sm:flex-row justify-end gap-3 rounded-b-2xl shrink-0 z-10">
-              <button onClick={() => handleEvaluation(selectedProposal.id, false)} disabled={actionLoading !== null} className="w-full sm:w-auto px-6 py-2.5 text-rose-600 bg-white hover:bg-rose-50 border border-rose-200 rounded-xl text-sm font-bold transition-all disabled:opacity-50 shadow-sm active:scale-[0.98] cursor-pointer flex justify-center">
+              <button onClick={() => handleEvaluation(selectedProposal.id, false)} disabled={actionLoading !== null} data-tour="proposal-reject" className="w-full sm:w-auto px-6 py-2.5 text-rose-600 bg-white hover:bg-rose-50 border border-rose-200 rounded-xl text-sm font-bold transition-all disabled:opacity-50 shadow-sm active:scale-[0.98] cursor-pointer flex justify-center">
                 {actionLoading === selectedProposal.id ? "Rejecting..." : "Reject Proposal"}
               </button>
               
@@ -724,6 +724,7 @@ export function ProposalsTab({ problem, onLocateInTree }: ProposalsTabProps) {
                   <button 
                     onClick={() => handleEvaluation(selectedProposal.id, true)} 
                     disabled={actionLoading !== null || isFull} 
+                    data-tour="proposal-approve"
                     className="w-full sm:w-auto px-6 py-2.5 text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl text-sm font-bold transition-all disabled:opacity-50 disabled:bg-slate-300 shadow-md hover:shadow-lg active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
                   >
                     {actionLoading === selectedProposal.id ? "Approving..." : isFull ? "Sub-problem at Capacity" : "Approve & Create Workspace"}

@@ -123,9 +123,11 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+
   html {
     @apply font-sans;
   }
@@ -171,6 +173,16 @@
   pointer-events: none;
 }
 
-#portal-root > * {
+#portal-root>* {
   pointer-events: auto;
+}
+
+.react-joyride__tooltip {
+  font-family: var(--font-sans) !important;
+}
+
+@media (max-width: 640px) {
+  .react-joyride__tooltip {
+    max-width: calc(100vw - 24px) !important;
+  }
 }

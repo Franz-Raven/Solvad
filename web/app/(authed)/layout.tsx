@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { AuthProvider } from "@/context/auth-context";
 import AuthedNavigation from "@/components/authed-navigation";
 import { AuthGuard } from "@/components/auth-guard";
+import { OnboardingEntry } from "@/components/onboarding/onboarding-entry";
 import { NotificationProvider } from "@/context/notification-context";
 
 export default function AuthedLayout({ children }: { children: React.ReactNode }) {
@@ -19,6 +20,7 @@ export default function AuthedLayout({ children }: { children: React.ReactNode }
             <main className="flex-1">
               {children}
             </main>
+            <OnboardingEntry />
           </div>
         </NotificationProvider>
       </AuthGuard>

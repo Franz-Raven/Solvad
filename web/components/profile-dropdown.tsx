@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
-import { User, Settings, LogOut, ChevronDown } from "lucide-react";
+import { User, Settings, LogOut, ChevronDown, Compass } from "lucide-react";
 import { getSolverOverviewStats } from "@/app/(authed)/solver/dashboard/api/dashboard"; // 🚀 Added API import
 
 interface ProfileDropdownProps {
@@ -16,31 +16,33 @@ export default function ProfileDropdown({ onLogout }: ProfileDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   // 🚀 --- DYNAMIC RANK LOGIC ---
-  const [displayRole, setDisplayRole] = useState(user?.role || "USER");
-  const [isRankLoading, setIsRankLoading] = useState(false);
+  const [solverRank, setSolverRank] = useState<string | null>(null);
+  const isSolver = user?.role === "SOLVER";
+  const displayRole = isSolver ? solverRank ?? "SOLVER" : user?.role || "USER";
 
   useEffect(() => {
-    if (user?.role === "SOLVER") {
-      setIsRankLoading(true);
-      getSolverOverviewStats()
-        .then((stats) => {
-          // Safely check completedSolutions (defaults to 0 if undefined)
-          const completed = stats?.completedSolutions || 0;
-          
-          if (completed >= 10) setDisplayRole("Elite Solver");
-          else if (completed >= 5) setDisplayRole("Proven Solver");
-          else if (completed >= 1) setDisplayRole("Contributor");
-          else setDisplayRole("Initiate");
-        })
-        .catch((err) => {
-          console.error("Failed to load rank:", err);
-          setDisplayRole("Initiate"); // 🚀 FIXED: Fallback to Initiate instead of raw SOLVER
-        })
-        .finally(() => setIsRankLoading(false));
-    } else {
-      setDisplayRole(user?.role || "USER");
-      setIsRankLoading(false);
-    }
+    if (user?.role !== "SOLVER") return;
+
+    let cancelled = false;
+
+    getSolverOverviewStats()
+      .then((stats) => {
+        if (cancelled) return;
+        const completed = stats?.completedSolutions || 0;
+
+        if (completed >= 10) setSolverRank("Elite Solver");
+        else if (completed >= 5) setSolverRank("Proven Solver");
+        else if (completed >= 1) setSolverRank("Contributor");
+        else setSolverRank("Initiate");
+      })
+      .catch((err) => {
+        console.error("Failed to load rank:", err);
+        if (!cancelled) setSolverRank("Initiate");
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
   // ---------------------------
 
@@ -76,6 +78,11 @@ export default function ProfileDropdown({ onLogout }: ProfileDropdownProps) {
     router.push("/profile?tab=settings");
   };
 
+  const handleTourClick = () => {
+    setIsOpen(false);
+    router.push("/public-tutorial");
+  };
+
   const handleLogoutClick = () => {
     setIsOpen(false);
     onLogout();
@@ -96,7 +103,7 @@ export default function ProfileDropdown({ onLogout }: ProfileDropdownProps) {
           </span>
           
           {/* 🚀 FIXED: Dynamic rank display with skeleton loading animation */}
-          {isRankLoading ? (
+          {displayRole === "SOLVER" ? (
             <div className="h-3 w-16 bg-slate-200 rounded animate-pulse mt-0.5" />
           ) : (
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
@@ -181,6 +188,18 @@ export default function ProfileDropdown({ onLogout }: ProfileDropdownProps) {
                 </div>
                 <span className="text-sm font-bold text-slate-700 group-hover:text-emerald-700 transition-colors">
                   Account Settings
+                </span>
+              </button>
+
+              <button
+                onClick={handleTourClick}
+                className="w-full px-3 py-2.5 flex items-center gap-3 hover:bg-slate-50 rounded-xl transition-colors text-left group cursor-pointer active:scale-[0.98]"
+              >
+                <div className="bg-white p-1.5 rounded-lg shadow-sm border border-slate-100 group-hover:border-emerald-100 transition-colors">
+                  <Compass className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 transition-colors" />
+                </div>
+                <span className="text-sm font-bold text-slate-700 group-hover:text-emerald-700 transition-colors">
+                  Tutorials
                 </span>
               </button>
             </div>

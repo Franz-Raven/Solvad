@@ -57,6 +57,7 @@ export default function ProblemFormFields({
           type="text"
           id="title"
           name="title"
+          data-tour="problem-title"
           value={formData.title}
           onChange={onInputChange}
           className={`w-full px-4 py-3 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all text-foreground placeholder:text-muted-foreground ${
@@ -80,6 +81,7 @@ export default function ProblemFormFields({
         <MarkdownEditor
           id="backgroundContext"
           name="backgroundContext"
+          data-tour="problem-background"
           value={formData.backgroundContext}
           onChange={(value) => onTextChange("backgroundContext", value)}
           minHeight={180}
@@ -104,6 +106,7 @@ export default function ProblemFormFields({
         <MarkdownEditor
           id="primaryStatement"
           name="primaryStatement"
+          data-tour="problem-primary"
           value={formData.primaryStatement}
           onChange={(value) => onTextChange("primaryStatement", value)}
           minHeight={180}
@@ -128,6 +131,7 @@ export default function ProblemFormFields({
         <MarkdownEditor
           id="objectives"
           name="objectives"
+          data-tour="problem-objectives"
           value={formData.objectives}
           onChange={(value) => onTextChange("objectives", value)}
           minHeight={140}
@@ -152,6 +156,7 @@ export default function ProblemFormFields({
         <MarkdownEditor
           id="constraints"
           name="constraints"
+          data-tour="problem-constraints"
           value={formData.constraints}
           onChange={(value) => onTextChange("constraints", value)}
           minHeight={140}
@@ -171,7 +176,7 @@ export default function ProblemFormFields({
         </p>
         
         <Select value={formData.preferredProgram} onValueChange={onProgramChange}>
-          <SelectTrigger className="w-full px-4 py-3 !h-auto rounded-lg border border-border bg-background text-foreground">
+          <SelectTrigger data-tour="problem-program" className="w-full px-4 py-3 !h-auto rounded-lg border border-border bg-background text-foreground">
             <SelectValue placeholder="Select a program" />
           </SelectTrigger>
           <SelectContent>
