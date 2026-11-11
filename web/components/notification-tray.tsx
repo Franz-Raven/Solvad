@@ -44,7 +44,7 @@ function NotificationItem({ notification, onSelect }: NotificationItemProps) {
       <button
         type="button"
         onClick={() => onSelect(notification)}
-        className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+        className="flex w-full cursor-pointer items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
       >
         <span
           aria-hidden="true"
@@ -144,6 +144,7 @@ export function NotificationTray({ open, anchorRef, onClose }: NotificationTrayP
     else if (
       notification.type === 'PROPOSAL_APPROVED' ||
       notification.type === 'PROPOSAL_REJECTED' ||
+      notification.type === 'PROPOSAL_CANCELLED' ||
       notification.type === 'SOLUTION_ATTEMPT_TERMINATED'
     ) {
      router.push(`/solver/problem/${notification.problemId}?tab=workspace`);
@@ -187,7 +188,7 @@ export function NotificationTray({ open, anchorRef, onClose }: NotificationTrayP
                 <NotificationItem
                   key={notification.id}
                   notification={notification}
-                  onSelect={handleNotificationClick} // <-- Using the new handler
+                  onSelect={handleNotificationClick}
                 />
               ))}
             </ul>

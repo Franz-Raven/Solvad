@@ -1,5 +1,5 @@
 import { programCategories } from "@/lib/data/programs";
-import AutoResizeTextarea from "./AutoResizeTextarea";
+import MarkdownEditor from "@/components/ui/markdown-editor";
 import {
   Select,
   SelectContent,
@@ -29,6 +29,7 @@ interface ProblemFormFieldsProps {
   onInputChange: (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => void;
+  onTextChange: (name: string, value: string) => void;
   onProgramChange: (value: string) => void;
 }
 
@@ -36,6 +37,7 @@ export default function ProblemFormFields({
   formData,
   validationErrors,
   onInputChange,
+  onTextChange,
   onProgramChange,
 }: ProblemFormFieldsProps) {
   return (
@@ -76,13 +78,13 @@ export default function ProblemFormFields({
             </span>
           )}
         </div>
-        <AutoResizeTextarea
+        <MarkdownEditor
           id="backgroundContext"
           name="backgroundContext"
           data-tour="problem-background"
           value={formData.backgroundContext}
-          onChange={onInputChange}
-          minRows={4}
+          onChange={(value) => onTextChange("backgroundContext", value)}
+          minHeight={180}
           className={`w-full px-4 py-3 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all text-foreground placeholder:text-muted-foreground ${
             validationErrors.backgroundContext ? 'border-destructive' : 'border-border'
           }`}
@@ -101,13 +103,13 @@ export default function ProblemFormFields({
             </span>
           )}
         </div>
-        <AutoResizeTextarea
+        <MarkdownEditor
           id="primaryStatement"
           name="primaryStatement"
           data-tour="problem-primary"
           value={formData.primaryStatement}
-          onChange={onInputChange}
-          minRows={4}
+          onChange={(value) => onTextChange("primaryStatement", value)}
+          minHeight={180}
           className={`w-full px-4 py-3 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all text-foreground placeholder:text-muted-foreground ${
             validationErrors.primaryStatement ? 'border-destructive' : 'border-border'
           }`}
@@ -126,13 +128,13 @@ export default function ProblemFormFields({
             </span>
           )}
         </div>
-        <AutoResizeTextarea
+        <MarkdownEditor
           id="objectives"
           name="objectives"
           data-tour="problem-objectives"
           value={formData.objectives}
-          onChange={onInputChange}
-          minRows={3}
+          onChange={(value) => onTextChange("objectives", value)}
+          minHeight={140}
           className={`w-full px-4 py-3 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all text-foreground placeholder:text-muted-foreground ${
             validationErrors.objectives ? 'border-destructive' : 'border-border'
           }`}
@@ -151,13 +153,13 @@ export default function ProblemFormFields({
             </span>
           )}
         </div>
-        <AutoResizeTextarea
+        <MarkdownEditor
           id="constraints"
           name="constraints"
           data-tour="problem-constraints"
           value={formData.constraints}
-          onChange={onInputChange}
-          minRows={3}
+          onChange={(value) => onTextChange("constraints", value)}
+          minHeight={140}
           className={`w-full px-4 py-3 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all text-foreground placeholder:text-muted-foreground ${
             validationErrors.constraints ? 'border-destructive' : 'border-border'
           }`}

@@ -1,5 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@uiw/react-md-editor/markdown-editor.css";
+@import "@uiw/react-markdown-preview/markdown.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -120,12 +123,44 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+
   html {
     @apply font-sans;
   }
+}
+
+.markdown-editor-content {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.markdown-editor-content:empty::before {
+  content: attr(data-placeholder);
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+
+.problem-rich-text .wmde-markdown {
+  background-color: transparent;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
+
+.problem-rich-text .wmde-markdown ul:not(.no-list) {
+  list-style-type: disc;
+  padding-left: 2em;
+}
+
+.problem-rich-text .wmde-markdown ol:not(.no-list) {
+  list-style-type: decimal;
+  padding-left: 2em;
 }
 
 #portal-root {
@@ -138,7 +173,7 @@
   pointer-events: none;
 }
 
-#portal-root > * {
+#portal-root>* {
   pointer-events: auto;
 }
 

@@ -1,6 +1,6 @@
 import { programCategories } from "@/lib/data/programs";
 import type { SubProblem } from "@/types/problem";
-import AutoResizeTextarea from "./AutoResizeTextarea";
+import MarkdownEditor from "@/components/ui/markdown-editor";
 import {
   Select,
   SelectContent,
@@ -100,16 +100,16 @@ export default function SubproblemsList({
                 </div>
               )}
 
-              <AutoResizeTextarea
+              <MarkdownEditor
                 value={subProblem.description}
-                onChange={(e) =>
+                onChange={(value) =>
                   onSubProblemChange(
                     subProblem.id,
                     "description",
-                    e.target.value
+                    value
                   )
                 }
-                minRows={3}
+                minHeight={140}
                 className="w-full px-4 py-3 bg-background border border-border rounded focus:outline-none focus:ring-2 focus:ring-secondary text-foreground"
                 placeholder="Description"
               />

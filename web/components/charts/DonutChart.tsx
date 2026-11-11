@@ -9,12 +9,14 @@ interface DonutChartProps {
   title?: string;
 }
 
+// Solvad theme: greens deepen as a problem progresses toward completion,
+// amber marks in-flight work (matches "Pending" badges), slate marks closed.
 const STATUS_COLORS: Record<keyof ProblemStatusGroupDto, string> = {
-  open: "#3b82f6",
-  active: "#f97316",
-  solvedNeedsImprovement: "#8b5cf6",
-  completed: "#ef4444",
-  closed: "#fbbf24",
+  open: "var(--accent)",
+  active: "#f59e0b",
+  solvedNeedsImprovement: "var(--secondary)",
+  completed: "var(--primary-foreground)",
+  closed: "#94a3b8",
 };
 
 const STATUS_LABELS: Record<keyof ProblemStatusGroupDto, string> = {
@@ -59,10 +61,19 @@ export function DonutChart({ statusData, title }: DonutChartProps) {
               outerRadius={90}
               paddingAngle={2}
               dataKey="value"
-              label={({ name, percent }) => {
-                const percentage = percent !== undefined ? (percent * 100).toFixed(0) : "0";
-                return `${name}: ${percentage}%`;
-              }}
+              // Percent-only labels in neutral slate: full names live in the legend,
+              // so long names like "Solved (Needs Improvement)" no longer get clipped.
+              label={({ x, y, percent, textAnchor }) => (
+                <text
+                  x={x}
+                  y={y}
+                  textAnchor={textAnchor}
+                  dominantBaseline="central"
+                  className="fill-slate-500 text-xs font-semibold"
+                >
+                  {`${Math.round((percent ?? 0) * 100)}%`}
+                </text>
+              )}
               labelLine={false}
             >
               {chartData.map((entry, index) => (
@@ -79,6 +90,7 @@ export function DonutChart({ statusData, title }: DonutChartProps) {
                 }}
             />
             <Legend
+              itemSorter={null} // keep lifecycle order (Open → Closed) instead of alphabetical
               layout="horizontal"
               verticalAlign="bottom"
               align="center"
