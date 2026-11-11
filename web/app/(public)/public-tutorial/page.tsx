@@ -708,6 +708,10 @@ export default function PublicTutorialPage() {
                         : {}
                     }
                     onInputChange={handleInputChange}
+                    onTextChange={(name, value) => {
+                      setFormError(false);
+                      setFormData((current) => ({ ...current, [name]: value }));
+                    }}
                     onProgramChange={(value) => {
                       setFormError(false);
                       setFormData((current) => ({ ...current, preferredProgram: value }));
