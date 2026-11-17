@@ -50,8 +50,8 @@ public class ClaudeJudgeService {
     private static final Map<String, Integer> CRITERIA_MAX;
     static {
         Map<String, Integer> criteria = new LinkedHashMap<>();
-        criteria.put("faithfulness", 25);
-        criteria.put("completeness", 15);
+        criteria.put("fidelity", 20);
+        criteria.put("clarity", 20);
         criteria.put("scopeDecision", 20);
         criteria.put("subtaskQuality", 20);
         criteria.put("programRouting", 10);
@@ -62,31 +62,51 @@ public class ClaudeJudgeService {
     private static final Set<String> IMAGE_TYPES = Set.of("image/png", "image/jpeg", "image/gif", "image/webp");
 
     private static final String RUBRIC = """
-            You are a strict reviewer grading how well an AI converted a seeker's industry problem into a
-            standardized specification and scope. Compare the CANDIDATE OUTPUT against the ORIGINAL SEEKER INPUT
-            (and any attachments shown). Do not penalize content that plausibly comes from attachments that were
-            not shown to you.
+            You are reviewing how well an AI turned a seeker's industry problem into a clear, standardized
+            specification and scope for university capstone teams. Seekers often write vague or incomplete problems.
+            Expanding them with reasonable, context-appropriate detail is the AI's job and must be rewarded, not
+            penalized. Grade the OUTPUT, not the input: a vague input must not lower the score if the output is a
+            sensible, well-structured specification. Do not penalize content that plausibly comes from attachments
+            that were not shown to you.
+
             Score each criterion with an integer:
-            1. faithfulness (0-25): every fact in the candidate is supported by the seeker input or attachments.
-               Deduct heavily for invented requirements, numbers, technologies or stakeholders, and for dropped or
-               contradicted seeker facts.
-            2. completeness (0-15): title, backgroundContext, primaryStatement, objectives and constraints are
-               present and clear; each objective and constraint is one actionable statement.
-            3. scopeDecision (0-20): scopeType is correct. SINGULAR = one cohesive challenge one capstone team can
-               solve, with exactly 1 sub-problem covering the whole problem. SYSTEMIC = 2-3 genuinely independent
-               functional modules, physical sub-structures or operational frameworks. Score 0 if scopeType is
-               missing or the sub-problem count contradicts it.
-            4. subtaskQuality (0-20): sub-problems do not overlap, together cover the primary statement, are each
-               capstone-sized and actionable, are not split by SDLC phases or architectural layers, and do not
-               invent software for non-software problems.
-            5. programRouting (0-10): every departmentFocus is an exact program name from the list below and fits
-               the work.
-            6. sdgAlignment (0-10): every sdgFocus is an exact SDG name from the list below and fits.
+            1. fidelity (0-20): the output keeps the seeker's core problem, goals and stated facts, and does not
+               change the problem's focus. Reasonable elaboration and inferred details that fit the context are
+               allowed. Deduct only for contradicting the seeker, changing what the problem is about, or presenting
+               fabricated hard facts as given (specific numbers, budgets, dates, named organizations or people,
+               legal or regulatory claims).
+            2. clarity (0-20): the title, background, primary statement, objectives and constraints are clearer,
+               more specific and more actionable than the input. Each objective and constraint is a single
+               statement a team can act on.
+            3. scopeDecision (0-20): the scopeType and the split follow the SCOPE RULES below. If the problem could
+               reasonably go either way, accept either choice when the rationale is sensible. Score 0 only if
+               scopeType is missing or the sub-problem count contradicts it.
+            4. subtaskQuality (0-20): each sub-problem could be taken on by a capstone team, the set covers the
+               primary statement, and no sub-problem is an INVALID split under the SCOPE RULES. A data dependency
+               between sub-problems with a stated interface is acceptable. Minor overlap is acceptable. Deduct for
+               sub-problems that duplicate each other or invent software for clearly non-software problems.
+            5. programRouting (0-10): each departmentFocus is the program whose students would do that work, as
+               the SCOPE RULES define. Full marks for an exact program name from the list; partial marks if the
+               field fits but the name is not exactly from the list.
+            6. sdgAlignment (0-10): full marks for any SDG from the list that plausibly fits.
+
+            Calibrate the total like this:
+              90-100 = a capstone team could start work immediately; no meaningful issues.
+              85-89  = usable with minor edits.
+              60-84  = usable, but has a clear problem (questionable scope, duplicated sub-problems, a contradicted
+                       or fabricated hard fact).
+              below 60 = misrepresents the problem or is not usable.
+            When you are torn between two scores for a criterion, choose the higher one.
+
+            Feedback: list only issues that actually cost points, as specific, actionable fixes naming the exact
+            field or sub-problem. At most 6 items. Use an empty array if nothing cost points. Give one recommended
+            fix per issue, not alternatives, and never recommend a split that the SCOPE RULES call invalid.
+
             Return ONLY this JSON:
-            {"criteria":{"faithfulness":0,"completeness":0,"scopeDecision":0,"subtaskQuality":0,"programRouting":0,"sdgAlignment":0},
-             "feedback":["specific, actionable fix naming the exact field or sub-problem"]}
-            Give at most 6 feedback items. Use an empty array if nothing needs fixing.
+            {"criteria":{"fidelity":0,"clarity":0,"scopeDecision":0,"subtaskQuality":0,"programRouting":0,"sdgAlignment":0},
+             "feedback":[]}
             """
+            + "\n" + GeminiService.SCOPE_RULES_TEXT
             + "\n" + GeminiService.ACADEMIC_PROGRAMS_TEXT
             + "\n" + GeminiService.SDG_TEXT;
 

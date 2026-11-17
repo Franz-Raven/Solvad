@@ -58,6 +58,22 @@ public class GeminiService {
             + "16. Peace, Justice and Strong Institutions\n"
             + "17. Partnerships for the Goals\n";
 
+    /**
+     * The single definition of a valid scope. Used verbatim by the Gemini prompt and the Claude
+     * judge rubric so the generator and the reviewer apply the same rules.
+     */
+    public static final String SCOPE_RULES_TEXT =
+            "SCOPE RULES:\n"
+            + "- SINGULAR = one cohesive challenge that one capstone team can deliver. generatedSubproblems has EXACTLY 1 item that restates the whole problem as one actionable capstone task.\n"
+            + "- SYSTEMIC = the problem has 2-3 parts that different capstone teams can each build, test and demonstrate on their own. generatedSubproblems has 2 or 3 items.\n"
+            + "- Choose SINGULAR when one team can deliver the whole problem. Choose SYSTEMIC only when the problem clearly needs several disciplines or is too large for one team. When either choice is reasonable, either is acceptable if scopeRationale explains it.\n"
+            + "- A VALID split divides the problem by (a) discipline and deliverable, e.g. a physical device or hardware prototype vs. the software platform that uses its data, or a structural design vs. its business model; or (b) independent functional modules, e.g. an appointment portal vs. an OCR scanner.\n"
+            + "- An INVALID split divides the problem by (a) software architectural layers inside one application (database, API/backend, frontend/UI); or (b) project phases (planning, research, implementation, testing, deployment). Separating a hardware device from the software platform that uses its data is a discipline split, not a layer split.\n"
+            + "- Sub-problems may exchange data. When one sub-problem uses another's output, its description names the interface (e.g. 'receives sensor readings as JSON over HTTP from the sensor unit') and says the team can develop against simulated or sample data. A data dependency with a stated interface does not make a split invalid.\n"
+            + "- Do not make a feature of one part into its own sub-problem (e.g. a monitoring platform's compliance report belongs inside that platform's sub-problem).\n"
+            + "- Size each sub-problem for one capstone team: about 3-5 core deliverables. Narrow a sub-problem that bundles many unrelated deliverables; merge a part that is too small to be a capstone on its own.\n"
+            + "- departmentFocus is the program whose students would do that sub-problem's work, written with the EXACT name from the program list. Use the Target Academic Program when it fits the work; otherwise use the best-fitting program (e.g. hardware, firmware and enclosures fit BS Computer Engineering or BS Electronics Engineering).\n";
+
     @Value("${gemini.key}")
     private String geminiApiKey;
 
@@ -136,19 +152,16 @@ public class GeminiService {
 
         prompt.append("If files are attached, analyze their content to better understand the problem context.\n\n");
 
-        prompt.append("SCOPE DECISION: Analyze this problem and decide its scopeType.\n");
-        prompt.append("- \"SINGULAR\" = one cohesive challenge that a single capstone team can solve.\n");
-        prompt.append("- \"SYSTEMIC\" = contains 2-3 genuinely independent functional modules, physical sub-structures, or operational frameworks (follow the guidelines below).\n");
-        prompt.append("- If SINGULAR: generatedSubproblems must contain EXACTLY 1 item. It restates the whole problem as one actionable capstone task. Its departmentFocus is the best-fitting program, normally the Target Academic Program.\n");
-        prompt.append("- If SYSTEMIC: generatedSubproblems must contain 2 or 3 items.\n\n");
+        prompt.append("SCOPE DECISION: Analyze this problem and decide its scopeType by following these rules.\n");
+        prompt.append(SCOPE_RULES_TEXT).append("\n");
 
         prompt.append("IMPORTANT GUIDELINES:\n");
         prompt.append("- DECOMPOSITION TYPE: Break the problem down into massive, independent functional modules, physical sub-structures, or distinct operational frameworks.\n");
         prompt.append("- NO SDLC/PHASES: DO NOT break the problem down by chronological phases (e.g., NEVER output 'Planning', 'Testing', 'Data Gathering', or 'Implementation').\n");
-        prompt.append("- NO ARCHITECTURAL LAYERS: For software problems, DO NOT split by layers (e.g., NEVER output 'Database Layer', 'API Layer', 'Frontend UI').\n");
-        prompt.append("- THE CAPSTONE RULE: Each subtask must be complex and distinct enough to serve as an independent thesis or capstone project for adedicated team.\n");
+        prompt.append("- NO ARCHITECTURAL LAYERS: For software, DO NOT split one application by layers (e.g., NEVER output 'Database Layer', 'API Layer', 'Frontend UI'). A hardware device vs. the software platform that uses its data is allowed (see SCOPE RULES).\n");
+        prompt.append("- THE CAPSTONE RULE: Each subtask must be complex and distinct enough to serve as an independent thesis or capstone project for a dedicated team.\n");
         prompt.append("- ANTI-SOFTWARE BIAS: If the problem is physical, environmental, or business-focused, DO NOT invent software, dashboards, or mobile apps unless explicitly mentioned in the problem statement.\n");
-        prompt.append("- DOMAIN STRICTNESS: The subtasks must strictly use the tools, deliverables, and terminology of the target academic program (e.g., Civil Engineering tasks must yield physical designs, blueprints, or material studies).\n");
+        prompt.append("- DOMAIN STRICTNESS: Each subtask must use the tools, deliverables, and terminology of its own departmentFocus program (e.g., Civil Engineering tasks must yield physical designs, blueprints, or material studies).\n");
         prompt.append("\n");
 
         prompt.append("EXAMPLE DECOMPOSITIONS:\n");
@@ -158,16 +171,20 @@ public class GeminiService {
         prompt.append("- GOOD (Modules): [\"Core Doctor-Patient Appointment Portal\", \"AI-Powered Handwriting OCR Scanner for Medical Notes\", \"IoT Patient Vitals Hardware Integration\"]\n\n");
 
         prompt.append("Example 2 (Civil/Environmental Engineering - River Flooding):\n");
-        prompt.append("- BAD (Phases/Software): [\"Site Inspection\", \"Build aFlood Warning Mobile App\", \"Post-Construction Testing\"]\n");
+        prompt.append("- BAD (Phases/Software): [\"Site Inspection\", \"Build a Flood Warning Mobile App\", \"Post-Construction Testing\"]\n");
         prompt.append("- GOOD (Physical Sub-structures): [\"Hydrological Catchment & Spillway Design\", \"Reinforced Retaining Wall & Embankment Structural Engineering\", \"Soil Permeability & Riparian Buffer Zone Analysis\"]\n\n");
 
         prompt.append("Example 3 (Business/Supply Chain - Failing Delivery Logistics):\n");
         prompt.append("- BAD (Phases): [\"Market Research\", \"Strategy Implementation\", \"Financial Review\"]\n");
-        prompt.append("- GOOD (Operational Frameworks): [\"Last-Mile Routing Optimization Model\", \"Warehouse Inventory & Predictive Stock Framework\", \"Third-Party Vendor Procurement & SLA Structuring\"]\n\n");// prompt.append("IMPORTANT GUIDELINES:\n");
+        prompt.append("- GOOD (Operational Frameworks): [\"Last-Mile Routing Optimization Model\", \"Warehouse Inventory & Predictive Stock Framework\", \"Third-Party Vendor Procurement & SLA Structuring\"]\n\n");
+
+        prompt.append("Example 4 (Hardware + Software - Smart Greenhouse Irrigation):\n");
+        prompt.append("- BAD (Layers): [\"Sensor Data Layer\", \"Backend API\", \"Mobile App UI\"]\n");
+        prompt.append("- GOOD (Discipline split with a stated interface): [\"Soil-Moisture Sensor and Valve Controller Hardware (BS Electronics Engineering)\", \"Irrigation Scheduling and Monitoring Platform (BS Information Technology)\"]\n\n");// prompt.append("IMPORTANT GUIDELINES:\n");
         // prompt.append("- Return 0 subtasks if the problem is straightforward and cannot be meaningfully decomposed\n");
         // prompt.append("- Only create subtasks if the problem genuinely requires different expertise areas or process stages\n");
         // prompt.append("- Subtasks should reflect the actual nature of the problem (engineering, environmental, business, etc.)\n");
-        // prompt.append("- Each subtask should have aclear departmentFocus that matches the problem domain\n");
+        // prompt.append("- Each subtask should have a clear departmentFocus that matches the problem domain\n");
         // prompt.append("- DO NOT default to 'Backend/Frontend/Database' unless the problem is explicitly about software development\n\n");
         // prompt.append("Examples of valid departmentFocus areas:\n");
         // prompt.append("- For technical problems: Backend Development, Frontend Development, Database Design, DevOps, UI/UX Design, Mobile Development\n");
@@ -184,12 +201,16 @@ public class GeminiService {
         prompt.append("- Analyze the problem title, background context, primary statement, objectives, and constraints\n");
         prompt.append("- If files are attached, extract additional context, objectives, or constraints mentioned in the documents\n");
         prompt.append("- Refine and improve the problem description to make it clearer and more comprehensive\n");
+        prompt.append("- Keep every fact, feature and requirement the seeker stated (e.g. every quantity to monitor, every threshold, every user group). Do not drop any of them.\n");
+        prompt.append("- You may add reasonable detail that fits the context, but do not invent specific numbers, budgets, dates, named organizations or people, or legal/regulatory claims the seeker did not give.\n");
         prompt.append("- Break down objectives and constraints into clear, separate bullet points (as array items)\n");
-        prompt.append("- Ensure each objective and constraint is asingle, actionable statement\n");
-        prompt.append("- Assign the MOST APPROPRIATE Sustainable Development Goal (SDG) for the main problem based on its primary focus\n");
-        prompt.append("- For each subtask, assign the MOST APPROPRIATE SDG based on its specific focus (subtasks may have different SDGs from the main problem)\n\n");
+        prompt.append("- Ensure each objective and constraint is a single, actionable statement\n");
+        prompt.append("- Never write two objectives with the same features. If the seeker wants one feature on several platforms (e.g. a web and mobile dashboard), write one objective naming all platforms, or give each platform a distinct purpose.\n");
+        prompt.append("- Assign the MOST APPROPRIATE Sustainable Development Goal (SDG) for the main problem: the goal it most directly advances, not an indirect or stretched link\n");
+        prompt.append("- For each subtask, assign the MOST APPROPRIATE SDG based on its specific focus (subtasks may have different SDGs from the main problem)\n");
+        prompt.append("- Proofread every field for spelling and typos before returning\n\n");
 
-        prompt.append("Format your response as aJSON object with this EXACT structure:\n");
+        prompt.append("Format your response as a JSON object with this EXACT structure:\n");
         prompt.append("{\n");
         prompt.append("  \"scopeType\": \"SINGULAR or SYSTEMIC\",\n");
         prompt.append("  \"scopeRationale\": \"1-2 sentences explaining the decision\",\n");
@@ -230,7 +251,9 @@ public class GeminiService {
             }
         }
         prompt.append("\nProduce a complete, corrected JSON object in exactly the same format that addresses every feedback item. ");
-        prompt.append("Do not invent facts that are not in the problem or the attachments.");
+        prompt.append("Do not invent facts that are not in the problem or the attachments.\n");
+        prompt.append("Change only what the feedback items name. Copy every other field exactly as it is in the previous attempt, so that parts the reviewer did not mention do not get worse.\n");
+        prompt.append("If a feedback item conflicts with the SCOPE RULES, follow the SCOPE RULES.");
     }
 
     /**
