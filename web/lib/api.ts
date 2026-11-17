@@ -1,6 +1,18 @@
 const API_BASE_URL =
   (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080").replace(/\/$/, "") + "/api";
 
+export class ApiError extends Error {
+  status: number;
+  code?: string;
+
+  constructor(message: string, status: number, code?: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.code = code;
+  }
+}
+
 export async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
@@ -55,7 +67,10 @@ export async function apiRequest<T>(
         ? data
         : `Request failed with status ${res.status}`);
 
-    throw new Error(msg);
+    const code =
+      maybeObj && typeof maybeObj.code === "string" ? maybeObj.code : undefined;
+
+    throw new ApiError(msg, res.status, code);
   }
 
   return data as T;

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { ApiError } from "@/lib/api";
+import Portal from "@/components/portal";
 import { generateScope, createProblem } from "./api/submit";
 import type { ProblemPayload, SubProblem, EnhancedProblem } from "@/types/problem";
 import ProblemFormFields from "./components/ProblemFormFields";
@@ -11,6 +13,18 @@ import EnhancedProblemPreview from "./components/EnhancedProblemPreview";
 import SubproblemsList from "./components/SubproblemsList";
 
 type ViewState = "FORM_VIEW" | "LOADING_VIEW" | "PREVIEW_VIEW" | "SUCCESS_VIEW";
+
+const AI_UNAVAILABLE_MESSAGE =
+  "We couldn't generate the AI scope right now. You can retry, or continue and define the sub-problems yourself.";
+const NO_SUBPROBLEMS_MESSAGE = "Add at least one sub-problem before publishing.";
+
+// Splits free-text into list items: one per line, trimmed, with one leading
+// list marker (-, *, •, "1." or "1)") removed and empty lines dropped.
+const toList = (text: string): string[] =>
+  text
+    .split(/\r?\n/)
+    .map((line) => line.trim().replace(/^(?:[-*•]|\d+[.)])(?:\s+|$)/, "").trim())
+    .filter((line) => line.length > 0);
 
 export default function SubmitProblemPage() {
   const router = useRouter();
@@ -40,6 +54,7 @@ export default function SubmitProblemPage() {
 
   const [enhancedProblem, setEnhancedProblem] = useState<EnhancedProblem | null>(null);
   const [subProblems, setSubProblems] = useState<SubProblem[]>([]);
+  const [aiUnavailable, setAiUnavailable] = useState(false);
 
   const handleTextChange = (name: string, value: string) => {
     setFormData((current) => ({
@@ -59,9 +74,34 @@ export default function SubmitProblemPage() {
     handleTextChange(name, value);
   };
 
+  const runGenerateScope = async () => {
+    setAiUnavailable(false);
+    setError(null);
+    setCurrentView("LOADING_VIEW");
+
+    try {
+      const response = await generateScope({
+        ...formData,
+        attachments,
+      });
+      setEnhancedProblem(response.enhancedProblem);
+      setSubProblems(response.generatedSubtasks);
+      setCurrentView("PREVIEW_VIEW");
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 503) {
+        // Shown in the AI-unavailable modal rather than the inline error banner
+        setAiUnavailable(true);
+      } else {
+        setError(err instanceof Error ? err.message : "Failed to generate scope. Please try again.");
+      }
+      setCurrentView("FORM_VIEW");
+    }
+  };
+
   const handleGenerateScope = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setAiUnavailable(false);
 
     const errors = {
       title: !formData.title.trim(),
@@ -78,20 +118,27 @@ export default function SubmitProblemPage() {
       return;
     }
 
-    setCurrentView("LOADING_VIEW");
+    await runGenerateScope();
+  };
 
-    try {
-      const response = await generateScope({
-        ...formData,
-        attachments,
-      });
-      setEnhancedProblem(response.enhancedProblem);
-      setSubProblems(response.generatedSubtasks);
-      setCurrentView("PREVIEW_VIEW");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to generate scope. Please try again.");
-      setCurrentView("FORM_VIEW");
-    }
+  // Closes the AI-unavailable modal and leaves the seeker on the filled-in form
+  const handleBackFromAiUnavailable = () => {
+    setAiUnavailable(false);
+  };
+
+  const handleContinueManually = () => {
+    setEnhancedProblem({
+      title: formData.title,
+      backgroundContext: formData.backgroundContext,
+      primaryStatement: formData.primaryStatement,
+      objectives: toList(formData.objectives),
+      constraints: toList(formData.constraints),
+      sdgFocus: undefined,
+    });
+    setSubProblems([]);
+    setAiUnavailable(false);
+    setError(null);
+    setCurrentView("PREVIEW_VIEW");
   };
 
   const handleSubProblemChange = (
@@ -146,7 +193,11 @@ export default function SubmitProblemPage() {
 
   const handleConfirmAndPublish = async () => {
     if (!enhancedProblem) return;
-    
+    if (subProblems.length === 0) {
+      setError(NO_SUBPROBLEMS_MESSAGE);
+      return;
+    }
+
     setError(null);
     setCurrentView("LOADING_VIEW");
 
@@ -252,6 +303,59 @@ export default function SubmitProblemPage() {
                 </div>
               </form>
             </div>
+
+            {aiUnavailable && (
+              <Portal>
+                <div
+                  className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in"
+                  onClick={(event) => {
+                    if (event.target === event.currentTarget) handleBackFromAiUnavailable();
+                  }}
+                >
+                  <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="ai-unavailable-title"
+                    className="bg-card rounded-2xl shadow-2xl w-full max-w-lg border border-border p-8 animate-in zoom-in-95 duration-200"
+                  >
+                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-5 bg-destructive/10 text-destructive border border-destructive/20">
+                      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                      </svg>
+                    </div>
+                    <h2 id="ai-unavailable-title" className="text-xl font-bold text-foreground text-center mb-2">
+                      AI Scoping Unavailable
+                    </h2>
+                    <p className="text-sm text-muted-foreground text-center mb-6">
+                      {AI_UNAVAILABLE_MESSAGE}
+                    </p>
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                      <button
+                        type="button"
+                        onClick={handleBackFromAiUnavailable}
+                        className="flex-1 px-4 py-3 border border-border text-foreground font-semibold rounded-lg hover:bg-accent/10 transition-all"
+                      >
+                        Back
+                      </button>
+                      <button
+                        type="button"
+                        onClick={runGenerateScope}
+                        className="flex-1 px-4 py-3 border border-border text-foreground font-semibold rounded-lg hover:bg-accent/10 transition-all"
+                      >
+                        Retry
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleContinueManually}
+                        className="flex-1 whitespace-nowrap px-4 py-3 bg-secondary hover:bg-accent text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg"
+                      >
+                        Continue manually
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </Portal>
+            )}
           </>
         )}
 
@@ -298,10 +402,19 @@ export default function SubmitProblemPage() {
                 <button onClick={() => setCurrentView("FORM_VIEW")} className="flex-1 px-6 py-3 border border-border text-foreground font-semibold rounded-lg hover:bg-accent/10 transition-all">
                   Back
                 </button>
-                <button onClick={handleConfirmAndPublish} className="flex-1 px-6 py-3 bg-secondary hover:bg-accent text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg">
+                <button
+                  onClick={handleConfirmAndPublish}
+                  disabled={subProblems.length === 0}
+                  className="flex-1 px-6 py-3 bg-secondary hover:bg-accent text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-secondary disabled:hover:shadow-md"
+                >
                   Confirm & Publish
                 </button>
               </div>
+              {subProblems.length === 0 && (
+                <p className="mt-3 text-sm text-muted-foreground text-right">
+                  {NO_SUBPROBLEMS_MESSAGE}
+                </p>
+              )}
             </div>
           </>
         )}
