@@ -1,6 +1,7 @@
 package com.solvad.backend.problem.core;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.solvad.backend.ai.AiServiceUnavailableException;
 import com.solvad.backend.audit.AuditLogResponse;
 import com.solvad.backend.problem.scope.GenerateScopeRequest;
 import com.solvad.backend.problem.scope.GenerateScopeResponse;
@@ -9,12 +10,14 @@ import com.solvad.backend.problem.subtask.SubtaskResponse;
 import com.solvad.backend.security.JwtService;
 import com.solvad.backend.audit.AuditService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -47,6 +50,9 @@ public class ProblemController {
             
             GenerateScopeResponse response = problemService.generateScope(request, attachments);
             return ResponseEntity.ok(response);
+        } catch (AiServiceUnavailableException e) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of("code", "AI_UNAVAILABLE", "message", e.getMessage()));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {

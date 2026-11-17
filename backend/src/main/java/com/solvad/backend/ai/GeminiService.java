@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.solvad.backend.problem.core.EnhancedProblemResponse;
 import com.solvad.backend.problem.scope.GenerateScopeResponse;
 import com.solvad.backend.problem.subtask.SubtaskResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -17,6 +19,8 @@ import java.util.*;
 
 @Service
 public class GeminiService {
+
+    private static final Logger log = LoggerFactory.getLogger(GeminiService.class);
 
     @Value("${gemini.key}")
     private String geminiApiKey;
@@ -35,21 +39,30 @@ public class GeminiService {
                                                   List<MultipartFile> attachments) {
         String prompt = buildPrompt(title, backgroundContext, primaryStatement, objectives, constraints, preferredProgram);
 
-        System.out.println("[GeminiService] Sending prompt to Gemini API...");
+        log.info("Sending scope generation prompt to Gemini API ({} attachment(s))",
+                attachments == null ? 0 : attachments.size());
 
+        GenerateScopeResponse parsed;
         try {
             String geminiResponse = callGeminiAPI(prompt, attachments);
-            System.out.println("[GeminiService] Raw API Response: " + geminiResponse);
-            GenerateScopeResponse parsed = parseGeminiResponse(geminiResponse);
-            System.out.println("[GeminiService] Successfully parsed " + parsed.getGeneratedSubtasks().size() + " subtasks.");
-            return parsed;
-        } catch (Exception e) {
-            // Fallback to default response if API fails
-            System.err.println("[GeminiService] API Connection or Execution failed!");
-            System.err.println("Error Message: " + e.getMessage());
-            e.printStackTrace();
-            return generateFallbackResponse(title, backgroundContext, primaryStatement, objectives, constraints, preferredProgram);
+            parsed = parseGeminiResponse(geminiResponse);
+        } catch (RuntimeException e) {
+            // Log only the exception type: RestClientException messages can contain the
+            // request URL, which carries the API key as a query parameter.
+            log.warn("Gemini scope generation failed: {}", e.getClass().getName());
+            throw new AiServiceUnavailableException("AI scoping service is currently unavailable.", e);
         }
+
+        EnhancedProblemResponse enhancedProblem = parsed.getEnhancedProblem();
+        if (enhancedProblem == null
+                || enhancedProblem.getTitle() == null || enhancedProblem.getTitle().isBlank()
+                || enhancedProblem.getPrimaryStatement() == null || enhancedProblem.getPrimaryStatement().isBlank()) {
+            log.warn("Gemini returned an incomplete specification (missing enhancedProblem, title or primaryStatement)");
+            throw new AiServiceUnavailableException("AI returned an incomplete specification.");
+        }
+
+        log.info("Successfully parsed {} subtasks from Gemini response", parsed.getGeneratedSubtasks().size());
+        return parsed;
     }
 
     private String buildPrompt(String title, String backgroundContext, String primaryStatement,
@@ -283,22 +296,6 @@ public class GeminiService {
             e.printStackTrace();
             throw new RuntimeException("Failed to parse Gemini response", e);
         }
-    }
-
-    private GenerateScopeResponse generateFallbackResponse(String title, String backgroundContext,
-                                                           String primaryStatement, String objectives,
-                                                           String constraints, String preferredProgram) {
-        // Return original problem info with empty subtasks list
-        EnhancedProblemResponse enhancedProblem = new EnhancedProblemResponse(
-            title,
-            backgroundContext,
-            primaryStatement,
-            objectives != null ? Arrays.asList(objectives.split("\\n")) : new ArrayList<>(),
-            constraints != null ? Arrays.asList(constraints.split("\\n")) : new ArrayList<>(),
-            null  // sdgFocus - not available in fallback response
-        );
-
-        return new GenerateScopeResponse(enhancedProblem, new ArrayList<>());
     }
 
 }
