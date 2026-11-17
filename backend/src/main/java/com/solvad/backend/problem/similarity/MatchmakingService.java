@@ -151,12 +151,7 @@ public class MatchmakingService {
                 .thenComparing(ScoredProblem::courseMatch, Comparator.reverseOrder())
                 .thenComparing(ScoredProblem::createdAt, Comparator.reverseOrder());
 
-        List<ScoredProblem> withSkillHits = allScored.stream()
-                .filter(sp -> sp.skillSimilarity() > 0)
-                .toList();
-        List<ScoredProblem> recommendationPool = withSkillHits.isEmpty() ? allScored : withSkillHits;
-
-        List<ProblemResponse> recommended = recommendationPool.stream()
+        List<ProblemResponse> recommended = allScored.stream()
                 .filter(sp -> sp.score() >= MIN_RECOMMENDATION_SCORE)
                 .sorted(byBestMatch)
                 .limit(RECOMMENDATION_LIMIT)
