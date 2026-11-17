@@ -1,10 +1,10 @@
 package com.solvad.backend.problem.core;
 
-import com.solvad.backend.ai.GeminiService;
 import com.solvad.backend.audit.AuditEventType;
 import com.solvad.backend.audit.AuditService;
 import com.solvad.backend.problem.scope.GenerateScopeRequest;
 import com.solvad.backend.problem.scope.GenerateScopeResponse;
+import com.solvad.backend.problem.scope.ScopeGenerationService;
 import com.solvad.backend.problem.search.PaginatedProblemsResponse;
 import com.solvad.backend.problem.event.ProblemCreatedEvent;
 import com.solvad.backend.notification.SolutionAttemptTerminatedEvent;
@@ -65,7 +65,7 @@ public class ProblemService {
     private ProblemAttachmentRepository attachmentRepository;
 
     @Autowired
-    private GeminiService geminiService;
+    private ScopeGenerationService scopeGenerationService;
 
     @Autowired
     private AuditService auditService;
@@ -154,15 +154,7 @@ public class ProblemService {
     }
 
     public GenerateScopeResponse generateScope(GenerateScopeRequest request, List<MultipartFile> attachments) {
-        return geminiService.generateSubtasks(
-                request.getTitle(),
-                request.getBackgroundContext(),
-                request.getPrimaryStatement(),
-                request.getObjectives(),
-                request.getConstraints(),
-                request.getPreferredProgram(),
-                attachments
-        );
+        return scopeGenerationService.generate(request, attachments);
     }
 
     @Transactional
