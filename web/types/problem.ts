@@ -36,9 +36,32 @@ export interface EnhancedProblem {
   sdgFocus?: string;
 }
 
+// Diagnostics from the backend's AI quality review. Not rendered anywhere in the UI.
+export interface AttemptResult {
+  attempt: number;
+  score: number | null;
+  criteria: Record<string, number> | null;
+  feedback: string[];
+  scopeType: string | null;
+  subtaskCount: number;
+}
+
+export interface ScopeEvaluation {
+  threshold: number;
+  finalScore: number | null;
+  passed: boolean;
+  selectedAttempt: number;
+  totalAttempts: number;
+  judgeModel: string;
+  attempts: AttemptResult[];
+}
+
 export interface GenerateScopeResponse {
   enhancedProblem: EnhancedProblem;
   generatedSubtasks: SubProblem[];
+  scopeType?: "SINGULAR" | "SYSTEMIC";
+  scopeRationale?: string;
+  evaluation?: ScopeEvaluation | null;
 }
 
 export interface AttachmentRequirement {

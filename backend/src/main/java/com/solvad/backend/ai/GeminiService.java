@@ -22,6 +22,42 @@ public class GeminiService {
 
     private static final Logger log = LoggerFactory.getLogger(GeminiService.class);
 
+    public static final String ACADEMIC_PROGRAMS_TEXT =
+            "AVAILABLE ACADEMIC PROGRAMS (use EXACT names for departmentFocus):\n"
+            + "Information Technology & Computer Science: BS Information Technology, BS Computer Science, BS Computer Engineering, BS Information Systems, BS Entertainment and Multimedia Computing, Associate in Computer Technology\n"
+            + "Engineering: BS Civil Engineering, BS Electrical Engineering, BS Electronics Engineering, BS Mechanical Engineering, BS Chemical Engineering, BS Industrial Engineering, BS Geodetic Engineering, BS Sanitary Engineering, BS Mining Engineering, BS Metallurgical Engineering, BS Ceramic Engineering, BS Agricultural and Biosystems Engineering\n"
+            + "Business & Management: BS Business Administration, BS Accountancy, BS Management Accounting, BS Accounting Information System, BS Entrepreneurship, BS Office Administration, BS Marketing Management, BS Finance, BS Economics, BS Real Estate Management\n"
+            + "Education: Bachelor of Elementary Education, Bachelor of Secondary Education, Bachelor of Physical Education, Bachelor of Special Needs Education, Bachelor of Early Childhood Education, BS in Industrial Education\n"
+            + "Health Sciences: BS Nursing, BS Pharmacy, BS Physical Therapy, BS Occupational Therapy, BS Medical Technology, BS Radiologic Technology, BS Nutrition and Dietetics, BS Midwifery, BS Respiratory Therapy, BS Speech-Language Pathology\n"
+            + "Architecture & Design: BS Architecture, BS Interior Design, BS Landscape Architecture, Bachelor of Fine Arts, BS Industrial Design\n"
+            + "Social Sciences & Humanities: AB Psychology, AB Political Science, AB Communication, AB Mass Communication, AB Broadcasting, AB Journalism, AB English, AB Filipino, AB History, AB Philosophy, AB Sociology, AB Social Work, BS Psychology, BS Social Work\n"
+            + "Hospitality & Tourism: BS Hotel and Restaurant Management, BS Tourism Management, BS Hospitality Management, BS Cruise Ship Management, BS Culinary Management\n"
+            + "Agriculture & Fisheries: BS Agriculture, BS Agricultural Technology, BS Agribusiness, BS Fisheries, BS Food Technology, BS Forestry, BS Development Communication\n"
+            + "Science & Mathematics: BS Biology, BS Chemistry, BS Physics, BS Mathematics, BS Statistics, BS Applied Mathematics, BS Environmental Science, BS Marine Biology\n"
+            + "Maritime Studies: BS Marine Transportation, BS Marine Engineering, BS Naval Architecture and Marine Engineering\n"
+            + "Criminology & Public Safety: BS Criminology, BS Forensic Science\n"
+            + "Other Programs: BS Aviation, BS Aeronautical Engineering, BS Library and Information Science, BS Customs Administration, AB Legal Management, Bachelor of Laws (LLB)\n";
+
+    public static final String SDG_TEXT =
+            "SUSTAINABLE DEVELOPMENT GOALS (SDG) - Use EXACT names for sdgFocus:\n"
+            + "1. No Poverty\n"
+            + "2. Zero Hunger\n"
+            + "3. Good Health and Well-being\n"
+            + "4. Quality Education\n"
+            + "5. Gender Equality\n"
+            + "6. Clean Water and Sanitation\n"
+            + "7. Affordable and Clean Energy\n"
+            + "8. Decent Work and Economic Growth\n"
+            + "9. Industry, Innovation and Infrastructure\n"
+            + "10. Reduced Inequalities\n"
+            + "11. Sustainable Cities and Communities\n"
+            + "12. Responsible Consumption and Production\n"
+            + "13. Climate Action\n"
+            + "14. Life Below Water\n"
+            + "15. Life on Land\n"
+            + "16. Peace, Justice and Strong Institutions\n"
+            + "17. Partnerships for the Goals\n";
+
     @Value("${gemini.key}")
     private String geminiApiKey;
 
@@ -37,10 +73,25 @@ public class GeminiService {
                                                   String primaryStatement, String objectives,
                                                   String constraints, String preferredProgram,
                                                   List<MultipartFile> attachments) {
-        String prompt = buildPrompt(title, backgroundContext, primaryStatement, objectives, constraints, preferredProgram);
+        return generateSubtasks(title, backgroundContext, primaryStatement, objectives, constraints,
+                preferredProgram, attachments, null, null);
+    }
 
-        log.info("Sending scope generation prompt to Gemini API ({} attachment(s))",
-                attachments == null ? 0 : attachments.size());
+    /**
+     * Generates the scope. When previousAttempt is non-null, the prompt includes a REVISION REQUEST
+     * with that attempt and the reviewer's feedback so Gemini can correct it.
+     */
+    public GenerateScopeResponse generateSubtasks(String title, String backgroundContext,
+                                                  String primaryStatement, String objectives,
+                                                  String constraints, String preferredProgram,
+                                                  List<MultipartFile> attachments,
+                                                  GenerateScopeResponse previousAttempt,
+                                                  List<String> reviewerFeedback) {
+        String prompt = buildPrompt(title, backgroundContext, primaryStatement, objectives, constraints,
+                preferredProgram, previousAttempt, reviewerFeedback);
+
+        log.info("Sending scope generation prompt to Gemini API ({} attachment(s), revision={})",
+                attachments == null ? 0 : attachments.size(), previousAttempt != null);
 
         GenerateScopeResponse parsed;
         try {
@@ -66,7 +117,8 @@ public class GeminiService {
     }
 
     private String buildPrompt(String title, String backgroundContext, String primaryStatement,
-                              String objectives, String constraints, String preferredProgram) {
+                              String objectives, String constraints, String preferredProgram,
+                              GenerateScopeResponse previousAttempt, List<String> reviewerFeedback) {
         StringBuilder prompt = new StringBuilder();
         prompt.append("You are an expert at analyzing complex industry problems and determining if they can be broken down into collaborative sub-tasks.\n\n");
         prompt.append("Problem Title: ").append(title).append("\n");
@@ -84,16 +136,20 @@ public class GeminiService {
 
         prompt.append("If files are attached, analyze their content to better understand the problem context.\n\n");
 
-        prompt.append("Analyze this problem and determine if it can be meaningfully broken down into 0-3 sub-tasks.\n\n");
+        prompt.append("SCOPE DECISION: Analyze this problem and decide its scopeType.\n");
+        prompt.append("- \"SINGULAR\" = one cohesive challenge that a single capstone team can solve.\n");
+        prompt.append("- \"SYSTEMIC\" = contains 2-3 genuinely independent functional modules, physical sub-structures, or operational frameworks (follow the guidelines below).\n");
+        prompt.append("- If SINGULAR: generatedSubproblems must contain EXACTLY 1 item. It restates the whole problem as one actionable capstone task. Its departmentFocus is the best-fitting program, normally the Target Academic Program.\n");
+        prompt.append("- If SYSTEMIC: generatedSubproblems must contain 2 or 3 items.\n\n");
 
         prompt.append("IMPORTANT GUIDELINES:\n");
         prompt.append("- DECOMPOSITION TYPE: Break the problem down into massive, independent functional modules, physical sub-structures, or distinct operational frameworks.\n");
         prompt.append("- NO SDLC/PHASES: DO NOT break the problem down by chronological phases (e.g., NEVER output 'Planning', 'Testing', 'Data Gathering', or 'Implementation').\n");
         prompt.append("- NO ARCHITECTURAL LAYERS: For software problems, DO NOT split by layers (e.g., NEVER output 'Database Layer', 'API Layer', 'Frontend UI').\n");
-        prompt.append("- THE CAPSTONE RULE: Each subtask must be complex and distinct enough to serve as an independent thesis or capstone project for aaa dedicated team.\n");
+        prompt.append("- THE CAPSTONE RULE: Each subtask must be complex and distinct enough to serve as an independent thesis or capstone project for adedicated team.\n");
         prompt.append("- ANTI-SOFTWARE BIAS: If the problem is physical, environmental, or business-focused, DO NOT invent software, dashboards, or mobile apps unless explicitly mentioned in the problem statement.\n");
         prompt.append("- DOMAIN STRICTNESS: The subtasks must strictly use the tools, deliverables, and terminology of the target academic program (e.g., Civil Engineering tasks must yield physical designs, blueprints, or material studies).\n");
-        prompt.append("- IF INDIVISIBLE: If the core problem is aaa single monolithic challenge that cannot be split into distinct functional modules, return an empty array [].\n\n");
+        prompt.append("\n");
 
         prompt.append("EXAMPLE DECOMPOSITIONS:\n");
 
@@ -102,7 +158,7 @@ public class GeminiService {
         prompt.append("- GOOD (Modules): [\"Core Doctor-Patient Appointment Portal\", \"AI-Powered Handwriting OCR Scanner for Medical Notes\", \"IoT Patient Vitals Hardware Integration\"]\n\n");
 
         prompt.append("Example 2 (Civil/Environmental Engineering - River Flooding):\n");
-        prompt.append("- BAD (Phases/Software): [\"Site Inspection\", \"Build aaa Flood Warning Mobile App\", \"Post-Construction Testing\"]\n");
+        prompt.append("- BAD (Phases/Software): [\"Site Inspection\", \"Build aFlood Warning Mobile App\", \"Post-Construction Testing\"]\n");
         prompt.append("- GOOD (Physical Sub-structures): [\"Hydrological Catchment & Spillway Design\", \"Reinforced Retaining Wall & Embankment Structural Engineering\", \"Soil Permeability & Riparian Buffer Zone Analysis\"]\n\n");
 
         prompt.append("Example 3 (Business/Supply Chain - Failing Delivery Logistics):\n");
@@ -111,7 +167,7 @@ public class GeminiService {
         // prompt.append("- Return 0 subtasks if the problem is straightforward and cannot be meaningfully decomposed\n");
         // prompt.append("- Only create subtasks if the problem genuinely requires different expertise areas or process stages\n");
         // prompt.append("- Subtasks should reflect the actual nature of the problem (engineering, environmental, business, etc.)\n");
-        // prompt.append("- Each subtask should have aaa clear departmentFocus that matches the problem domain\n");
+        // prompt.append("- Each subtask should have aclear departmentFocus that matches the problem domain\n");
         // prompt.append("- DO NOT default to 'Backend/Frontend/Database' unless the problem is explicitly about software development\n\n");
         // prompt.append("Examples of valid departmentFocus areas:\n");
         // prompt.append("- For technical problems: Backend Development, Frontend Development, Database Design, DevOps, UI/UX Design, Mobile Development\n");
@@ -119,39 +175,9 @@ public class GeminiService {
         // prompt.append("- For business problems: Market Research, Financial Analysis, Strategy Development, Operations Management\n");
         // prompt.append("- For engineering problems: Mechanical Design, Electrical Systems, Testing & Validation, Manufacturing Process\n\n");
 
-        prompt.append("AVAILABLE ACADEMIC PROGRAMS (use EXACT names for departmentFocus):\n");
-        prompt.append("Information Technology & Computer Science: BS Information Technology, BS Computer Science, BS Computer Engineering, BS Information Systems, BS Entertainment and Multimedia Computing, Associate in Computer Technology\n");
-        prompt.append("Engineering: BS Civil Engineering, BS Electrical Engineering, BS Electronics Engineering, BS Mechanical Engineering, BS Chemical Engineering, BS Industrial Engineering, BS Geodetic Engineering, BS Sanitary Engineering, BS Mining Engineering, BS Metallurgical Engineering, BS Ceramic Engineering, BS Agricultural and Biosystems Engineering\n");
-        prompt.append("Business & Management: BS Business Administration, BS Accountancy, BS Management Accounting, BS Accounting Information System, BS Entrepreneurship, BS Office Administration, BS Marketing Management, BS Finance, BS Economics, BS Real Estate Management\n");
-        prompt.append("Education: Bachelor of Elementary Education, Bachelor of Secondary Education, Bachelor of Physical Education, Bachelor of Special Needs Education, Bachelor of Early Childhood Education, BS in Industrial Education\n");
-        prompt.append("Health Sciences: BS Nursing, BS Pharmacy, BS Physical Therapy, BS Occupational Therapy, BS Medical Technology, BS Radiologic Technology, BS Nutrition and Dietetics, BS Midwifery, BS Respiratory Therapy, BS Speech-Language Pathology\n");
-        prompt.append("Architecture & Design: BS Architecture, BS Interior Design, BS Landscape Architecture, Bachelor of Fine Arts, BS Industrial Design\n");
-        prompt.append("Social Sciences & Humanities: AB Psychology, AB Political Science, AB Communication, AB Mass Communication, AB Broadcasting, AB Journalism, AB English, AB Filipino, AB History, AB Philosophy, AB Sociology, AB Social Work, BS Psychology, BS Social Work\n");
-        prompt.append("Hospitality & Tourism: BS Hotel and Restaurant Management, BS Tourism Management, BS Hospitality Management, BS Cruise Ship Management, BS Culinary Management\n");
-        prompt.append("Agriculture & Fisheries: BS Agriculture, BS Agricultural Technology, BS Agribusiness, BS Fisheries, BS Food Technology, BS Forestry, BS Development Communication\n");
-        prompt.append("Science & Mathematics: BS Biology, BS Chemistry, BS Physics, BS Mathematics, BS Statistics, BS Applied Mathematics, BS Environmental Science, BS Marine Biology\n");
-        prompt.append("Maritime Studies: BS Marine Transportation, BS Marine Engineering, BS Naval Architecture and Marine Engineering\n");
-        prompt.append("Criminology & Public Safety: BS Criminology, BS Forensic Science\n");
-        prompt.append("Other Programs: BS Aviation, BS Aeronautical Engineering, BS Library and Information Science, BS Customs Administration, AB Legal Management, Bachelor of Laws (LLB)\n\n");
+        prompt.append(ACADEMIC_PROGRAMS_TEXT).append("\n");
 
-        prompt.append("SUSTAINABLE DEVELOPMENT GOALS (SDG) - Use EXACT names for sdgFocus:\n");
-        prompt.append("1. No Poverty\n");
-        prompt.append("2. Zero Hunger\n");
-        prompt.append("3. Good Health and Well-being\n");
-        prompt.append("4. Quality Education\n");
-        prompt.append("5. Gender Equality\n");
-        prompt.append("6. Clean Water and Sanitation\n");
-        prompt.append("7. Affordable and Clean Energy\n");
-        prompt.append("8. Decent Work and Economic Growth\n");
-        prompt.append("9. Industry, Innovation and Infrastructure\n");
-        prompt.append("10. Reduced Inequalities\n");
-        prompt.append("11. Sustainable Cities and Communities\n");
-        prompt.append("12. Responsible Consumption and Production\n");
-        prompt.append("13. Climate Action\n");
-        prompt.append("14. Life Below Water\n");
-        prompt.append("15. Life on Land\n");
-        prompt.append("16. Peace, Justice and Strong Institutions\n");
-        prompt.append("17. Partnerships for the Goals\n\n");
+        prompt.append(SDG_TEXT).append("\n");
 
         prompt.append("ADDITIONAL TASK: ENHANCE AND FINALIZE PROBLEM INFORMATION\n");
         prompt.append("In addition to generating subtasks, you must also review and enhance the problem information provided above.\n");
@@ -159,12 +185,14 @@ public class GeminiService {
         prompt.append("- If files are attached, extract additional context, objectives, or constraints mentioned in the documents\n");
         prompt.append("- Refine and improve the problem description to make it clearer and more comprehensive\n");
         prompt.append("- Break down objectives and constraints into clear, separate bullet points (as array items)\n");
-        prompt.append("- Ensure each objective and constraint is aaa single, actionable statement\n");
+        prompt.append("- Ensure each objective and constraint is asingle, actionable statement\n");
         prompt.append("- Assign the MOST APPROPRIATE Sustainable Development Goal (SDG) for the main problem based on its primary focus\n");
         prompt.append("- For each subtask, assign the MOST APPROPRIATE SDG based on its specific focus (subtasks may have different SDGs from the main problem)\n\n");
 
-        prompt.append("Format your response as aaa JSON object with this EXACT structure:\n");
+        prompt.append("Format your response as aJSON object with this EXACT structure:\n");
         prompt.append("{\n");
+        prompt.append("  \"scopeType\": \"SINGULAR or SYSTEMIC\",\n");
+        prompt.append("  \"scopeRationale\": \"1-2 sentences explaining the decision\",\n");
         prompt.append("  \"enhancedProblem\": {\n");
         prompt.append("    \"title\": \"Enhanced/refined problem title\",\n");
         prompt.append("    \"backgroundContext\": \"Enhanced background context (incorporating any additional info from uploaded files)\",\n");
@@ -178,10 +206,56 @@ public class GeminiService {
         prompt.append("    ...\n");
         prompt.append("  ]\n");
         prompt.append("}\n");
-        prompt.append("If no subtasks are needed, the generatedSubproblems array should be empty: [].\n");
         prompt.append("Only return the JSON object, nothing else.");
 
+        if (previousAttempt != null) {
+            appendRevisionRequest(prompt, previousAttempt, reviewerFeedback);
+        }
+
         return prompt.toString();
+    }
+
+    private void appendRevisionRequest(StringBuilder prompt, GenerateScopeResponse previousAttempt,
+                                       List<String> reviewerFeedback) {
+        prompt.append("\n\nREVISION REQUEST\n");
+        prompt.append("A reviewer checked your previous attempt for this problem and found issues.\n\n");
+        prompt.append("Previous attempt:\n");
+        prompt.append(objectMapper.valueToTree(toCandidateView(previousAttempt)).toPrettyString()).append("\n\n");
+        prompt.append("Reviewer feedback:\n");
+        if (reviewerFeedback == null || reviewerFeedback.isEmpty()) {
+            prompt.append("- (no specific feedback provided)\n");
+        } else {
+            for (String item : reviewerFeedback) {
+                prompt.append("- ").append(item).append("\n");
+            }
+        }
+        prompt.append("\nProduce a complete, corrected JSON object in exactly the same format that addresses every feedback item. ");
+        prompt.append("Do not invent facts that are not in the problem or the attachments.");
+    }
+
+    /**
+     * The model-facing view of a scope response: the same shape Gemini is asked to produce
+     * (no ids, attachments or evaluation). Shared with ClaudeJudgeService.
+     */
+    static Map<String, Object> toCandidateView(GenerateScopeResponse response) {
+        List<Map<String, Object>> subproblems = new ArrayList<>();
+        if (response.getGeneratedSubtasks() != null) {
+            for (SubtaskResponse subtask : response.getGeneratedSubtasks()) {
+                Map<String, Object> view = new LinkedHashMap<>();
+                view.put("title", subtask.getTitle());
+                view.put("departmentFocus", subtask.getDepartmentFocus());
+                view.put("sdgFocus", subtask.getSdgFocus());
+                view.put("description", subtask.getDescription());
+                subproblems.add(view);
+            }
+        }
+
+        Map<String, Object> view = new LinkedHashMap<>();
+        view.put("scopeType", response.getScopeType());
+        view.put("scopeRationale", response.getScopeRationale());
+        view.put("enhancedProblem", response.getEnhancedProblem());
+        view.put("generatedSubproblems", subproblems);
+        return view;
     }
 
     private String callGeminiAPI(String prompt, List<MultipartFile> attachments) {
@@ -290,7 +364,23 @@ public class GeminiService {
                 subtasks = new ArrayList<>();
             }
 
-            return new GenerateScopeResponse(enhancedProblem, subtasks);
+            GenerateScopeResponse parsed = new GenerateScopeResponse(enhancedProblem, subtasks);
+
+            // Scope decision. Missing or inconsistent values are not rejected here;
+            // the judge penalizes them.
+            Object rawScopeType = responseMap.get("scopeType");
+            if (rawScopeType instanceof String scopeType) {
+                String normalized = scopeType.trim().toUpperCase(Locale.ROOT);
+                if (normalized.equals("SINGULAR") || normalized.equals("SYSTEMIC")) {
+                    parsed.setScopeType(normalized);
+                }
+            }
+            Object rawRationale = responseMap.get("scopeRationale");
+            if (rawRationale instanceof String rationale && !rationale.isBlank()) {
+                parsed.setScopeRationale(rationale.trim());
+            }
+
+            return parsed;
         } catch (Exception e) {
             System.err.println("Failed to parse JSON: " + e.getMessage());
             e.printStackTrace();

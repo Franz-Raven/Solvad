@@ -363,7 +363,7 @@ export default function SubmitProblemPage() {
           <div className="flex flex-col items-center justify-center min-h-[60vh]">
             <div className="w-16 h-16 border-4 border-secondary border-t-transparent rounded-full animate-spin mb-6"></div>
             <h2 className="text-2xl font-bold text-foreground mb-2">Analyzing Your Problem...</h2>
-            <p className="text-muted-foreground text-center max-w-md">Gemini AI is breaking down your problem into departmental sub-tasks and generating a structured scope</p>
+            <p className="text-muted-foreground text-center max-w-md">Gemini is structuring your problem and an AI reviewer is checking its quality. This can take up to a minute.</p>
           </div>
         )}
 
