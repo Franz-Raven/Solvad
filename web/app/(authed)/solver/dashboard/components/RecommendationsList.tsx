@@ -9,10 +9,30 @@ interface RecommendationsListProps {
   recommendations: ProblemResponse[];
 }
 
+// Splits 100 across the scores proportionally (largest-remainder rounding so the parts sum to exactly 100).
+function sharePercents(scores: number[]): number[] {
+  const total = scores.reduce((sum, s) => sum + s, 0);
+  if (total <= 0) return scores.map(() => 0);
+
+  const raw = scores.map((s) => (s / total) * 100);
+  const result = raw.map((v) => Math.floor(v));
+  const remaining = 100 - result.reduce((sum, v) => sum + v, 0);
+
+  raw
+    .map((v, i) => ({ i, fraction: v - result[i] }))
+    .sort((a, b) => b.fraction - a.fraction)
+    .slice(0, remaining)
+    .forEach(({ i }) => {
+      result[i] += 1;
+    });
+
+  return result;
+}
+
 export function RecommendationsList({ isLoading, recommendations }: RecommendationsListProps) {
   const top = recommendations.slice(0, 3);
-  // matchScore is the backend's 0–1 composite (70% skills, 30% course alignment)
-  const percents = top.map((p) => Math.round((p.matchScore ?? 0) * 100));
+  // matchScore is the backend's 0–1 composite; shares are relative to these top matches and total 100%.
+  const percents = sharePercents(top.map((p) => p.matchScore ?? 0));
 
   return (
     <div className="bg-white rounded-2xl shadow-xl border border-secondary/30 p-8 mb-8">
