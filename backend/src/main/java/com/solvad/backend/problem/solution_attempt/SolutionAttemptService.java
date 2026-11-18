@@ -16,10 +16,14 @@ import com.solvad.backend.profile.seeker.SeekerProfileRepository;
 import com.solvad.backend.profile.seeker.SeekerProfile;
 import com.solvad.backend.profile.solver.SolverProfile;
 import com.solvad.backend.profile.solver.SolverProfileRepository;
+import com.solvad.backend.notification.SolutionAttemptAbandonedEvent;
+import com.solvad.backend.notification.SolutionReviewedEvent;
+import com.solvad.backend.notification.SolutionSubmittedForReviewEvent;
 import com.solvad.backend.audit.AuditService;
 import com.solvad.backend.storage.CloudinaryService;
 import com.solvad.backend.problem.similarity.MatchmakingService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -63,6 +67,9 @@ public class SolutionAttemptService {
 
     @Autowired
     private ClaimRequestRepository claimRequestRepository;
+
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
 
 
 
@@ -415,6 +422,15 @@ public class SolutionAttemptService {
         String solverFullName = solver.getFirstName() + " " + solver.getLastName();
         String subtaskTitle = attempt.getTargetSubtask() != null ? attempt.getTargetSubtask().getTitle() : "unknown sub-problem";
         auditService.log(attempt.getProblem().getId(), solverUserId, solverFullName, "SOLVER", AuditEventType.ATTEMPT_ABANDONED, solverFullName + " abandoned their attempt on sub-problem \"" + subtaskTitle + "\".");
+        eventPublisher.publishEvent(new SolutionAttemptAbandonedEvent(
+                attempt.getId(),
+                attempt.getProblem().getId(),
+                attempt.getProblem().getTitle(),
+                attempt.getProblem().getSeeker().getUser().getId(),
+                attempt.getProblem().getSeeker().getOrganizationName(),
+                attempt.getProblem().getSeeker().getUser().getEmail(),
+                solverFullName,
+                subtaskTitle));
 
         if (attemptRepository.countByProblemAndStatus(attempt.getProblem(), SolutionAttemptStatus.ACTIVE) == 0 && attempt.getProblem().getStatus() != ProblemStatus.SOLVED_OPEN_FOR_IMPROVEMENT) {
             attempt.getProblem().setStatus(ProblemStatus.OPEN);
@@ -448,6 +464,15 @@ public class SolutionAttemptService {
 
         auditService.log(attempt.getProblem().getId(), solverUserId, solverFullName, "SOLVER", AuditEventType.ATTEMPT_COMPLETED,
                 solverFullName + " finalized and submitted their attempt for sub-problem \"" + subtaskTitle + "\" and is awaiting seeker approval.");
+        eventPublisher.publishEvent(new SolutionSubmittedForReviewEvent(
+                attempt.getId(),
+                attempt.getProblem().getId(),
+                attempt.getProblem().getTitle(),
+                attempt.getProblem().getSeeker().getUser().getId(),
+                attempt.getProblem().getSeeker().getOrganizationName(),
+                attempt.getProblem().getSeeker().getUser().getEmail(),
+                solverFullName,
+                subtaskTitle));
 
         return mapToResponse(savedAttempt, submissions, solverUserId);
     }
@@ -587,6 +612,16 @@ public class SolutionAttemptService {
         }
 
         SolutionAttempt savedAttempt = attemptRepository.save(attempt);
+        SolverProfile solver = attempt.getSolver();
+        eventPublisher.publishEvent(new SolutionReviewedEvent(
+                attempt.getId(),
+                attempt.getProblem().getId(),
+                attempt.getProblem().getTitle(),
+                solver.getUser().getId(),
+                solver.getFirstName() + " " + solver.getLastName(),
+                solver.getUser().getEmail(),
+                isApproved,
+                rejectionReason));
         return mapToResponse(savedAttempt, submissionRepository.findByAttempt(savedAttempt), seekerUserId);
     }
 

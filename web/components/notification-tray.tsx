@@ -137,15 +137,24 @@ export function NotificationTray({ open, anchorRef, onClose }: NotificationTrayP
     // Close the tray
     onClose();
 
-    if (notification.type === 'PROPOSAL_SUBMITTED') {
+    if (
+      notification.type === 'PROPOSAL_SUBMITTED' ||
+      notification.type === 'SOLUTION_SUBMITTED_FOR_REVIEW'
+    ) {
       // route them to their specific problem
-      router.push(`/seeker/problem/${notification.problemId}?tab=proposals`);    
+      const tab = notification.type === 'PROPOSAL_SUBMITTED' ? 'proposals' : 'review';
+      router.push(`/seeker/problem/${notification.problemId}?tab=${tab}`);
+    }
+    else if (notification.type === 'SOLUTION_ATTEMPT_ABANDONED') {
+      router.push(`/seeker/problem/${notification.problemId}?tab=workspace`);
     } 
     else if (
       notification.type === 'PROPOSAL_APPROVED' ||
       notification.type === 'PROPOSAL_REJECTED' ||
       notification.type === 'PROPOSAL_CANCELLED' ||
-      notification.type === 'SOLUTION_ATTEMPT_TERMINATED'
+      notification.type === 'SOLUTION_ATTEMPT_TERMINATED' ||
+      notification.type === 'SOLUTION_APPROVED' ||
+      notification.type === 'SOLUTION_REJECTED'
     ) {
      router.push(`/solver/problem/${notification.problemId}?tab=workspace`);
     }

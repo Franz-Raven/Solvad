@@ -98,4 +98,82 @@ public class NotificationEventListener {
                     e.problemId(), ex);
         }
     }
+
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onSolutionSubmittedForReview(SolutionSubmittedForReviewEvent e) {
+        try {
+            notificationService.createAndPush(
+                    e.seekerUserId(),
+                    NotificationType.SOLUTION_SUBMITTED_FOR_REVIEW,
+                    e.solverName() + " submitted a solution for \"" + e.subtaskTitle()
+                            + "\" on '" + e.problemTitle() + "' for your review.",
+                    e.problemId(),
+                    null);
+        } catch (Exception ex) {
+            log.error("Failed to create solution-submitted-for-review notification for attempt {}",
+                    e.attemptId(), ex);
+        }
+
+        try {
+            notificationEmailService.sendSolutionSubmittedForReviewEmail(
+                    e.seekerEmail(), e.seekerName(), e.solverName(), e.problemTitle(),
+                    e.subtaskTitle(), e.problemId());
+        } catch (Exception ex) {
+            log.error("Failed to send solution-submitted-for-review email for attempt {}",
+                    e.attemptId(), ex);
+        }
+    }
+
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onSolutionReviewed(SolutionReviewedEvent e) {
+        NotificationType type = e.approved()
+                ? NotificationType.SOLUTION_APPROVED
+                : NotificationType.SOLUTION_REJECTED;
+        String decision = e.approved() ? "approved" : "rejected";
+
+        try {
+            notificationService.createAndPush(
+                    e.solverUserId(),
+                    type,
+                    "Your final solution for '" + e.problemTitle() + "' was " + decision + ".",
+                    e.problemId(),
+                    null);
+        } catch (Exception ex) {
+            log.error("Failed to create solution-review notification for attempt {}", e.attemptId(), ex);
+        }
+
+        try {
+            notificationEmailService.sendSolutionDecisionEmail(
+                    e.solverEmail(), e.solverName(), e.problemTitle(), e.approved(),
+                    e.rejectionReason(), e.problemId());
+        } catch (Exception ex) {
+            log.error("Failed to send solution-review email for attempt {}", e.attemptId(), ex);
+        }
+    }
+
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onSolutionAttemptAbandoned(SolutionAttemptAbandonedEvent e) {
+        try {
+            notificationService.createAndPush(
+                    e.seekerUserId(),
+                    NotificationType.SOLUTION_ATTEMPT_ABANDONED,
+                    e.solverName() + " abandoned their attempt on \"" + e.subtaskTitle()
+                            + "\" for '" + e.problemTitle() + "'.",
+                    e.problemId(),
+                    null);
+        } catch (Exception ex) {
+            log.error("Failed to create attempt-abandoned notification for attempt {}", e.attemptId(), ex);
+        }
+
+        try {
+            notificationEmailService.sendAttemptAbandonedEmail(
+                    e.seekerEmail(), e.seekerName(), e.solverName(), e.problemTitle(),
+                    e.subtaskTitle(), e.problemId());
+        } catch (Exception ex) {
+            log.error("Failed to send attempt-abandoned email for attempt {}", e.attemptId(), ex);
+        }
+    }
 }
