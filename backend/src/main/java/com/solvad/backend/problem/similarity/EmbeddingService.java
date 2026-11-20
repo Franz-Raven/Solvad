@@ -1,56 +1,90 @@
 package com.solvad.backend.problem.similarity;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 import com.solvad.backend.problem.core.Problem;
 
-import java.util.List;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
+import java.util.Arrays;
 import java.util.Map;
 
 @Service
 public class EmbeddingService {
 
-    @Value("${EMBED_TOKEN}")
-    private String hfToken;
+    private static final Logger log = LoggerFactory.getLogger(EmbeddingService.class);
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    @Value("${CF_ACCOUNT_ID}")
+    private String cfAccountId;
 
-    private static final String HF_API_URL =  "https://router.huggingface.co/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2/pipeline/feature-extraction";
+    @Value("${CF_TOKEN}")
+    private String cfToken;
 
+    private final ObjectMapper mapper = new ObjectMapper();
+
+    private final HttpClient client = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(5))
+            .build();
 
     public float[] generateEmbedding(String text) {
+        // Cloudflare BGE-small has a max sequence length, 2000 chars is safe
         String truncated = text.length() > 2000 ? text.substring(0, 2000) : text;
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "Bearer " + hfToken);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
-        Map<String, Object> payload = Map.of(
-                "inputs", new String[]{truncated}
-        );
-
-        HttpEntity<Map<String, Object>> request = new HttpEntity<>(payload, headers);
-
         try {
-            ResponseEntity<String> response = restTemplate.exchange(
-                    HF_API_URL,
-                    HttpMethod.POST,
-                    request,
-                    String.class
-            );
+            String url = "https://api.cloudflare.com/client/v4/accounts/" + cfAccountId + "/ai/run/@cf/baai/bge-small-en-v1.5";
+            String jsonPayload = mapper.writeValueAsString(Map.of("text", truncated));
 
-            ObjectMapper mapper = new ObjectMapper();
-            float[][] result = mapper.readValue(response.getBody(), float[][].class);
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .header("Authorization", "Bearer " + cfToken)
+                    .header("Content-Type", "application/json")
+                    .timeout(Duration.ofSeconds(10))
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
+                    .build();
 
-            if (result != null && result.length > 0) {
-                return result[0];
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() != 200) {
+                log.error("Cloudflare API error. Status: {}, Body: {}", response.statusCode(), response.body());
+                return null;
             }
-            return null;
+
+            JsonNode dataNode = mapper.readTree(response.body()).path("result").path("data");
+            float[] embedding = null;
+
+            if (dataNode.isArray() && !dataNode.isEmpty()) {
+                // Handles both [[0.1, 0.2...]] and [0.1, 0.2...]
+                if (dataNode.get(0).isArray()) {
+                    embedding = mapper.convertValue(dataNode.get(0), float[].class);
+                } else {
+                    embedding = mapper.convertValue(dataNode, float[].class);
+                }
+            }
+
+            if (embedding == null) {
+                log.error("Cloudflare returned an empty or invalid array.");
+                return null;
+            }
+
+            // 3. STRICT DIMENSION CHECK (Ensures Postgres never crashes)
+            if (embedding.length != 384) {
+                log.warn("Cloudflare returned {} dimensions, forcing to 384.", embedding.length);
+                float[] fixed = new float[384];
+                System.arraycopy(embedding, 0, fixed, 0, Math.min(embedding.length, 384));
+                return fixed;
+            }
+
+            return embedding;
+
         } catch (Exception e) {
-            System.err.println("Failed to generate embedding: " + e.getMessage());
+            log.error("Failed to generate Cloudflare embedding", e);
             return null;
         }
     }

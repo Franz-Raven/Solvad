@@ -80,4 +80,56 @@ public class VectorSimilarityService {
         sb.append("]");
         return sb.toString();
     }
+
+    public void backfillMissingEmbeddings() {
+        System.out.println(">>> STARTING EMBEDDING BACKFILL...");
+
+        // 1. Get only the problems where the embedding is currently NULL
+        List<UUID> missingIds = vectorRepository.findProblemsWithoutEmbeddings();
+
+        if (missingIds.isEmpty()) {
+            System.out.println(">>> All problems already have embeddings. Nothing to do.");
+            return;
+        }
+
+        System.out.println(">>> Found " + missingIds.size() + " problems missing embeddings.");
+        int successCount = 0;
+        int failCount = 0;
+
+        for (UUID id : missingIds) {
+            try {
+                // Fetch the problem so we can build the searchable text
+                Problem problem = problemRepository.findById(id).orElse(null);
+                if (problem == null) continue;
+
+                System.out.println("Processing: " + problem.getTitle());
+
+                // Generate the embedding from Cloudflare
+                String searchableText = embeddingService.buildSearchableText(problem);
+                float[] embedding = embeddingService.generateEmbedding(searchableText);
+
+                if (embedding != null) {
+                    // Save to database
+                    String vectorStr = toVectorString(embedding);
+                    vectorRepository.updateEmbedding(id, vectorStr);
+                    successCount++;
+                } else {
+                    System.err.println("Failed to generate embedding for: " + problem.getTitle());
+                    failCount++;
+                }
+
+                // Sleep for 1 second to avoid Cloudflare Rate Limiting (429 Too Many Requests)
+                Thread.sleep(1000);
+
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            } catch (Exception e) {
+                System.err.println("Error processing ID " + id + ": " + e.getMessage());
+                failCount++;
+            }
+        }
+
+        System.out.println(">>> BACKFILL COMPLETE. Success: " + successCount + ", Failed: " + failCount);
+    }
 }
